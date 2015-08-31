@@ -18,19 +18,22 @@
 		<version>7</version>
 	</parent>
 	<name>PH-Tree</name>
-	<url>http://www.globis.ethz.ch/people/ztilmann</url>
+	<url>https://github.com/tzaeschke/phtree</url>
+	
 	<licenses>
-		<license>
-			<name>GNU Lesser General Public License</name>
-			<url>http://www.gnu.org/licenses/lgpl.html</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
+	  <license>
+        <name>Apache License, Version 2.0</name>
+        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        <distribution>repo</distribution>
+        <comments>A business-friendly OSS license</comments>
+      </license>
+    </licenses>
+    
 	<developers>
 		<developer>
 			<name>Tilmann Zäschke</name>
 			<id>tzaeschke</id>
-			<email>zaeschke@inf.ethz.ch</email>
+			<email>zoodb@gmx.de</email>
 		</developer>
 	</developers>
 
