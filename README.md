@@ -13,6 +13,31 @@ Contact:
 {zaeschke,zimmerli,norrie)@inf.ethz.ch
 
 
+# Main properties
+
+### Advantages
+
+- Memory efficient: Due to prefix sharing and other optimisations the tree may consume less memory than a flat array of integers/floats
+- Update efficieny: The performance of `insert()`, `update()` and `delete()` operations is almost independent of the size of the tree. For low dimensions performance may even improve with larger trees (> 1M entries).
+- Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more
+- Scalability with dimension: Updates and 'contains()' queries scale very well to the current maximum of 62 dimensions. Range queries and other operations are best used with upto 10-15 dimensions only.
+- Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
+- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is no a concern (see paper). The advanatages are that any modification operation will never modify more than one nod in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
+
+### Disadvanatages
+
+- The current implementation will not work with mor then 62 dimensions.
+- Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more
+- Performance/dimensionality: performance of range queries degrades when using data with more than 10-15 dimensions. Updates and `contains()` work fine for higher dimensions
+- Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better that traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
+- Storage: 
+
+### Generally
+
+- The tree performs best with large datasets.
+- The tree performs best on range queries that return few result (1-1000) because of the comparatively high extraction cost of values. 
+
+
 # Interfaces / Abstract Classes
 
 This archive contains four variants and multiple versions of the PH-tree.
@@ -35,16 +60,7 @@ A higher version number usually (not always) indicates better performance in ter
 scalability (size and dimensionality) as well as storage requirements.
 
 
-# Tuning possibilities
-
-
-## UPDATE
-
-For updating the keys of entries (aka moving objects index), consider using ```update()```. This function
-is about twice as fast for small displacements and at least as fast as a ```put()```/```remove()``` combo.
-
-
-## MEMORY
+# Tuning Memory Usage
 
 There is little point in using 32bit instead of 64bit values, because prefix sharing takes care of
 unused leading bits.
@@ -56,10 +72,12 @@ For example, if you have a precision of 6 digits after the decimal point, then m
 by 1,000,000 before casting the to (long) and adding them to the tree.
 
 
-## SPEED
+# Perfomance Optimisation
 
-The following suggestions concern mostly range queries.
+### Updates
 
+For updating the keys of entries (aka moving objects index), consider using ```update()```. This function
+is about twice as fast for small displacements and at least as fast as a ```put()```/```remove()``` combo.
 
 ### Choose a type of query
 
