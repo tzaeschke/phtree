@@ -5,7 +5,7 @@ By default it stores k-dimensional keys (points) consisting of k 64bit-integers.
 to efficiently store floating point values and/or ranged objects such as k-dimensional boxes.
 
 The PH-tree was developed at ETH Zurich and first published in:
-"The PH-Tree: A Space-Efficient Storage Structure and Multi-Dimensional Index" [PDF](http://globis.ethz.ch/?pubdownload=699), 
+"The PH-Tree: A Space-Efficient Storage Structure and Multi-Dimensional Index" ([PDF](http://globis.ethz.ch/?pubdownload=699)), 
 Tilmann Zäschke, Christoph Zimmerli and Moira C. Norrie, 
 Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
 
