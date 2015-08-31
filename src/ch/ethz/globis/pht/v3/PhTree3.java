@@ -29,7 +29,7 @@ import ch.ethz.globis.pht.PhEntry;
 import ch.ethz.globis.pht.PhPredicate;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.PhTreeHelper.Stats;
-import ch.ethz.globis.pht.util.Bits;
+import ch.ethz.globis.pht.util.BitsInt;
 import ch.ethz.globis.pht.util.PhMapper;
 import ch.ethz.globis.pht.util.PhTreeQStats;
 import ch.ethz.globis.pht.util.Refs;
@@ -144,7 +144,7 @@ public class PhTree3<T> implements PhTree<T> {
         	this.postLen = (byte) postLen;
         	if (estimatedPostCount >= 0) {
         		int size = calcArraySizeTotalBits(estimatedPostCount, 0, false, DIM);
-        		this.ba = Bits.arrayCreate(size);
+        		this.ba = BitsInt.arrayCreate(size);
         	}
         }
 
@@ -180,7 +180,7 @@ public class PhTree3<T> implements PhTree<T> {
         }
        
         long getInfix(int dim, final int DIM) {
-        	return Bits.readArray(this.ba, getBitPos_Infix(DIM)
+        	return BitsInt.readArray(this.ba, getBitPos_Infix(DIM)
         			+ dim*infixLen, infixLen) << (postLen+1);
         }
         
@@ -224,14 +224,14 @@ public class PhTree3<T> implements PhTree<T> {
          * @param infixOffs The number of bits AFTER the infix.
          */
         private void setInfix(int infId, long inf, final int DIM) {
-        	Bits.writeArray(this.ba, getBitPos_Infix(DIM)
+        	BitsInt.writeArray(this.ba, getBitPos_Infix(DIM)
         			+ infId*infixLen, infixLen, inf >>> (postLen+1));
         }
         
 
         private boolean getInfixBit(int infId, final int DIM, final int infixInternalOffset) {
             int startBitTotal = infId*infixLen + infixInternalOffset;
-            return Bits.getBit(ba, getBitPos_Infix(DIM) + startBitTotal);
+            return BitsInt.getBit(ba, getBitPos_Infix(DIM) + startBitTotal);
         }
 
         /**
@@ -250,7 +250,7 @@ public class PhTree3<T> implements PhTree<T> {
 				return new NodeEntry<>(subNRef[(int) pos]);
 			}
 			int subOffsBits = getBitPos_SubNodeIndex(DIM);
-			int p2 = Bits.binarySearch(ba, subOffsBits, getSubCount(DIM), pos, SIK_WIDTH(DIM), 0);
+			int p2 = BitsInt.binarySearch(ba, subOffsBits, getSubCount(DIM), pos, SIK_WIDTH(DIM), 0);
 			if (p2 < 0) {
 				return null;
 			}
@@ -280,7 +280,7 @@ public class PhTree3<T> implements PhTree<T> {
 				return subNRef[(int) pos];
 			}
 			int subOffsBits = getBitPos_SubNodeIndex(DIM);
-			int p2 = Bits.binarySearch(ba, subOffsBits, getSubCount(DIM), pos, SIK_WIDTH(DIM), 0);
+			int p2 = BitsInt.binarySearch(ba, subOffsBits, getSubCount(DIM), pos, SIK_WIDTH(DIM), 0);
 			if (p2 < 0) {
 				return null;
 			}
@@ -345,21 +345,21 @@ public class PhTree3<T> implements PhTree<T> {
 				//migrate to full array!
 				Node<T>[] na = new Node[1<<DIM];
 				for (int i = 0; i < bufSubCount; i++) {
-					int posOld = (int) Bits.readArray(ba, subOffsBits + i*SIK_WIDTH(DIM), SIK_WIDTH(DIM));
+					int posOld = (int) BitsInt.readArray(ba, subOffsBits + i*SIK_WIDTH(DIM), SIK_WIDTH(DIM));
 					na[posOld] = subNRef[i];
 				}
 				subNRef = na;
-				Bits.removeBits(ba, subOffsBits, bufSubCount*SIK_WIDTH(DIM));
+				BitsInt.removeBits(ba, subOffsBits, bufSubCount*SIK_WIDTH(DIM));
 				setSubHC(true);
 				subNRef[(int) pos] = sub;
 				//subCount++;
 				setSubCount(bufSubCount+1, DIM);
 				int reqSize = calcArraySizeTotalBits(bufPostCount, bufSubCount, isPostHC(), DIM);
-				ba = Bits.arrayTrim(ba, reqSize);
+				ba = BitsInt.arrayTrim(ba, reqSize);
 				return;
 			}
 			
-			int p2 = Bits.binarySearch(ba, subOffsBits, bufSubCount, pos, SIK_WIDTH(DIM), 0);
+			int p2 = BitsInt.binarySearch(ba, subOffsBits, bufSubCount, pos, SIK_WIDTH(DIM), 0);
 			if (DEBUG &&  p2 >= 0) {
 				throw new IllegalStateException("pos=" + pos);
 			}
@@ -383,10 +383,10 @@ public class PhTree3<T> implements PhTree<T> {
 			subNRef[start] = sub;
 
 			//resize index array?
-			ba = Bits.arrayEnsureSize(ba, calcArraySizeTotalBits(bufPostCount, bufSubCount+1, 
+			ba = BitsInt.arrayEnsureSize(ba, calcArraySizeTotalBits(bufPostCount, bufSubCount+1, 
 					false, DIM));
-			Bits.insertBits(ba, subOffsBits + start*SIK_WIDTH(DIM), SIK_WIDTH(DIM));
-			Bits.writeArray(ba, subOffsBits + start*SIK_WIDTH(DIM), SIK_WIDTH(DIM), pos);
+			BitsInt.insertBits(ba, subOffsBits + start*SIK_WIDTH(DIM), SIK_WIDTH(DIM));
+			BitsInt.writeArray(ba, subOffsBits + start*SIK_WIDTH(DIM), SIK_WIDTH(DIM), pos);
 		}
 
 		/**
@@ -404,7 +404,7 @@ public class PhTree3<T> implements PhTree<T> {
 				//linearized cube
 				int subOffsBits = getBitPos_SubNodeIndex(DIM);
 				int p2 = 
-					Bits.binarySearch(ba, subOffsBits, getSubCount(DIM), pos, SIK_WIDTH(DIM), 0);
+					BitsInt.binarySearch(ba, subOffsBits, getSubCount(DIM), pos, SIK_WIDTH(DIM), 0);
 				if (DEBUG &&  p2 < 0) {
 					throw new IllegalStateException("pos=" + pos);
 				}
@@ -441,11 +441,11 @@ public class PhTree3<T> implements PhTree<T> {
 				setSubHC( false );
 				int prePostBits_SubLHC = getBitPos_PostIndex(bufSubCnt-1, DIM);
 				int bia2Size = calcArraySizeTotalBits(bufPostCnt, bufSubCnt-1, isPostHC(), DIM);
-				int[] bia2 = Bits.arrayCreate(bia2Size);
+				int[] bia2 = BitsInt.arrayCreate(bia2Size);
 				Node<T>[] sa2 = new Node[bufSubCnt-1];
 				int preSubBits = getBitPos_SubNodeIndex(DIM);
 				//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-				Bits.copyBitsLeft(ba, 0, bia2, 0, preSubBits);
+				BitsInt.copyBitsLeft(ba, 0, bia2, 0, preSubBits);
 				int n=0;
 				for (int i = 0; i < (1L<<DIM); i++) {
 					if (i==pos) {
@@ -454,12 +454,12 @@ public class PhTree3<T> implements PhTree<T> {
 					}
 					if (subNRef[i] != null) {
 						sa2[n]= subNRef[i];
-						Bits.writeArray(bia2, preSubBits + n*SIK_WIDTH(DIM), SIK_WIDTH(DIM), i);
+						BitsInt.writeArray(bia2, preSubBits + n*SIK_WIDTH(DIM), SIK_WIDTH(DIM), i);
 						n++;
 					}
 				}
 				//length: we copy as many bits as fit into bia2, which is easiest to calculate
-				Bits.copyBitsLeft(
+				BitsInt.copyBitsLeft(
 						ba, prePostBits_SubHC, 
 						bia2, prePostBits_SubLHC,
 						bia2Size-prePostBits_SubLHC);  
@@ -479,7 +479,7 @@ public class PhTree3<T> implements PhTree<T> {
 			} else {
 				//linearized cube
 				int subOffsBits = getBitPos_SubNodeIndex(DIM);
-				int p2 = Bits.binarySearch(ba, subOffsBits, bufSubCnt, pos, SIK_WIDTH(DIM), 0);
+				int p2 = BitsInt.binarySearch(ba, subOffsBits, bufSubCnt, pos, SIK_WIDTH(DIM), 0);
 				if (DEBUG &&  p2 < 0) {
 					throw new IllegalStateException("pos=" + pos + "  p2=" + p2);
 				}
@@ -513,10 +513,10 @@ public class PhTree3<T> implements PhTree<T> {
 				if (DEBUG && offsKey < 0) {
 					throw new IllegalStateException("Element does not exist.");
 				}
-				Bits.removeBits(ba, offsKey, DIM);
+				BitsInt.removeBits(ba, offsKey, DIM);
 
 				//shrink array
-				ba = Bits.arrayTrim(ba, calcArraySizeTotalBits(bufPostCnt, bufSubCnt-1, isPostHC(), DIM));
+				ba = BitsInt.arrayTrim(ba, calcArraySizeTotalBits(bufPostCnt, bufSubCnt-1, isPostHC(), DIM));
 			}
 		}
 		
@@ -545,7 +545,7 @@ public class PhTree3<T> implements PhTree<T> {
 			//Also, length can be expected to be equal
 			long mask = ~((-1L) << postLen);
 			for (int i = 0; i < key.length; i++) {
-				long l = Bits.readArray(ia, offs + i*postLen, postLen);
+				long l = BitsInt.readArray(ia, offs + i*postLen, postLen);
 				if (l != (key[i] & mask)) {
 					return false;
 				}
@@ -652,16 +652,16 @@ public class PhTree3<T> implements PhTree<T> {
 			if (!isPostHC() && (DIM<=31) && (sizeLin >= sizeHC)) {
 				int prePostBits = getBitPos_PostIndex(bufSubCnt, DIM);
 				setPostHC( true );
-				int[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(bufPostCnt+1, bufSubCnt, true, DIM));
+				int[] bia2 = BitsInt.arrayCreate(calcArraySizeTotalBits(bufPostCnt+1, bufSubCnt, true, DIM));
 				T [] v2 = Refs.arrayCreate(1<<DIM);
 				//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-				Bits.copyBitsLeft(ba, 0, bia2, 0, prePostBits);
+				BitsInt.copyBitsLeft(ba, 0, bia2, 0, prePostBits);
 				int postLenTotal = DIM*postLen; 
 				for (int i = 0; i < bufPostCnt; i++) {
 					int entryPosLHC = prePostBits + i*(PIK_WIDTH(DIM)+postLenTotal);
-					int p2 = (int)Bits.readArray(ba, entryPosLHC, PIK_WIDTH(DIM));
-					Bits.setBit(bia2, prePostBits+PINN_HC_WIDTH*p2, true);
-					Bits.copyBitsLeft(ba, entryPosLHC+PIK_WIDTH(DIM),
+					int p2 = (int)BitsInt.readArray(ba, entryPosLHC, PIK_WIDTH(DIM));
+					BitsInt.setBit(bia2, prePostBits+PINN_HC_WIDTH*p2, true);
+					BitsInt.copyBitsLeft(ba, entryPosLHC+PIK_WIDTH(DIM),
 							bia2, prePostBits + (1<<DIM)*PINN_HC_WIDTH + postLenTotal*p2, 
 							postLenTotal);
 					v2[p2] = values[i];
@@ -681,25 +681,25 @@ public class PhTree3<T> implements PhTree<T> {
 			if (isPostHC()) {
 				//hyper-cube
 				for (int i = 0; i < key.length; i++) {
-					Bits.writeArray(ba, offsPostKey + postLen * i, postLen, key[i]);
+					BitsInt.writeArray(ba, offsPostKey + postLen * i, postLen, key[i]);
 				}
 				int offsNN = getBitPos_PostIndex(bufSubCnt, DIM);
-				Bits.setBit(ba, (int) (offsNN+PINN_HC_WIDTH*pos), true);
+				BitsInt.setBit(ba, (int) (offsNN+PINN_HC_WIDTH*pos), true);
 				values[(int) pos] = value;
 			} else {
 				int[] ia;
 				int offs;
 				if (!isPostNI()) {
 					//resize array
-					ba = Bits.arrayEnsureSize(ba, calcArraySizeTotalBits(bufPostCnt+1, bufSubCnt, false, DIM));
+					ba = BitsInt.arrayEnsureSize(ba, calcArraySizeTotalBits(bufPostCnt+1, bufSubCnt, false, DIM));
 					ia = ba;
 					offs = offsPostKey;
-					Bits.insertBits(ia, offs-PIK_WIDTH(DIM), PIK_WIDTH(DIM) + DIM*postLen);
+					BitsInt.insertBits(ia, offs-PIK_WIDTH(DIM), PIK_WIDTH(DIM) + DIM*postLen);
 					//insert key
-					Bits.writeArray(ia, offs-PIK_WIDTH(DIM), PIK_WIDTH(DIM), pos);
+					BitsInt.writeArray(ia, offs-PIK_WIDTH(DIM), PIK_WIDTH(DIM), pos);
 					//insert value:
 					for (int i = 0; i < DIM; i++) {
-						Bits.writeArray(ia, offs + postLen * i, postLen, key[i]);
+						BitsInt.writeArray(ia, offs + postLen * i, postLen, key[i]);
 					}
 					values = Refs.arrayEnsureSize(values, bufPostCnt+1);
 					Refs.insertAtPos(values, offs2ValPos(offs, pos, DIM, bufSubCnt), value);
@@ -713,7 +713,7 @@ public class PhTree3<T> implements PhTree<T> {
 		long[] postToNI(int startBit, int postLen, int DIM) {
 			long[] key = new long[DIM];
 			for (int d = 0; d < key.length; d++) {
-				key[d] |= Bits.readArray(ba, startBit, postLen);
+				key[d] |= BitsInt.readArray(ba, startBit, postLen);
 				startBit += postLen;
 			}
 			return key;
@@ -722,7 +722,7 @@ public class PhTree3<T> implements PhTree<T> {
 		void postFromNI(int[] ia, int startBit, long key[], int postLen) {
 			//insert value:
 			for (int d = 0; d < key.length; d++) {
-				Bits.writeArray(ia, startBit + postLen * d, postLen, key[d]);
+				BitsInt.writeArray(ia, startBit + postLen * d, postLen, key[d]);
 			}
 		}
 		
@@ -739,16 +739,16 @@ public class PhTree3<T> implements PhTree<T> {
 				int prePostBitsVal = prePostBitsKey + (1<<DIM)*PINN_HC_WIDTH;
 				int postLenTotal = DIM*postLen;
 				for (int i = 0; i < (1L<<DIM); i++) {
-					if (Bits.getBit(ba, prePostBitsKey + PINN_HC_WIDTH*i)) {
+					if (BitsInt.getBit(ba, prePostBitsKey + PINN_HC_WIDTH*i)) {
 						int postPosLHC = prePostBitsVal + i*postLenTotal;
-						//Bits.writeArray(bia2, entryPosLHC, PIK_WIDTH(DIM), i);
-						//Bits.copyBitsLeft(
+						//BitsInt.writeArray(bia2, entryPosLHC, PIK_WIDTH(DIM), i);
+						//BitsInt.copyBitsLeft(
 						//		ba, prePostBits + (1<<DIM)*PINN_HC_WIDTH + postLenTotal*i, 
 						//		bia2, entryPosLHC+PIK_WIDTH(DIM),
 						//		postLenTotal);
 						long[] key = postToNI(postPosLHC, postLen, DIM);
 						postPosLHC += DIM*postLen;
-						System.out.println("n-b-1: " + Bits.toBinary(key, 8));
+						System.out.println("n-b-1: " + BitsInt.toBinary(key, 8));
 						niPutNoCopy(i, key, values[i]);
 					}
 				}
@@ -757,11 +757,11 @@ public class PhTree3<T> implements PhTree<T> {
 				int postPosLHC = prePostBits;
 				for (int i = 0; i < bufPostCnt; i++) {
 					//int entryPosLHC = prePostBits + i*(PIK_WIDTH(DIM)+postLenTotal);
-					long p2 = Bits.readArray(ba, postPosLHC, PIK_WIDTH(DIM));
+					long p2 = BitsInt.readArray(ba, postPosLHC, PIK_WIDTH(DIM));
 					postPosLHC += PIK_WIDTH(DIM);
 					//This reads compressed keys...
-//					Bits.setBit(bia2, prePostBits+PINN_HC_WIDTH*p2, true);
-//					Bits.copyBitsLeft(ba, entryPosLHC+PIK_WIDTH(DIM),
+//					BitsInt.setBit(bia2, prePostBits+PINN_HC_WIDTH*p2, true);
+//					BitsInt.copyBitsLeft(ba, entryPosLHC+PIK_WIDTH(DIM),
 //							bia2, prePostBits + (1<<DIM)*PINN_HC_WIDTH + postLenTotal*p2, 
 //							postLenTotal);
 					long[] key = postToNI(postPosLHC, postLen, DIM);
@@ -781,7 +781,7 @@ public class PhTree3<T> implements PhTree<T> {
 			} else {
 				int subOffsBits = getBitPos_SubNodeIndex(DIM);
 				for (int i = 0; i < bufSubCnt; i++) {
-					long posOld = Bits.readArray(ba, subOffsBits, SIK_WIDTH(DIM));
+					long posOld = BitsInt.readArray(ba, subOffsBits, SIK_WIDTH(DIM));
 					subOffsBits += SIK_WIDTH(DIM);
 					niPut(posOld, subNRef[i]);
 				}
@@ -791,7 +791,7 @@ public class PhTree3<T> implements PhTree<T> {
 			setSubHC(false);
 			setPostNI(true);
 			setSubNI(true);
-			ba = Bits.arrayTrim(ba, calcArraySizeTotalBitsNI(bufSubCnt, DIM));
+			ba = BitsInt.arrayTrim(ba, calcArraySizeTotalBitsNI(bufSubCnt, DIM));
 			subNRef = null;
 			values = null; 
 		}
@@ -849,11 +849,11 @@ public class PhTree3<T> implements PhTree<T> {
 				//migrate to LHC
 				setSubHC( false );
 				int bia2Size = calcArraySizeTotalBits(newPostCnt, newSubCnt, isPostHC, DIM);
-				int[] bia2 = Bits.arrayCreate(bia2Size);
+				int[] bia2 = BitsInt.arrayCreate(bia2Size);
 				Node<T>[] sa2 = new Node[newSubCnt];
 				int preSubBits = getBitPos_SubNodeIndex(DIM);
 				//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-				Bits.copyBitsLeft(ba, 0, bia2, 0, preSubBits);
+				BitsInt.copyBitsLeft(ba, 0, bia2, 0, preSubBits);
 				int n=0;
 				CBIterator<NodeEntry<T>> it = ind.iterator();
 				while (it.hasNext()) {
@@ -868,7 +868,7 @@ public class PhTree3<T> implements PhTree<T> {
 							continue;
 						}
 						sa2[n] = e.value().node;
-						Bits.writeArray(bia2, preSubBits + n*SIK_WIDTH(DIM), SIK_WIDTH(DIM), pos);
+						BitsInt.writeArray(bia2, preSubBits + n*SIK_WIDTH(DIM), SIK_WIDTH(DIM), pos);
 						n++;
 					}
 				}
@@ -880,9 +880,9 @@ public class PhTree3<T> implements PhTree<T> {
 			T oldValue = null;
 			setPostHC(isPostHC);
 			int prePostBits = getBitPos_PostIndex(newSubCnt, DIM);
-			int[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(newPostCnt, newSubCnt, isPostHC, DIM));
+			int[] bia2 = BitsInt.arrayCreate(calcArraySizeTotalBits(newPostCnt, newSubCnt, isPostHC, DIM));
 			//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-			Bits.copyBitsLeft(ba, 0, bia2, 0, prePostBits);
+			BitsInt.copyBitsLeft(ba, 0, bia2, 0, prePostBits);
 			int postLenTotal = DIM*postLen;
 			if (isPostHC) {
 				//HC mode
@@ -900,7 +900,7 @@ public class PhTree3<T> implements PhTree<T> {
 							continue;
 						}
 						int p2 = (int) e.key();
-						Bits.setBit(bia2, prePostBits+PINN_HC_WIDTH*p2, true);
+						BitsInt.setBit(bia2, prePostBits+PINN_HC_WIDTH*p2, true);
 						int startBit = startBitBase + postLenTotal*p2;
 						postFromNI(bia2, startBit, e.value().key, postLen);
 						v2[p2] = e.value().getValue();
@@ -927,7 +927,7 @@ public class PhTree3<T> implements PhTree<T> {
 							continue;
 						}
 						v2[n] = e.value().value;
-						Bits.writeArray(bia2, entryPosLHC, PIK_WIDTH(DIM), pos);
+						BitsInt.writeArray(bia2, entryPosLHC, PIK_WIDTH(DIM), pos);
 						entryPosLHC += PIK_WIDTH(DIM);
 						postFromNI(bia2, entryPosLHC, e.value().key, postLen);
 						entryPosLHC += postLenTotal;
@@ -965,7 +965,7 @@ public class PhTree3<T> implements PhTree<T> {
 			final long mask = (~0L)<<postLen;
 			for (int i = 0; i < key.length; i++) {
 				key[i] &= mask;
-				key[i] |= Bits.readArray(ia, offs, postLen);
+				key[i] |= BitsInt.readArray(ia, offs, postLen);
 				offs += postLen;
 			}
 			return values[valPos];   
@@ -1002,7 +1002,7 @@ public class PhTree3<T> implements PhTree<T> {
 			final long mask = (~0L)<<postLen;
 			for (int i = 0; i < key.length; i++) {
 				key[i] &= mask;
-				key[i] |= Bits.readArray(ia, offs, postLen);
+				key[i] |= BitsInt.readArray(ia, offs, postLen);
 				if (key[i] < rangeMin[i] || key[i] > rangeMax[i]) {
 					return null;
 				}
@@ -1094,12 +1094,12 @@ public class PhTree3<T> implements PhTree<T> {
 			if (isPostHC() && (sizeLin < sizeHC)) {
 				//revert to linearized representation, if applicable
 				setPostHC( false );
-				int[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(bufPostCnt-1, bufSubCnt, false, DIM));
+				int[] bia2 = BitsInt.arrayCreate(calcArraySizeTotalBits(bufPostCnt-1, bufSubCnt, false, DIM));
 				T[] v2 = Refs.arrayCreate(bufPostCnt);
 				int prePostBits = getBitPos_PostIndex(bufSubCnt, DIM);
 				int prePostBitsVal = prePostBits + (1<<DIM)*PINN_HC_WIDTH;
 				//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-				Bits.copyBitsLeft(ba, 0, bia2, 0, prePostBits);
+				BitsInt.copyBitsLeft(ba, 0, bia2, 0, prePostBits);
 				int postLenTotal = DIM*postLen;
 				int n=0;
 				for (int i = 0; i < (1L<<DIM); i++) {
@@ -1108,10 +1108,10 @@ public class PhTree3<T> implements PhTree<T> {
 						oldVal = values[i];
 						continue;
 					}
-					if (Bits.getBit(ba, prePostBits + PINN_HC_WIDTH*i)) {
+					if (BitsInt.getBit(ba, prePostBits + PINN_HC_WIDTH*i)) {
 						int entryPosLHC = prePostBits + n*(PIK_WIDTH(DIM)+postLenTotal);
-						Bits.writeArray(bia2, entryPosLHC, PIK_WIDTH(DIM), i);
-						Bits.copyBitsLeft(
+						BitsInt.writeArray(bia2, entryPosLHC, PIK_WIDTH(DIM), i);
+						BitsInt.copyBitsLeft(
 								ba, prePostBitsVal + postLenTotal*i, 
 								bia2, entryPosLHC+PIK_WIDTH(DIM),
 								postLenTotal);
@@ -1135,7 +1135,7 @@ public class PhTree3<T> implements PhTree<T> {
 			if (isPostHC()) {
 				//hyper-cube
 				int offsNN = getBitPos_PostIndex(bufSubCnt, DIM);
-				Bits.setBit(ba, (int) (offsNN+PINN_HC_WIDTH*pos), false);
+				BitsInt.setBit(ba, (int) (offsNN+PINN_HC_WIDTH*pos), false);
 				oldVal = values[(int) pos]; 
 				values[(int) pos] = null;
 				//Nothing else to do, values can just stay where they are
@@ -1143,9 +1143,9 @@ public class PhTree3<T> implements PhTree<T> {
 				if (!isPostNI()) {
 					//linearized cube:
 					//remove key and value
-					Bits.removeBits(ba, offsPostKey-PIK_WIDTH(DIM), PIK_WIDTH(DIM) + DIM*postLen);
+					BitsInt.removeBits(ba, offsPostKey-PIK_WIDTH(DIM), PIK_WIDTH(DIM) + DIM*postLen);
 					//shrink array
-					ba = Bits.arrayTrim(ba, calcArraySizeTotalBits(bufPostCnt-1, bufSubCnt, false, DIM));
+					ba = BitsInt.arrayTrim(ba, calcArraySizeTotalBits(bufPostCnt-1, bufSubCnt, false, DIM));
 					//values:
 					int valPos = offs2ValPos(offsPostKey, pos, DIM, bufSubCnt);
 					oldVal = values[valPos]; 
@@ -1167,7 +1167,7 @@ public class PhTree3<T> implements PhTree<T> {
 		 */
 		boolean isPostHC() {
 			return (isHC & 0b10) != 0;
-			//return Bits.getBit(ba, 0);
+			//return BitsInt.getBit(ba, 0);
 		}
 		
 		
@@ -1176,7 +1176,7 @@ public class PhTree3<T> implements PhTree<T> {
 		 */
 		void setPostHC(boolean b) {
 			isHC = (byte) (b ? (isHC | 0b10) : (isHC & (~0b10)));
-			//Bits.setBit(ba, 0, b);
+			//BitsInt.setBit(ba, 0, b);
 		}
 		
 		
@@ -1185,7 +1185,7 @@ public class PhTree3<T> implements PhTree<T> {
 		 */
 		boolean isSubHC() {
 			return (isHC & 0b01) != 0;
-			//return Bits.getBit(ba, 1);
+			//return BitsInt.getBit(ba, 1);
 		}
 		
 		
@@ -1194,7 +1194,7 @@ public class PhTree3<T> implements PhTree<T> {
 		 */
 		void setSubHC(boolean b) {
 			isHC = (byte) (b ? (isHC | 0b01) : (isHC & (~0b01)));
-			//Bits.setBit(ba, 1, b);
+			//BitsInt.setBit(ba, 1, b);
 		}
 		
 		
@@ -1237,7 +1237,7 @@ public class PhTree3<T> implements PhTree<T> {
 		 */
 		int getPostCount(final int DIM) {
 	        //DIM+1; //Counters require DIM + 1 bits, e.g. [0..8] for DIM=3
-			return (int) Bits.readArray(ba, HC_BITS, DIM+1);
+			return (int) BitsInt.readArray(ba, HC_BITS, DIM+1);
 		}
 		
 		
@@ -1246,7 +1246,7 @@ public class PhTree3<T> implements PhTree<T> {
 		 */
 		private void setPostCount(long cnt, final int DIM) {
 	        //DIM+1; //Counters require DIM + 1 bits, e.g. [0..8] for DIM=3
-			Bits.writeArray(ba, HC_BITS, DIM+1, cnt);
+			BitsInt.writeArray(ba, HC_BITS, DIM+1, cnt);
 		}
 		
 		
@@ -1256,7 +1256,7 @@ public class PhTree3<T> implements PhTree<T> {
 		int getSubCount(final int DIM) {
 			//DIM+3: two bits for HC/LHC + (DIM+1) for postCount
 	        //DIM+1; //Counters require DIM + 1 bits, e.g. [0..8] for DIM=3
-			return (int) Bits.readArray(ba, HC_BITS+1+DIM, DIM+1);
+			return (int) BitsInt.readArray(ba, HC_BITS+1+DIM, DIM+1);
 		}
 		
 		
@@ -1264,7 +1264,7 @@ public class PhTree3<T> implements PhTree<T> {
 		 * Set sub-node counter.
 		 */
 		private void setSubCount(long cnt, final int DIM) {
-			Bits.writeArray(ba, HC_BITS+1+DIM, DIM+1, cnt);
+			BitsInt.writeArray(ba, HC_BITS+1+DIM, DIM+1, cnt);
 		}
 		
 		
@@ -1361,7 +1361,7 @@ public class PhTree3<T> implements PhTree<T> {
 			if (bufIsPostHC) {
 				//hyper-cube
 				int posInt = (int) pos;  //Hypercube can not be larger than 2^31
-				boolean notNull = Bits.getBit(ba, offsInd+PINN_HC_WIDTH*posInt);
+				boolean notNull = BitsInt.getBit(ba, offsInd+PINN_HC_WIDTH*posInt);
 				offsInd += PINN_HC_WIDTH*(1<<DIM);
 				if (!notNull) {
 					return -(posInt * postLen * DIM + offsInd)-1;
@@ -1370,7 +1370,7 @@ public class PhTree3<T> implements PhTree<T> {
 			} else {
 				if (!isPostNI()) {
 					//linearized cube
-					int p2 = Bits.binarySearch(ba, offsInd, bufPostCnt, pos, PIK_WIDTH(DIM), 
+					int p2 = BitsInt.binarySearch(ba, offsInd, bufPostCnt, pos, PIK_WIDTH(DIM), 
 							DIM * postLen);
 					if (p2 < 0) {
 						p2 = -(p2+1);
@@ -1588,7 +1588,7 @@ public class PhTree3<T> implements PhTree<T> {
     						break;
     					}
     					currentOffsetPostKey += Node.PINN_HC_WIDTH;  //pos with bit-offset
-    					if (Bits.getBit(node.ba, currentOffsetPostKey)) {
+    					if (BitsInt.getBit(node.ba, currentOffsetPostKey)) {
 	    	    			//check HC-pos
     	    				if (!checkHcPos(currentPos)) {
 	    	    				if (currentPos > maskUpper) {
@@ -1615,7 +1615,7 @@ public class PhTree3<T> implements PhTree<T> {
     							isPostFinished = true;
     							break;
     						}
-	    					long currentPos = Bits.readArray(node.ba, currentOffsetPostKey, Node.PIK_WIDTH(DIM));
+	    					long currentPos = BitsInt.readArray(node.ba, currentOffsetPostKey, Node.PIK_WIDTH(DIM));
 	    	    			//check HC-pos
 		    				if (!checkHcPos(currentPos)) {
 	    	    				if (currentPos > maskUpper) {
@@ -1673,7 +1673,7 @@ public class PhTree3<T> implements PhTree<T> {
     						break;
     					}
 	    				currentOffsetSub += Node.SIK_WIDTH(DIM);
-	    				long currentPos = Bits.readArray(node.ba, currentOffsetSub, Node.SIK_WIDTH(DIM));
+	    				long currentPos = BitsInt.readArray(node.ba, currentOffsetSub, Node.SIK_WIDTH(DIM));
 	    				posSubLHC++;
     	    			//check HC-pos
 	    				if (!checkHcPos(currentPos)) {
@@ -1944,7 +1944,7 @@ public class PhTree3<T> implements PhTree<T> {
     						break;
     					}
     					currentOffsetPostKey += Node.PINN_HC_WIDTH;  //pos with bit-offset
-    					if (Bits.getBit(node.ba, currentOffsetPostKey)) {
+    					if (BitsInt.getBit(node.ba, currentOffsetPostKey)) {
 	    	    			//read post-fix
 	    					int offs = (int) (currentOffsetPostVal+currentPos*postEntryLen);
 	    	    			readValue(currentPos, offs);
@@ -1960,7 +1960,7 @@ public class PhTree3<T> implements PhTree<T> {
     						break;
     					}
     					currentOffsetPostKey += postEntryLen;
-    					long currentPos = Bits.readArray(node.ba, currentOffsetPostKey, Node.PIK_WIDTH(DIM));
+    					long currentPos = BitsInt.readArray(node.ba, currentOffsetPostKey, Node.PIK_WIDTH(DIM));
     					//read post-fix
     					readValue(currentPos, currentOffsetPostKey+Node.PIK_WIDTH(DIM));
     					nextPost = currentPos;
@@ -1994,7 +1994,7 @@ public class PhTree3<T> implements PhTree<T> {
     						break;
     					}
 	    				currentOffsetSub += Node.SIK_WIDTH(DIM);
-	    				long currentPos = Bits.readArray(node.ba, currentOffsetSub, Node.SIK_WIDTH(DIM));
+	    				long currentPos = BitsInt.readArray(node.ba, currentOffsetSub, Node.SIK_WIDTH(DIM));
 	    				posSubLHC++;
     	    			nextSub = currentPos;
 						nextSubNode = node.getSubNodeWithPos(-1, posSubLHC);
@@ -2175,7 +2175,7 @@ public class PhTree3<T> implements PhTree<T> {
         	}
        		nChildren += node.getPostCount(DIM);
             //count post-fixes
-            stats.size += 16 + align8(Bits.arraySizeInByte(node.ba));
+            stats.size += 16 + align8(BitsInt.arraySizeInByte(node.ba));
         }
         
 
@@ -2211,8 +2211,8 @@ public class PhTree3<T> implements PhTree<T> {
         int sizeBA = 0;
         sizeBA = node.calcArraySizeTotalBits(node.getPostCount(DIM), node.getSubCount(DIM), 
         		node.isPostHC(), DIM);
-        sizeBA = Bits.calcArraySize(sizeBA);
-        sizeBA = Bits.arraySizeInByte(sizeBA);
+        sizeBA = BitsInt.calcArraySize(sizeBA);
+        sizeBA = BitsInt.arraySizeInByte(sizeBA);
         stats.size += align8(sizeBA);
         
         currentDepth += node.getInfixLen();
@@ -2287,7 +2287,7 @@ public class PhTree3<T> implements PhTree<T> {
         //check space
         int baS = node.calcArraySizeTotalBits(node.getPostCount(DIM), node.getSubCount(DIM), 
         		node.isPostHC(), DIM);
-        baS = Bits.calcArraySize(baS);
+        baS = BitsInt.calcArraySize(baS);
         if (baS < node.ba.length) {
     		stats.nTooLarge++;
         	if ((node.ba.length - baS)==2) {
@@ -2526,9 +2526,9 @@ public class PhTree3<T> implements PhTree<T> {
 		int infOffs = node.getBitPos_Infix(DIM);
 		int newInfixLen = node.getInfixLen() + 1 + sub2.getInfixLen();
        	sub2.infixLen = (byte)newInfixLen;
-		sub2.ba = Bits.arrayEnsureSize(sub2.ba, sub2.calcArraySizeTotalBits(
+		sub2.ba = BitsInt.arrayEnsureSize(sub2.ba, sub2.calcArraySizeTotalBits(
 				sub2.getPostCount(DIM), sub2.getSubCount(DIM), sub2.isPostHC(), DIM));
-		Bits.insertBits(sub2.ba, infOffs, DIM*(node.getInfixLen()+1));
+		BitsInt.insertBits(sub2.ba, infOffs, DIM*(node.getInfixLen()+1));
 		
 		// update infix
 		for (int i = 0; i < DIM; i++) {
@@ -2609,9 +2609,9 @@ public class PhTree3<T> implements PhTree<T> {
 		int infOffs = node.getBitPos_Infix(DIM);
 		int newInfixLen = node.getInfixLen() + 1 + sub2.getInfixLen();
        	sub2.infixLen = (byte)newInfixLen;
-		sub2.ba = Bits.arrayEnsureSize(sub2.ba, sub2.calcArraySizeTotalBits(
+		sub2.ba = BitsInt.arrayEnsureSize(sub2.ba, sub2.calcArraySizeTotalBits(
 				sub2.getPostCount(DIM), sub2.getSubCount(DIM), sub2.isPostHC(), DIM));
-		Bits.insertBits(sub2.ba, infOffs, DIM*(node.getInfixLen()+1));
+		BitsInt.insertBits(sub2.ba, infOffs, DIM*(node.getInfixLen()+1));
 		
 		// update infix
 		for (int i = 0; i < DIM; i++) {
@@ -2840,18 +2840,18 @@ public class PhTree3<T> implements PhTree<T> {
         int oldInfLen = node.getInfixLen();
         node.infixLen = newLocalLen;
         //this sets all values to 0/false:
-        node.ba = Bits.arrayCreate(node.calcArraySizeTotalBits(1, 1, false, DIM));
+        node.ba = BitsInt.arrayCreate(node.calcArraySizeTotalBits(1, 1, false, DIM));
         
         //cut off existing prefixes in sub-node
     	int baseS = newSub.getBitPos_Infix(DIM);
         int toSkip = oldInfLen - newSubInfLen;
         for (int i = 0; i < DIM; i++) {
-        	Bits.copyBitsLeft(newSub.ba, baseS+oldInfLen*i+toSkip, 
+        	BitsInt.copyBitsLeft(newSub.ba, baseS+oldInfLen*i+toSkip, 
         			newSub.ba, baseS+newSubInfLen*i, newSubInfLen);
         }
-    	Bits.removeBits(newSub.ba, baseS+newSubInfLen*DIM, (oldInfLen-newSubInfLen)*DIM);
+    	BitsInt.removeBits(newSub.ba, baseS+newSubInfLen*DIM, (oldInfLen-newSubInfLen)*DIM);
     	//ensure that subNode has correct byte[] size
-    	newSub.ba = Bits.arrayTrim(newSub.ba, newSub.calcArraySizeTotalBits(
+    	newSub.ba = BitsInt.arrayTrim(newSub.ba, newSub.calcArraySizeTotalBits(
     			newSub.getPostCount(DIM), newSub.getSubCount(DIM), newSub.isPostHC(), DIM));
         
         //update local node
@@ -2962,7 +2962,7 @@ public class PhTree3<T> implements PhTree<T> {
         	//post-fix?
         	if (node.hasPostFix(i, DIM)) {
         		node.getPost(i, key);
-        		sb.append(Bits.toBinary(key, DEPTH));
+        		sb.append(BitsInt.toBinary(key, DEPTH));
         		sb.appendLn("  v=" + node.getPostValue(i, DIM));
         	}
         }
@@ -2990,7 +2990,7 @@ public class PhTree3<T> implements PhTree<T> {
         if (node.getInfixLen() > 0) {
         	long[] inf = new long[DIM];
         	node.getInfix(inf);
-        	sb.append(Bits.toBinary(inf, DEPTH));
+        	sb.append(BitsInt.toBinary(inf, DEPTH));
             currentDepth += node.getInfixLen();
         }
         sb.appendLn("]");
@@ -3007,7 +3007,7 @@ public class PhTree3<T> implements PhTree<T> {
         	//post-fix?
         	if (node.hasPostFix(i, DIM)) {
         		T v = node.getPost(i, key);
-                sb.append(ind + Bits.toBinary(key, DEPTH));
+                sb.append(ind + BitsInt.toBinary(key, DEPTH));
                 if (printValue) {
                 	sb.append("  v=" + v);
                 }

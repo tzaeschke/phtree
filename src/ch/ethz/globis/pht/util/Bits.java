@@ -13,7 +13,7 @@ package ch.ethz.globis.pht.util;
  * @author ztilmann
  *
  */
-public class Bits extends BitsInt {
+public class Bits extends BitsLong {
 
 
 }

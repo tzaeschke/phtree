@@ -1,15 +1,25 @@
+/*
+ * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ *
+ * This software is the proprietary information of ETH Zurich.
+ * Use is subject to license terms.
+ */
 package ch.ethz.globis.pht.test;
 
-import ch.ethz.globis.pht.nv.PhTreeNV;
-import ch.ethz.globis.pht.test.util.TestUtil;
-import ch.ethz.globis.pht.util.Bits;
-
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Iterator;
 import java.util.Random;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
+
+import ch.ethz.globis.pht.PhTree;
+import ch.ethz.globis.pht.test.util.TestUtil;
+import ch.ethz.globis.pht.util.Bits;
 
 /**
  *  This test harness contains all of the tests for trees whose number of dimensions k will
@@ -22,8 +32,8 @@ import static org.junit.Assert.*;
  */
 public class TestHighDimensions {
 
-    private PhTreeNV create(int dim, int depth) {
-        return TestUtil.newTreeNV(dim, depth);
+    private PhTree<long[]> create(int dim, int depth) {
+        return TestUtil.newTree(dim, depth);
     }
 
     @Test
@@ -36,20 +46,20 @@ public class TestHighDimensions {
         for (int DIM = 32; DIM <= MAX_DIM; DIM++) {
             //System.out.println("d="+ DIM);
             long[][] vals = new long[N][];
-            PhTreeNV ind = create(DIM, DEPTH);
+            PhTree<long[]> ind = create(DIM, DEPTH);
             for (int i = 0; i < N; i++) {
                 long[] v = new long[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextLong();
                 }
                 vals[i] = v;
-                assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+                assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
             }
 
             //delete all
             for (long[] v: vals) {
                 assertTrue("DIM=" + DIM + " v=" + Bits.toBinary(v, DEPTH), ind.contains(v));
-                assertTrue(ind.delete(v));
+                assertNotNull(ind.remove(v));
             }
 
             //check empty result
@@ -76,13 +86,13 @@ public class TestHighDimensions {
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
             //System.out.println("d="+ DIM);
-            PhTreeNV ind = create(DIM, DEPTH);
+            PhTree<long[]> ind = create(DIM, DEPTH);
             for (int i = 0; i < N; i++) {
                 long[] v = new long[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextLong() & mask;
                 }
-                assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+                assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
             }
 
             //check empty result
@@ -136,13 +146,13 @@ public class TestHighDimensions {
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
             //System.out.println("d="+ DIM);
-            PhTreeNV ind = create(DIM, DEPTH);
+            PhTree<long[]> ind = create(DIM, DEPTH);
             for (int i = 0; i < N; i++) {
                 long[] v = new long[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextLong() & mask;
                 }
-                assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+                assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
             }
 
             //check empty result
@@ -195,13 +205,13 @@ public class TestHighDimensions {
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
             //System.out.println("d="+ DIM);
-            PhTreeNV ind = create(DIM, DEPTH);
+            PhTree<long[]> ind = create(DIM, DEPTH);
             for (int i = 0; i < N; i++) {
                 long[] v = new long[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextLong();
                 }
-                assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+                assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
             }
 
             //check empty result

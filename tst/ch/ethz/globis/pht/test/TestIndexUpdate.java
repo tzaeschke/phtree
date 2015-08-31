@@ -7,6 +7,8 @@
 package ch.ethz.globis.pht.test;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
@@ -15,31 +17,31 @@ import java.util.Random;
 import org.junit.Test;
 import org.zoodb.index.critbit.BitTools;
 
-import ch.ethz.globis.pht.nv.PhTreeNV;
+import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.test.util.TestSuper;
 import ch.ethz.globis.pht.test.util.TestUtil;
 
 public class TestIndexUpdate extends TestSuper {
 
-	private PhTreeNV create(int dim, int depth) {
-		return TestUtil.newTreeNV(dim, depth);
+	private PhTree<long[]> create(int dim, int depth) {
+		return TestUtil.newTree(dim, depth);
 	}
 	
 	@Test
 	public void testSmokeTest() {
-		PhTreeNV t = create(3, 64);
+		PhTree<long[]> t = create(3, 64);
 		long[] p1 = new long[]{2,3,4};
 		long[] p2 = new long[]{5,6,7};
-		assertFalse(t.update(p1, p2));
+		assertNull(t.update(p1, p2));
 		assertFalse(t.contains(p1));
 		assertFalse(t.contains(p2));
 		
-		t.insert(p1);
-		assertTrue(t.update(p1, p2));
+		t.put(p1, p1);
+		assertNotNull(t.update(p1, p2));
 		assertFalse(t.contains(p1));
 		assertTrue(t.contains(p2));
 		
-		assertFalse(t.update(p1, p2));
+		assertNull(t.update(p1, p2));
 		assertFalse(t.contains(p1));
 		assertTrue(t.contains(p2));
 	}
@@ -59,10 +61,10 @@ public class TestIndexUpdate extends TestSuper {
 			}
 		}
 		
-		PhTreeNV tree = create(K, 64);
+		PhTree<long[]> tree = create(K, 64);
 		for (long[] r: data) {
 			//System.out.println("Inserting: " + r);
-			tree.insert(r);
+			tree.put(r, r);
 			assertTrue(tree.contains(r));
 		}
 		
@@ -75,7 +77,7 @@ public class TestIndexUpdate extends TestSuper {
 				long[] rNew = r.clone();
 				Arrays.setAll(rNew, x -> BitTools.toSortableLong(BitTools.toDouble(x)+delta));
 				assertTrue(tree.contains(r));
-				assertTrue(tree.update(r, rNew));
+				assertNotNull(tree.update(r, rNew));
 				data[i] = rNew;
 				assertFalse(tree.contains(r));
 				assertTrue(tree.contains(rNew));
@@ -83,7 +85,7 @@ public class TestIndexUpdate extends TestSuper {
 		}
 		
 		for (long[] r: data) {
-			tree.delete(r);
+			tree.remove(r);
 			assertFalse(tree.contains(r));
 		}
 	}
@@ -103,10 +105,10 @@ public class TestIndexUpdate extends TestSuper {
 			}
 		}
 		
-		PhTreeNV tree = create(K, 64);
+		PhTree<long[]> tree = create(K, 64);
 		for (long[] r: data) {
 			//System.out.println("Inserting: " + r);
-			tree.insert(r);
+			tree.put(r, r);
 			assertTrue(tree.contains(r));
 		}
 		
@@ -119,7 +121,7 @@ public class TestIndexUpdate extends TestSuper {
 				long[] rNew = r.clone();
 				Arrays.setAll(rNew, x -> BitTools.toSortableLong(BitTools.toDouble(x)+delta));
 				assertTrue(tree.contains(r));
-				assertTrue(tree.update(r, rNew));
+				assertNotNull(tree.update(r, rNew));
 				data[i] = rNew;
 				assertFalse(tree.contains(r));
 				assertTrue(tree.contains(rNew));
@@ -127,7 +129,7 @@ public class TestIndexUpdate extends TestSuper {
 		}
 		
 		for (long[] r: data) {
-			tree.delete(r);
+			tree.remove(r);
 			assertFalse(tree.contains(r));
 		}
 	}
@@ -150,10 +152,10 @@ public class TestIndexUpdate extends TestSuper {
 			}
 		}
 		
-		PhTreeNV tree = create(K, 64);
+		PhTree<long[]> tree = create(K, 64);
 		for (long[] r: data) {
 			//System.out.println("Inserting: " + r);
-			tree.insert(r);
+			tree.put(r, r);
 			assertTrue(tree.contains(r));
 		}
 		
@@ -167,7 +169,7 @@ public class TestIndexUpdate extends TestSuper {
 				long[] rNew = new long[K];
 				Arrays.setAll(rNew, x -> (r[x] + (long)(delta)));
 				assertTrue("r="+ repeat + "  i=" + i, tree.contains(r));
-				assertTrue(tree.update(r, rNew));
+				assertNotNull(tree.update(r, rNew));
 				data[i] = rNew;
 				assertFalse("r="+ repeat + "  i=" + i,tree.contains(r));
 				assertTrue(tree.contains(rNew));
@@ -175,7 +177,7 @@ public class TestIndexUpdate extends TestSuper {
 		}
 		
 		for (long[] r: data) {
-			tree.delete(r);
+			tree.remove(r);
 			assertFalse(tree.contains(r));
 		}
 	}
@@ -196,10 +198,10 @@ public class TestIndexUpdate extends TestSuper {
 			}
 		}
 		
-		PhTreeNV tree = create(K, 64);
+		PhTree<long[]> tree = create(K, 64);
 		for (long[] r: data) {
 			//System.out.println("Inserting: " + r);
-			tree.insert(r);
+			tree.put(r, r);
 			assertTrue(tree.contains(r));
 		}
 		
@@ -211,7 +213,7 @@ public class TestIndexUpdate extends TestSuper {
 				long lDelta = (long) (delta*MUL);
 				long[] rNew = new long[K];
 				Arrays.setAll(rNew, x -> r[x] + lDelta);
-				assertTrue(tree.update(r, rNew));
+				assertNotNull(tree.update(r, rNew));
 				data[i] = rNew;
 				if (lDelta > 0) {
 					assertFalse("r="+ repeat + "  i=" + i, tree.contains(r));
@@ -221,7 +223,7 @@ public class TestIndexUpdate extends TestSuper {
 		}
 		
 		for (long[] r: data) {
-			tree.delete(r);
+			tree.remove(r);
 			assertFalse(tree.contains(r));
 		}
 	}

@@ -6,11 +6,7 @@
  */
 package ch.ethz.globis.pht.test;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -18,34 +14,34 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.nv.PhTreeNV;
+import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.test.util.TestSuper;
 import ch.ethz.globis.pht.test.util.TestUtil;
 import ch.ethz.globis.pht.util.Bits;
 
 public class TestIndexDeletion extends TestSuper {
 
-	private PhTreeNV create(int dim, int depth) {
-		return TestUtil.newTreeNV(dim, depth);
+	private PhTree<long[]> create(int dim, int depth) {
+		return TestUtil.newTree(dim, depth);
 	}
 	
 	@Test
 	public void testDeleteSingle() {
-		PhTreeNV ind = create(3, 32);
+		PhTree<long[]> ind = create(3, 32);
 		Random R = new Random(0);
 		for (int i = 0; i < 100000; i++) {
 			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
-			ind.insert(v);
+			ind.put(v, v);
 			assertTrue(ind.contains(v));
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
 	
 	@Test
 	public void testDeleteMulti2D() {
-		PhTreeNV ind = create(2, 16);
+		PhTree<long[]> ind = create(2, 16);
 		Random R = new Random(1);
 		int N = 200000;
 		long[][] vals = new long[N][];
@@ -53,7 +49,7 @@ public class TestIndexDeletion extends TestSuper {
 			long[] v = new long[]{R.nextInt(), R.nextInt()};
 			//System.out.println("i=" + i + "  vA.add(new long[]{" + v[0] + ", " + v[1] + "});");
 			vals[i] = v;
-			if (ind.insert(v)) {
+			if (ind.put(v, v) != null) {
 				//catch duplicates, maybe in future we should just skip them
 				i--;
 				continue;
@@ -63,17 +59,17 @@ public class TestIndexDeletion extends TestSuper {
 		for (int i = 0; i < N; i++) {
 			long[] v = vals[i];
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
 	
 	@Test
 	public void testDeleteMulti3D() {
-		PhTreeNV ind = create(3, 32);
+		PhTree<long[]> ind = create(3, 32);
 		Random R = new Random(0);
 		int N = 200000;
 		long[][] vals = new long[N][];
@@ -81,7 +77,7 @@ public class TestIndexDeletion extends TestSuper {
 			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
 			//System.out.println("vA.add(new long[]{" + v[0] + ", " + v[1] + "});");
 			vals[i] = v;
-			if (ind.insert(v)) {
+			if (ind.put(v, v) != null) {
 				//catch duplicates, maybe in future we should just skip them
 				i--;
 				continue;
@@ -91,10 +87,10 @@ public class TestIndexDeletion extends TestSuper {
 		for (int i = 0; i < N; i++) {
 			long[] v = vals[i];
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
@@ -109,7 +105,7 @@ public class TestIndexDeletion extends TestSuper {
 	}
 	
 	private void checkSeed(int s) {
-		PhTreeNV ind = create(3, 32);
+		PhTree<long[]> ind = create(3, 32);
 		Random R = new Random(s);
 		int N = 100;
 		long[][] vals = new long[N][];
@@ -117,7 +113,7 @@ public class TestIndexDeletion extends TestSuper {
 			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
 			//System.out.println("vA.add(new long[]{" + v[0] + ", " + v[1] + "});");
 			vals[i] = v;
-			if (ind.insert(v)) {
+			if (ind.put(v, v) != null) {
 				//catch duplicates, maybe in future we should just skip them
 				fail();
 			}
@@ -126,35 +122,35 @@ public class TestIndexDeletion extends TestSuper {
 		for (int i = 0; i < N; i++) {
 			long[] v = vals[i];
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
-			assertTrue("s=" + s + " i="+ i, ind.delete(v));
+			assertNotNull("s=" + s + " i="+ i, ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
 	
 	@Test
 	public void testBug1() {
-		PhTreeNV ind = create(2, 32);
+		PhTree<long[]> ind = create(2, 32);
 		ArrayList<long[]> vA = new ArrayList<long[]>();
 		vA.add(new long[]{1157023572, 396984392});//, 349120689});
 		vA.add(new long[]{1291704192, 862408176});//, 837789372});
 		
 		for (long[] v: vA) {
 			//System.out.println("v: " + Bits.toBinary(v, 32));
-			assertFalse(ind.insert(v));
+			assertNull(ind.put(v, v));
 		}
 
 		for (long[] v: vA) {
 			//ind.printTree();
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 		}
 	}
 
 	@Test
 	public void testBug2() {
-		PhTreeNV ind = create(2, 32);
+		PhTree<long[]> ind = create(2, 32);
 		Random R = new Random(1);
 		int N = 20;
 		long[][] vals = new long[N][];
@@ -162,47 +158,47 @@ public class TestIndexDeletion extends TestSuper {
 			long[] v = new long[]{R.nextInt(), R.nextInt()};
 			//System.out.println("v=" + Arrays.toString(v));
 			vals[i] = v;
-			ind.insert(v);
+			ind.put(v, v);
 		}
 		
 		for (int i = 0; i < N; i++) {
 			long[] v = vals[i];
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
 			//ind.printTree();
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
 	
 	@Test
 	public void testBug3() {
-		PhTreeNV ind = create(2, 32);
+		PhTree<long[]> ind = create(2, 32);
 		Random R = new Random(3);
 		int N = 25;
 		long[][] vals = new long[N][];
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[]{R.nextInt(), R.nextInt()};
 			vals[i] = v;
-			ind.insert(v);
+			ind.put(v, v);
 		}
 		
 		for (int i = 0; i < N; i++) {
 			long[] v = vals[i];
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
 	
 	@Test
 	public void testBug3b() {
-		PhTreeNV ind = create(2, 32);
+		PhTree<long[]> ind = create(2, 32);
 		ArrayList<long[]> vA = new ArrayList<long[]>();
 		
 		vA.add(new long[]{1904347123, 1743248268});
@@ -213,7 +209,7 @@ public class TestIndexDeletion extends TestSuper {
 			long[] v = vA.get(i);
 			//System.out.println("vA.add(new long[]{" + v[0] + ", " + v[1] + "});");
 			//System.out.println("adding: " + Bits.toBinary(v, 32));
-			ind.insert(v);
+			ind.put(v, v);
 		}
 
 		for (int i = 0; i < vA.size(); i++) {
@@ -226,17 +222,17 @@ public class TestIndexDeletion extends TestSuper {
 			long[] v = vA.get(i);
 			//ind.printTree();
 			//System.out.println("deleting i=" + i + "  " + Bits.toBinary(v, 32));
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
 	
 	@Test
 	public void testBug4() {
-		PhTreeNV ind = create(2, 32);
+		PhTree<long[]> ind = create(2, 32);
 		Random R = new Random(0);
 		int N = 10;
 		long[][] vals = new long[N][];
@@ -245,23 +241,23 @@ public class TestIndexDeletion extends TestSuper {
 			//System.out.println("vA.add(new long[]{" + v[0] + ", " + v[1] + "});");
 			//System.out.println("v=" + Arrays.toString(v));
 			vals[i] = v;
-			ind.insert(v);
+			ind.put(v, v);
 		}
 		
 		for (int i = 0; i < N; i++) {
 			long[] v = vals[i];
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
 	
 	@Test
 	public void testBug4b() {
-		PhTreeNV ind = create(2, 32);
+		PhTree<long[]> ind = create(2, 32);
 		ArrayList<long[]> vA = new ArrayList<long[]>();
 
 		vA.add(new long[]{-1557280266, 1327362106});
@@ -271,24 +267,24 @@ public class TestIndexDeletion extends TestSuper {
 		for (int i = 0; i < vA.size(); i++) {
 			long[] v = vA.get(i);
 			//System.out.println("vA.add(new long[]{" + v[0] + ", " + v[1] + "});");
-			ind.insert(v);
+			ind.put(v, v);
 		}
 
 		for (int i = 0; i < vA.size(); i++) {
 			long[] v = vA.get(i);
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
 			//ind.printTree();
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
 	
 	@Test
 	public void testBug5() {
-		PhTreeNV ind = create(2, 32);
+		PhTree<long[]> ind = create(2, 32);
 		ArrayList<long[]> vA = new ArrayList<long[]>();
 
 		vA.add(new long[]{-845879838, -187653156});
@@ -299,17 +295,17 @@ public class TestIndexDeletion extends TestSuper {
 		for (int i = 0; i < vA.size(); i++) {
 			long[] v = vA.get(i);
 			//System.out.println("vA.add(new long[]{" + v[0] + ", " + v[1] + "});");
-			ind.insert(v);
+			ind.put(v, v);
 		}
 
 		for (int i = 0; i < vA.size(); i++) {
 			long[] v = vA.get(i);
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
 			//ind.printTree();
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
@@ -317,7 +313,7 @@ public class TestIndexDeletion extends TestSuper {
 	@Test
 	public void testBug6() {
 		//seed=2264
-		PhTreeNV ind = create(2, 32);
+		PhTree<long[]> ind = create(2, 32);
 		ArrayList<long[]> vA = new ArrayList<long[]>();
 
 		vA.add(new long[]{-571503246, -911425707});
@@ -329,7 +325,7 @@ public class TestIndexDeletion extends TestSuper {
 		for (int i = 0; i < vA.size(); i++) {
 			long[] v = vA.get(i);
 			//System.out.println("vA.add(new long[]{" + v[0] + ", " + v[1] + "});");
-			assertFalse(ind.insert(v));
+			assertNull(ind.put(v, v));
 		}
 
 		for (int i = 0; i < vA.size(); i++) {
@@ -337,10 +333,10 @@ public class TestIndexDeletion extends TestSuper {
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
 			//ind.printTree();
 			//System.out.println();
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 			//try again.
-			assertFalse(ind.delete(v));
+			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
 		}
 	}
@@ -355,20 +351,20 @@ public class TestIndexDeletion extends TestSuper {
 		for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
 			//System.out.println("d="+ DIM);
 			long[][] vals = new long[N][];
-			PhTreeNV ind = create(DIM, DEPTH);
+			PhTree<long[]> ind = create(DIM, DEPTH);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int j = 0; j < DIM; j++) {
 					v[j] = R.nextLong();
 				}
 				vals[i] = v;
-				assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+				assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
 			}
 
 			//delete all
 			for (long[] v: vals) {
 				assertTrue("DIM=" + DIM + " v=" + Bits.toBinary(v, DEPTH), ind.contains(v));
-				assertTrue(ind.delete(v));
+				assertNotNull(ind.remove(v));
 			}
 			
 			//check empty result
@@ -417,10 +413,10 @@ public class TestIndexDeletion extends TestSuper {
 					-4514641440177765589L, 3721608777574387356L, -1662765351114890487L, 
 					3457037762958540780L, -1786853829876224128L,  }};
 		final int N = vals.length;
-		PhTreeNV ind = create(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (int i = 0; i < N; i++) {
 			long[] v = vals[i];
-			assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+			assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
 		}
 
 		Iterator<long[]> it3 = ind.queryExtent();
@@ -430,7 +426,7 @@ public class TestIndexDeletion extends TestSuper {
 		//delete all
 		for (long[] v: vals) {
 			assertTrue("DIM=" + DIM + " v=" + Bits.toBinary(v, DEPTH), ind.contains(v));
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 		}
 
 		//check empty result
@@ -462,15 +458,15 @@ public class TestIndexDeletion extends TestSuper {
 				{4629874845854037575L, 4633240064692623119L},
 				{4629875863526815872L, 4633239255452065076L}
 		};
-		PhTreeNV ind = create(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (long[] v: vals) {
-			assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+			assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
 		}
 
 		//delete all
 		for (long[] v: vals) {
 			assertTrue("DIM=" + DIM + " v=" + Bits.toBinary(v, DEPTH), ind.contains(v));
-			assertTrue(ind.delete(v));
+			assertNotNull(ind.remove(v));
 		}
 
 		//check empty result
@@ -501,31 +497,31 @@ public class TestIndexDeletion extends TestSuper {
 				{ 4629875721663427610L, 4633238021184292200L },
 				{ 4629875863526815872L, 4633239255452065076L }, 
 		};
-		PhTreeNV ind = PhTreeNV.create(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (long[] v : vals) {
-			assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+			assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
 		}
 
 
 		// update 1
-		ind.delete(vals[0]);
+		ind.remove(vals[0]);
 		long[] value1 = { 4629871921680873272L, 4633238188380428366L };
-		ind.insert(value1);
+		ind.put(value1, value1);
 
 		//update2
-		ind.delete(vals[1]);	
+		ind.remove(vals[1]);	
 		long[] value2 = { 4629872369648298706L, 4633237661037059499L };
-		ind.insert(value2);
+		ind.put(value2, value2);
 
 		//update 3
-		ind.delete(vals[2]);	
+		ind.remove(vals[2]);	
 		long[] value3 = { 4629872475131046230L, 4633239827761061474L };
-		ind.insert(value3);
+		ind.put(value3, value3);
 
 
 		//delete error
 		assertTrue(ind.contains(value2));
-		assertTrue(ind.delete(vals[3]));
+		assertNotNull(ind.remove(vals[3]));
 		assertTrue(ind.contains(value2));
 	}
 
@@ -547,16 +543,16 @@ public class TestIndexDeletion extends TestSuper {
 				{ 4629875721663427610L, 4633238021184292200L },
 				{ 4629875863526815872L, 4633239255452065076L }, 
 		};
-		PhTreeNV ind = PhTreeNV.create(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (long[] v : vals) {
-			assertFalse(Bits.toBinary(v, DEPTH), ind.insert(v));
+			assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
 		}
 
 
 		// update 1
-		assertTrue(ind.delete(vals[0]));
+		assertNotNull(ind.remove(vals[0]));
 		long[] value1 = { 4629871921680873272L, 4633238188380428366L };
-		assertFalse(ind.insert(value1));
+		assertNull(ind.put(value1, value1));
 
 		//update2
 //		System.out.println("removing " + Arrays.toString(vals[1]));
@@ -567,8 +563,8 @@ public class TestIndexDeletion extends TestSuper {
 //		long[] value2 = vals[1];
 
 		//update 3
-		assertTrue(ind.delete(vals[2]));
-		assertFalse(ind.insert(vals[2]));
+		assertNotNull(ind.remove(vals[2]));
+		assertNull(ind.put(vals[2], vals[2]));
 		assertTrue(ind.contains(value1));
 		assertTrue(ind.contains(vals[1]));
 		assertTrue(ind.contains(vals[2]));
@@ -581,7 +577,7 @@ public class TestIndexDeletion extends TestSuper {
 
 		//delete error
 		assertTrue(ind.contains(vals[1]));
-		assertTrue(ind.delete(vals[3]));
+		assertNotNull(ind.remove(vals[3]));
 		assertTrue(ind.contains(vals[1]));
 	}
 }
