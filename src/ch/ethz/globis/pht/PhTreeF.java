@@ -7,9 +7,11 @@
 package ch.ethz.globis.pht;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import ch.ethz.globis.pht.PhTree.PhIterator;
+import ch.ethz.globis.pht.PhTree.PhQuery;
 import ch.ethz.globis.pht.pre.EmptyPP;
 import ch.ethz.globis.pht.pre.PreProcessorPoint;
 import ch.ethz.globis.pht.util.PhIteratorBase;
@@ -99,12 +101,12 @@ public class PhTreeF<T> {
 	 * @param max
 	 * @return Result iterator.
 	 */
-	public PhIteratorF<T> query(double[] min, double[] max) {
+	public PhQueryF<T> query(double[] min, double[] max) {
 		long[] lMin = new long[min.length];
 		long[] lMax = new long[max.length];
 		pre.pre(min, lMin);
 		pre.pre(max, lMax);
-		return new PhIteratorF<>(pht.query(lMin, lMax), pht.getDIM(), pre);
+		return new PhQueryF<>(pht.query(lMin, lMax), pht.getDIM(), pre);
 	}
 
 //	/**
@@ -144,7 +146,7 @@ public class PhTreeF<T> {
 	
 	public static class PhIteratorF<T> implements PhIteratorBase<double[], T, PhEntryF<T>> {
 		private final PhIterator<T> iter;
-		private final PreProcessorPoint pre;
+		protected final PreProcessorPoint pre;
 		private final int DIM;
 		
 		private PhIteratorF(PhIterator<T> iter, int DIM, PreProcessorPoint pre) {
@@ -163,6 +165,7 @@ public class PhTreeF<T> {
 			return nextValue();
 		}
 
+		@Override
 		public PhEntryF<T> nextEntry() {
 			double[] d = new double[DIM];
 			PhEntry<T> e = iter.nextEntry();
@@ -170,12 +173,14 @@ public class PhTreeF<T> {
 			return new PhEntryF<T>(d, e.getValue());
 		}
 		
+		@Override
 		public double[] nextKey() {
 			double[] d = new double[DIM];
 			pre.post(iter.nextKey(), d);
 			return d;
 		}
 		
+		@Override
 		public T nextValue() {
 			return iter.nextValue();
 		}
@@ -183,6 +188,30 @@ public class PhTreeF<T> {
 		@Override
 		public void remove() {
 			iter.remove();
+		}
+	}
+
+	public static class PhQueryF<T> extends PhIteratorF<T> {
+		private final long[] lMin, lMax;
+		private final PhQuery<T> q;
+		private final double[] MIN;
+		private final double[] MAX;
+		
+		private PhQueryF(PhQuery<T> iter, int DIM, PreProcessorPoint pre) {
+			super(iter, DIM, pre);
+			q = iter;
+			MIN = new double[DIM];
+			Arrays.fill(MIN, Double.NEGATIVE_INFINITY);
+			MAX = new double[DIM];
+			Arrays.fill(MAX, Double.POSITIVE_INFINITY);
+			lMin = new long[DIM];
+			lMax = new long[DIM];
+		}
+
+		public void reset(double[] lower, double[] upper) {
+			pre.pre(lower, lMin);
+			pre.pre(upper, lMax);
+			q.reset(lMin, lMax);
 		}
 	}
 

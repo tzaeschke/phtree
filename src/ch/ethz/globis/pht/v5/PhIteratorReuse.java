@@ -9,10 +9,10 @@ package ch.ethz.globis.pht.v5;
 import java.util.NoSuchElementException;
 
 import ch.ethz.globis.pht.PhEntry;
-import ch.ethz.globis.pht.PhTree.PhIterator;
+import ch.ethz.globis.pht.PhTree.PhQuery;
 import ch.ethz.globis.pht.v5.PhTree5.Node;
 
-public final class PhIteratorReuse<T> implements PhIterator<T> {
+public final class PhIteratorReuse<T> implements PhQuery<T> {
 
 	public class PhIteratorStack {
 		private final NodeIteratorReuse<T>[] stack;
@@ -163,6 +163,16 @@ public final class PhIteratorReuse<T> implements PhIterator<T> {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void reset(long[] min, long[] max) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public PhEntry<T> nextEntryReuse() {
+		return nextEntry();
 	}
 	
 }

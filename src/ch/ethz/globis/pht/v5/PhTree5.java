@@ -3470,13 +3470,13 @@ public class PhTree5<T> implements PhTree<T> {
 
 
 	/**
-	 * Performes a range query. The parameters are the min and max values.
+	 * Performs a range query. The parameters are the min and max values.
 	 * @param min
 	 * @param max
 	 * @return Result iterator.
 	 */
 	@Override
-	public PhIterator<T> query(long[] min, long[] max) {
+	public PhQuery<T> query(long[] min, long[] max) {
 		if (min.length != DIM || max.length != DIM) {
 			throw new IllegalArgumentException("Invalid number of arguments: " + min.length +  
 					" / " + max.length + "  DIM=" + DIM);
@@ -3487,7 +3487,7 @@ public class PhTree5<T> implements PhTree<T> {
 	}
 
 	/**
-	 * Performes a range query. The parameters are the min and max values.
+	 * Performs a range query. The parameters are the min and max values.
 	 * @param min
 	 * @param max
 	 * @return Result list.
@@ -3499,7 +3499,7 @@ public class PhTree5<T> implements PhTree<T> {
 	}
 	
 	/**
-	 * Performes a range query. The parameters are the min and max values.
+	 * Performs a range query. The parameters are the min and max values.
 	 * @param min
 	 * @param max
 	 * @return Result list.

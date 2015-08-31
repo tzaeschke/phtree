@@ -963,6 +963,38 @@ class Node<T> {
 	/**
 	 * Get post-fix.
 	 * @param offsPostKey
+	 * @param key
+	 * @param range After the method call, this contains the postfix if the postfix matches the
+	 * range. Otherwise it contains only part of the postfix.
+	 * @return NodeEntry if the postfix matches the range, otherwise null.
+	 */
+	boolean getPostPOB(int offsPostKey, long hcPos, PhEntry<T> e, 
+			long[] rangeMin, long[] rangeMax) {
+		if (DEBUG && ind != null) {
+			throw new IllegalStateException();
+		}
+
+		long[] ia = ba;
+		int offs = offsPostKey;
+		long[] key = e.getKey();
+		final long mask = (~0L)<<postLen;
+		for (int i = 0; i < key.length; i++) {
+			key[i] &= mask;
+			key[i] |= Bits.readArray(ia, offs, postLen);
+			if (key[i] < rangeMin[i] || key[i] > rangeMax[i]) {
+				return false;
+			}
+			offs += postLen;
+		}
+		int valPos = offs2ValPos(offsPostKey, hcPos, key.length);
+		e.setValue(values[valPos]);
+		return true;
+	}
+
+
+	/**
+	 * Get post-fix.
+	 * @param offsPostKey
 	 * @param hcPos
 	 * @param key
 	 * @return NodeEntry if the postfix matches the range, otherwise null.

@@ -1,3 +1,19 @@
+
+2015-08-31
+==========
+- (TZ) Proper NoGC iterator for avoiding any object creation (+bug fix)
+- (TZ) Changed iterator recursion to loops
+- (TZ) Removed some old iterators
+
+2015-08-03
+==========
+- (TZ) PhQuery interface added. This allows resetting & reusing of query iterators.
+
+2015-07-30
+==========
+- (TZ) Smaller NodeEntries + Avoid NodeEntry creation in some situations
+- (TZ) Added experimental iterator that does not create new long[]...
+
 2015-07-29
 ==========
 - Added clear() method

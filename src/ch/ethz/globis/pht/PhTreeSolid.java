@@ -9,6 +9,8 @@ package ch.ethz.globis.pht;
 import java.util.Arrays;
 
 import ch.ethz.globis.pht.PhTree.PhIterator;
+import ch.ethz.globis.pht.PhTree.PhQuery;
+import ch.ethz.globis.pht.nv.PhTreeNV;
 import ch.ethz.globis.pht.pre.EmptyPPR;
 import ch.ethz.globis.pht.pre.PreProcessorRange;
 import ch.ethz.globis.pht.util.PhIteratorBase;
@@ -132,14 +134,14 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	/**
 	 * @see #queryInclude(long[], long[])
 	 */
-	public PhIteratorS<T> queryInclude(PhEntryS<T> e) {
+	public PhQueryS<T> queryInclude(PhEntryS<T> e) {
 		return queryInclude(e.lower(), e.upper());
 	}
 
 	/**
 	 * @see #queryIntersect(long[], long[])
 	 */
-	public PhIteratorS<T> queryIntersect(PhEntryS<T> e) {
+	public PhQueryS<T> queryIntersect(PhEntryS<T> e) {
 		return queryIntersect(e.lower(), e.upper());
 	}
 
@@ -149,12 +151,12 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	 * @param upper 'upper right' corner of query rectangle
 	 * @return Iterator over all matching elements.
 	 */
-	public PhIteratorS<T> queryInclude(long[] lower, long[] upper) {
+	public PhQueryS<T> queryInclude(long[] lower, long[] upper) {
 		long[] lUpp = new long[lower.length << 1];
 		long[] lLow = new long[lower.length << 1];
 		pre.pre(lower, lower, lLow);
 		pre.pre(upper, upper, lUpp);
-		return new PhIteratorS<T>(pht.query(lLow, lUpp), DIM, pre);
+		return new PhQueryS<T>(pht.query(lLow, lUpp), DIM, pre, false);
 	}
 
 	/**
@@ -163,18 +165,18 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	 * @param upper 'upper right' corner of query rectangle
 	 * @return Iterator over all matching elements.
 	 */
-	public PhIteratorS<T> queryIntersect(long[] lower, long[] upper) {
+	public PhQueryS<T> queryIntersect(long[] lower, long[] upper) {
 		long[] lUpp = new long[lower.length << 1];
 		long[] lLow = new long[lower.length << 1];
 		pre.pre(MIN, lower, lLow);
 		pre.pre(upper, MAX, lUpp);
-		return new PhIteratorS<T>(pht.query(lLow, lUpp), DIM, pre);
+		return new PhQueryS<T>(pht.query(lLow, lUpp), DIM, pre, true);
 	}
 
 	public static class PhIteratorS<T> implements PhIteratorBase<long[], T, PhEntryS<T>> {
 		private final PhIterator<T> iter;
 		private final int DIM;
-		private final PreProcessorRange pre;
+		protected final PreProcessorRange pre;
 		private PhIteratorS(PhIterator<T> iter, int DIM, PreProcessorRange pre) {
 			this.iter = iter;
 			this.DIM = DIM;
@@ -217,6 +219,38 @@ public class PhTreeSolid<T> implements Iterable<T> {
 		@Override
 		public void remove() {
 			iter.remove();
+		}
+	}
+
+	public static class PhQueryS<T> extends PhIteratorS<T> {
+		private final long[] lLow, lUpp;
+		private final PhQuery<T> q;
+		private final long[] MIN;
+		private final long[] MAX;
+		private final boolean intersect;
+		
+		private PhQueryS(PhQuery<T> iter, int DIM, PreProcessorRange pre, boolean intersect) {
+			super(iter, DIM, pre);
+			q = iter;
+			MIN = new long[DIM];
+			Arrays.fill(MIN, Long.MIN_VALUE);
+			MAX = new long[DIM];
+			Arrays.fill(MAX, Long.MAX_VALUE);
+			this.intersect = intersect;
+			lLow = new long[DIM*2];
+			lUpp = new long[DIM*2];
+		}
+
+		public void reset(long[] lower, long[] upper) {
+			if (intersect) {
+				pre.pre(MIN, lower, lLow);
+				pre.pre(upper, MAX, lUpp);
+			} else {
+				//include
+				pre.pre(lower, lower, lLow);
+				pre.pre(upper, upper, lUpp);
+			}
+			q.reset(lLow, lUpp);
 		}
 	}
 

@@ -76,4 +76,8 @@ public class PhEntry<T> {
         result = 31 * result + (value != null ? value.hashCode() : 0);
         return result;
     }
+
+	public void setValue(T value) {
+		this.value = value;
+	}
 }
