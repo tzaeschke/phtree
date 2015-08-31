@@ -5,8 +5,8 @@ By default it stores k-dimensional keys (points) consisting of k 64bit-integers.
 to efficiently store floating point values and/or ranged objects such as k-dimensional boxes.
 
 The PH-tree was developed at ETH Zurich and first published in:
-"The PH-Tree: A Space-Efficient Storage Structure and Multi-Dimensional Index", 
-Tilmann Zaeschke, Christoph Zimmerli and Moira C. Norrie, 
+"The PH-Tree: A Space-Efficient Storage Structure and Multi-Dimensional Index" [PDF](http://globis.ethz.ch/?pubdownload=699), 
+Tilmann Zäschke, Christoph Zimmerli and Moira C. Norrie, 
 Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
 
 Contact:
@@ -132,4 +132,4 @@ Switzerland.
 The critbit tree (namespace ```org.zoodb```) is copyright 2009-2015 by
 Tilmann Zäschke,
 zoodb@gmx.de.
-The critbit tree is also separately available here: [https://github.com/tzaeschke/critbit]
+The critbit tree is also separately available here: https://github.com/tzaeschke/critbit
