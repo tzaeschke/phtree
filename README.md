@@ -22,15 +22,18 @@ Contact:
 - Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more
 - Scalability with dimension: Updates and 'contains()' queries scale very well to the current maximum of 62 dimensions. Range queries and other operations are best used with upto 10-15 dimensions only.
 - Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
-- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is no a concern (see paper). The advanatages are that any modification operation will never modify more than one nod in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
+- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (see paper). The advanatages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
 
-### Disadvanatages
+### Disadvantages
 
 - The current implementation will not work with mor then 62 dimensions.
 - Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more
 - Performance/dimensionality: performance of range queries degrades when using data with more than 10-15 dimensions. Updates and `contains()` work fine for higher dimensions
 - Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better that traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
-- Storage: 
+- Storage: The tree does not store references to the provided keys. That means, when extracting keys (for exampl via queries), new objects are created to return the keys. There are two solutions to that: 
+  - First, it is possible to store the keys as 'values' in the tree via `put(key, key)` for example. Then, when iterating over the result, one should use this key stored in the value rather than the primary key. This allows the JVM to more easily collect the primary keys. There is also an experimental iterator (not public yet) that reuses primary key and thus avoid creation of any temporary objects.
+  - Second, if the extracted keys are only used temporarily or if they get copied, then this can again simplify garbage collection, especially in combination with the experimental iterator mentioned above.
+
 
 ### Generally
 
@@ -119,14 +122,14 @@ multiplier.
   
 # License
 
-The PH-tree (namespace ```ch.ethz```) is copyright 2013-2015 by 
+The PH-tree (namespace ```ch.ethz```) is copyright 2011-2015 by 
 ETH Zurich,
 Institute for Information Systems,
 Universitätsstrasse 6,
 8092 Zurich,
 Switzerland.
 
-The critbit tree (namespace ```org.zoodb```) is copyright 2013-2015 by
+The critbit tree (namespace ```org.zoodb```) is copyright 2009-2015 by
 Tilmann Zäschke,
 zoodb@gmx.de.
 The critbit tree is also separately available here: [https://github.com/tzaeschke/critbit]
