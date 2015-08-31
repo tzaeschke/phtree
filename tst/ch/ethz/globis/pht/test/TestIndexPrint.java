@@ -14,14 +14,14 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.nv.PhTreeNV;
+import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.test.util.TestUtil;
 import ch.ethz.globis.pht.util.Bits;
 
 public class TestIndexPrint {
 
-	private PhTreeNV create(int dim, int depth) {
-		return TestUtil.newTreeNV(dim, depth);
+	private PhTree<long[]> create(int dim, int depth) {
+		return TestUtil.newTree(dim, depth);
 	}
 	
 	@Test
@@ -29,10 +29,10 @@ public class TestIndexPrint {
 		final int N = 1000;
 		final Random R = new Random(0);
 		
-		PhTreeNV ind = create(3, 32);
+		PhTree<long[]> ind = create(3, 32);
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
-			ind.insert(v);
+			ind.put(v, v);
 		}
 
 		ArrayList<String> keys = new ArrayList<>();
@@ -53,10 +53,10 @@ public class TestIndexPrint {
 		final int N = 5;
 		final Random R = new Random(4);
 		
-		PhTreeNV ind = create(3, 32);
+		PhTree<long[]> ind = create(3, 32);
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
-			ind.insert(v);
+			ind.put(v, v);
 		}
 
 		ArrayList<String> keys = new ArrayList<>();
