@@ -1,7 +1,7 @@
 # PH-tree
 
 The PH-tree is a multi-dimensional indexing and storage structure.
-By default it stores k-dimensional keys consisting of k integers. However, it can also be used
+By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used
 to efficiently store floating point values and/or ranged objects such as k-dimensional boxes.
 
 The PH-tree was developed at ETH Zurich and first published in:
