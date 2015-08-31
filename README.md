@@ -99,3 +99,16 @@ wide should the dimension spread over the tree, i.e. the dimension should be giv
 multiplier.
 
   
+# License
+
+The PH-tree (namespace ```ch.ethz```) is copyright 2013-2015 by 
+ETH Zurich,
+Institute for Information Systems,
+Universitätsstrasse 6,
+8092 Zurich,
+Switzerland.
+
+The critbit tree (namespace ```org.zoodb```) is copyright 2013-2015 by
+Tilmann Zäschke,
+zoodb@gmx.de.
+The critbit tree is also separately available here: [https://github.com/tzaeschke/critbit]
