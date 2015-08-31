@@ -1,0 +1,131 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>ch.ethz.globis.pht</groupId>
+	<artifactId>phtree</artifactId>
+	<packaging>jar</packaging>
+	<version>0.2.1-SNAPSHOT</version>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+	<prerequisites>
+		<maven>3.0.3</maven>
+	</prerequisites>
+
+	<parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent>
+	<name>PH-Tree</name>
+	<url>http://www.globis.ethz.ch/people/ztilmann</url>
+	<licenses>
+		<license>
+			<name>GNU Lesser General Public License</name>
+			<url>http://www.gnu.org/licenses/lgpl.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<name>Tilmann Zäschke</name>
+			<id>tzaeschke</id>
+			<email>zaeschke@inf.ethz.ch</email>
+		</developer>
+	</developers>
+
+	<repositories>
+		<repository>
+			<id>sonatype-snapshots</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+			<releases>
+	            <!-- <updatePolicy>always</updatePolicy> -->
+				<enabled>false</enabled>
+			</releases>
+			<snapshots>
+	            <!-- <updatePolicy>always</updatePolicy> -->
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+		</dependency>
+
+<!-- 		<dependency>
+			<groupId>org.zoodb.index</groupId>
+			<artifactId>zoodb-critbit</artifactId>
+			<version>1.0.1-SNAPSHOT</version>
+		</dependency>
+ -->
+	</dependencies>
+ 
+	<build>
+		<sourceDirectory>src</sourceDirectory>
+		<testSourceDirectory>tst</testSourceDirectory>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.0</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<finalName>${project.groupId}-${project.artifactId}-${project.version}-all</finalName>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.15</version>
+				<configuration>
+					<printSummary>true</printSummary>
+					<skipTests>false</skipTests>
+					<includes>
+						<!-- include ALL tests -->
+						<include>**/*.java</include>
+					</includes>
+					<excludes>
+						<!-- exclude tests that currently fail -->
+					</excludes>
+  				</configuration>
+			</plugin>
+		</plugins>
+
+		<testResources>
+			<testResource>
+				<directory>${project.basedir}/tst</directory>
+				<excludes>
+			        <exclude>**/*.java</exclude>
+				</excludes>
+			</testResource>
+			<testResource>
+				<!-- Add the default dir when overwriting testResource: -->
+ 				<directory>${project.basedir}/src/test/resources</directory>
+ 			</testResource>
+    	</testResources>
+	</build>
+
+	<description>PH-Tree</description>
+</project>
+

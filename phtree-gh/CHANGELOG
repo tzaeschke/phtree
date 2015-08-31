@@ -1,0 +1,19 @@
+2015-07-29
+==========
+- Added clear() method
+- Fixed bug that prevented internal iterators from being reused (-> performance)
+- Fixed another bug that caused queryAll to skip some matching keys.
+       See TestIndexQueries.testBug64Neg_2() 
+- Fixed bug that caused queryAll to skip some matching keys. 
+
+2015-05-03
+==========
+- API change! Refactored the API for simplification and removal of old non-value API.
+  
+  
+2015-03-03
+==========
+- Significantly reduced object creation during insert/update/delete/query. This should reduce
+  GC problems.
+- New queryAll() function that returns a list of results instead of an iterator. This should
+  be faster especially for small expected result sets.
