@@ -3224,7 +3224,7 @@ public class PhTree3<T> implements PhTree<T> {
 	 * @return Result iterator.
 	 */
 	@Override
-	public PhIterator<T> query(long[] min, long[] max) {
+	public PhQuery<T> query(long[] min, long[] max) {
 		if (min.length != DIM || max.length != DIM) {
 			throw new IllegalArgumentException("Invalid number of arguments: " + min.length +  
 					" / " + max.length + "  DIM=" + DIM);

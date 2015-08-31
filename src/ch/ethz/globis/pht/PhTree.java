@@ -68,7 +68,7 @@ public interface PhTree<T> {
 	 * @param max
 	 * @return Result iterator.
 	 */
-	public abstract PhIterator<T> query(long[] min, long[] max);
+	public abstract PhQuery<T> query(long[] min, long[] max);
 
 	public abstract int getDIM();
 
@@ -137,6 +137,26 @@ public interface PhTree<T> {
     }
 
     public static interface PhIterator<T> extends PhIteratorBase<long[], T, PhEntry<T>> {}
+
+    public static interface PhQuery<T> extends PhIterator<T> {
+   	 
+ 		/**
+     	 * Reset the query with the new 'min' and 'max' boundaries.
+     	 * @param min
+     	 * @param max
+     	 */
+     	void reset(long[] min, long[] max);
+   	 
+    	/**
+    	 * Special 'next' method that avoids creating new objects internally by reusing Entry objects.
+    	 * Advantage: Should completely avoid any GC effort.
+    	 * Disadvantage: Returned PhEntries are not stable and are only valid until the
+    	 * next call to next(). After that they may change state. Modifying returned entries may
+    	 * invalidate the backing tree.
+    	 * @return The next entry
+    	 */
+     	PhEntry<T> nextEntryReuse();
+     }
 
     /**
      * Clear the tree.
