@@ -12,3 +12,7 @@
 hs_err_pid*
 /bin/
 /target/
+
+*.project
+*.prefs
+.classpath

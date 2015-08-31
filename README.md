@@ -1,4 +1,4 @@
-# PH-tree
+# PH-Tree
 
 The PH-tree is a multi-dimensional indexing and storage structure.
 By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used
@@ -13,7 +13,7 @@ Contact:
 {zaeschke,zimmerli,norrie)@inf.ethz.ch
 
 
-# Main properties
+# Main Properties
 
 ### Advantages
 
@@ -82,7 +82,7 @@ by 1,000,000 before casting the to (long) and adding them to the tree.
 For updating the keys of entries (aka moving objects index), consider using ```update()```. This function
 is about twice as fast for small displacements and at least as fast as a ```put()```/```remove()``` combo.
 
-### Choose a type of query
+### Choose a Type of Query
 
 - ```queryExtent()```: Fastest option when traversing (almost) all of the tree
 - ```query()```:       Fastest option for for average result size > 50 (depending on data)
@@ -98,7 +98,7 @@ disadvantage that the entries need to be created and create load on the GC. Howe
 provide easy access to the key, especially for SOLID keys.
 
 
-### Data preprocessing
+### Data Treprocessing
 
 To improve speed, similar measures can be applied as suggested for MEMORY. For example it makes 
 sense to transform values into integers by multiplication with a constant.
@@ -108,9 +108,9 @@ or multiplying a constant such that the whole value domain falls into a single e
 shift the values such that all values have the same exponent. It can also help to shift values
 such that all values have a positive sign.
 
-For heterogenous data (combination of floats, integers, boolean, ...) consider shifting the
+For heterogeneous data (combination of floats, integers, boolean, ...) consider shifting the
 values such that the min/max values in each dimension have a similar distance in the integer 
-representation. For example a 3D tree: [0...10][10..30][0..1000] multiply the first dimension by
+representation. For example a 3D tree: `[0...10][10..30][0..1000]` multiply the first dimension by
 100 and the second by 50, so that all dimensions have a range of about 1000.
 
 The above is true if all dimension are queried with similar selectivity. If range queries in the
