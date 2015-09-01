@@ -18,15 +18,15 @@ Contact:
 ### Advantages
 
 - Memory efficient: Due to prefix sharing and other optimisations the tree may consume less memory than a flat array of integers/floats
-- Update efficieny: The performance of `insert()`, `update()` and `delete()` operations is almost independent of the size of the tree. For low dimensions performance may even improve with larger trees (> 1M entries).
+- Update efficiency: The performance of `insert()`, `update()` and `delete()` operations is almost independent of the size of the tree. For low dimensions performance may even improve with larger trees (> 1M entries).
 - Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more
-- Scalability with dimension: Updates and 'contains()' queries scale very well to the current maximum of 62 dimensions. Range queries and other operations are best used with upto 10-15 dimensions only.
+- Scalability with dimension: Updates and 'contains()' queries scale very well to the current maximum of 62 dimensions. Range queries and other operations are best used with up to 10-15 dimensions only.
 - Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
-- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (see paper). The advanatages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
+- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
 
 ### Disadvantages
 
-- The current implementation will not work with mor then 62 dimensions.
+- The current implementation will not work with more then 62 dimensions.
 - Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more
 - Performance/dimensionality: performance of range queries degrades when using data with more than 10-15 dimensions. Updates and `contains()` work fine for higher dimensions
 - Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better that traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
@@ -46,17 +46,17 @@ This archive contains four variants and multiple versions of the PH-tree.
 
 The four variants are:
 
-- ```PhTree```          For point data with integer coordinates. This is the native storage format.
-- ```PhTreeF```         For point data with floating point coordinates.
-- ```PhTreeSolid```     For intervals/rectangles/boxes (solids) with integer coordinates.
-- ```PhTreeSolidF```    For intervals/rectangles/boxes (solids) with floating point coordinates.
+- `PhTree`          For point data with integer coordinates. This is the native storage format.
+- `PhTreeF`         For point data with floating point coordinates.
+- `PhTreeSolid`     For intervals/rectangles/boxes (solids) with integer coordinates.
+- `PhTreeSolidF`    For intervals/rectangles/boxes (solids) with floating point coordinates.
 
-They can be created with ```PhTreeXYZ.create(dimensions)```. The default key-width is 64bit per dimension.
-The old non-value API is still available in the ```tst``` folder.
+They can be created with `PhTreeXYZ.create(dimensions)`. The default key-width is 64bit per dimension.
+The old non-value API is still available in the `tst` folder.
 All queries return specialised iterators that give direct access to key, value or entry.
-The ```queryAll()``` methods return lists of entries and are especially useful for small result sets. 
+The `queryAll()` methods return lists of entries and are especially useful for small result sets. 
 
-The packages ```ch.ethz.globis.pht.v*``` contain different versions of the PH-tree. They are the actual
+The packages `ch.ethz.globis.pht.v*` contain different versions of the PH-tree. They are the actual
 implementations of the four interfaces mentioned above.
 A higher version number usually (not always) indicates better performance in terms of base speed,
 scalability (size and dimensionality) as well as storage requirements.
@@ -99,7 +99,7 @@ provide easy access to the key, especially for SOLID keys.
 
 The `nextValue()` and `next()` methods do not cause any GC (garbage collector) load and simply return the value associated with the result key.
 The `nextKey()` and `nextEntry()` always create new key objects or new key and additional `PhEntry` objects respectively. There are two ways to avoid this:
-- During insert, one could store the key as part of the value, vor example `insert(key, key)`. Then we can use the `next()` method to access the key without creeating new objects. The disadvantage is that we are effectively storing the key twice, once as 'key' and once as 'value'. Since the PH-tree is quite memory efficient, this may still consum,e less memory than other trees. 
+- During insert, one could store the key as part of the value, for example `insert(key, key)`. Then we can use the `next()` method to access the key without creating new objects. The disadvantage is that we are effectively storing the key twice, once as 'key' and once as 'value'. Since the PH-tree is quite memory efficient, this may still consume less memory than other trees. 
 - During extraction, we can use the `PhQuery.nextEntryReuse()` method that is available in every iterator. It reuse `PhEntry` objects and key objects by resetting their content. Several calls to `nextEntryReuse()` may return the same object, but always with the appropriate content. The returned object is only valid until the next call to `nextEntryReuse()`.
 The disadvantage is that the key and `PhEntry` objects need to be copied if they are needed locally beyond the next call to `nextEntryReuse()`.
 
@@ -131,14 +131,14 @@ multiplier.
   
 # License
 
-The PH-tree (namespace ```ch.ethz```) is copyright 2011-2015 by 
+The PH-tree (namespace `ch.ethz`) is copyright 2011-2015 by 
 ETH Zurich,
 Institute for Information Systems,
 Universitätsstrasse 6,
 8092 Zurich,
 Switzerland.
 
-The critbit tree (namespace ```org.zoodb```) is copyright 2009-2015 by
+The critbit tree (namespace `org.zoodb`) is copyright 2009-2015 by
 Tilmann Zäschke,
 zoodb@gmx.de.
 The critbit tree is also separately available here: https://github.com/tzaeschke/critbit
