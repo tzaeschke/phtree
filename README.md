@@ -30,9 +30,8 @@ Contact:
 - Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more
 - Performance/dimensionality: performance of range queries degrades when using data with more than 10-15 dimensions. Updates and `contains()` work fine for higher dimensions
 - Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better that traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
-- Storage: The tree does not store references to the provided keys. That means, when extracting keys (for exampl via queries), new objects are created to return the keys. There are two solutions to that: 
-  - First, it is possible to store the keys as 'values' in the tree via `put(key, key)` for example. Then, when iterating over the result, one should use this key stored in the value rather than the primary key. This allows the JVM to more easily collect the primary keys. There is also an experimental iterator (not public yet) that reuses primary key and thus avoid creation of any temporary objects.
-  - Second, if the extracted keys are only used temporarily or if they get copied, then this can again simplify garbage collection, especially in combination with the experimental iterator mentioned above.
+- Storage: The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about [iterators](#iterators) below on some strategies to avoid this problem. 
+
 
 
 ### Generally
@@ -74,36 +73,46 @@ Also, chose the multiplier such that it is not higher than the precision require
 For example, if you have a precision of 6 digits after the decimal point, then multiply all values
 by 1,000,000 before casting the to (long) and adding them to the tree.
 
+See also the section about [iterators](#iterators) on how to avoid GC from performing queries.
 
 # Perfomance Optimisation
 
 ### Updates
 
-For updating the keys of entries (aka moving objects index), consider using ```update()```. This function
-is about twice as fast for small displacements and at least as fast as a ```put()```/```remove()``` combo.
+For updating the keys of entries (aka moving objects index), consider using `update()`. This function
+is about twice as fast for small displacements and at least as fast as a `put()`/`remove()` combo.
 
 ### Choose a Type of Query
 
-- ```queryExtent()```: Fastest option when traversing (almost) all of the tree
-- ```query()```:       Fastest option for for average result size > 50 (depending on data)
-- ```queryAll()```:    Fastest option for for average result size < 50 (depending on data)
+- `queryExtent()`: Fastest option when traversing (almost) all of the tree
+- `query()`:       Fastest option for for average result size > 50 (depending on data)
+- `queryAll()`:    Fastest option for for average result size < 50 (depending on data)
 
 
-### Iterators
+### <a name="iterators"></a>Iterators
 
 All iterators return by default the value of a stored key/value pair. All iterators also provide
-three specialised methods ```nextKey()```, ```nextValue()``` and ```nextEntry()``` to return only the key, only the 
-value (just as ```next()```) or the combined entry object. Iterating over the entry object has the 
-disadvantage that the entries need to be created and create load on the GC. However, the entries
+three specialised methods `nextKey()`, `nextValue()` and `nextEntry()` to return only the key, only the 
+value (just as `next()`) or the combined entry object. Iterating over the entry object has the 
+disadvantage that the entries need to be created and create load on the GC (garbage collector). However, the entries
 provide easy access to the key, especially for SOLID keys.
 
+The `nextValue()` and `next()` methods do not cause any GC (garbage collector) load and simply return the value associated with the result key.
+The `nextKey()` and `nextEntry()` always create new key objects or new key and additional `PhEntry` objects respectively. There are two ways to avoid this:
+- During insert, one could store the key as part of the value, vor example `insert(key, key)`. Then we can use the `next()` method to access the key without creeating new objects. The disadvantage is that we are effectively storing the key twice, once as 'key' and once as 'value'. Since the PH-tree is quite memory efficient, this may still consum,e less memory than other trees. 
+- During extraction, we can use the `PhQuery.nextEntryReuse()` method that is available in every iterator. It reuse `PhEntry` objects and key objects by resetting their content. Several calls to `nextEntryReuse()` may return the same object, but always with the appropriate content. The returned object is only valid until the next call to `nextEntryReuse()`.
+The disadvantage is that the key and `PhEntry` objects need to be copied if they are needed locally beyond the next call to `nextEntryReuse()`.
 
-### Data Treprocessing
+Another way to reduce GC is to reuse the iterators when performing multiple queries. This can be done by calling `PhQuery.reset(..)`, which will abort the current query and reset the iterator to the first element that fits the min/max values provided in the `reset(..)` call.
+
+
+
+### Data Preprocessing
 
 To improve speed, similar measures can be applied as suggested for MEMORY. For example it makes 
 sense to transform values into integers by multiplication with a constant.
 
-If data is stored as floats in IEEE representation (```BitTools.toSortableLong()```), consider adding
+If data is stored as floats in IEEE representation (`BitTools.toSortableLong()`), consider adding
 or multiplying a constant such that the whole value domain falls into a single exponent. I.e.
 shift the values such that all values have the same exponent. It can also help to shift values
 such that all values have a positive sign.
