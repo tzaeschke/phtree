@@ -30,7 +30,7 @@ Contact:
 - Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more
 - Performance/dimensionality: performance of range queries degrades when using data with more than 10-15 dimensions. Updates and `contains()` work fine for higher dimensions
 - Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better that traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
-- Storage: The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about [iterators](#iterators) below on some strategies to avoid this problem. 
+- Storage: The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about [iterators](#iterators) [Iterators](#iterators) [Generally](#generally) below on some strategies to avoid this problem. 
 
 
 
