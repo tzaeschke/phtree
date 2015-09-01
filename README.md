@@ -89,7 +89,7 @@ is about twice as fast for small displacements and at least as fast as a `put()`
 - `queryAll()`:    Fastest option for for average result size < 50 (depending on data)
 
 
-### <a name="iterators"></a>Iterators
+### Iterators
 
 All iterators return by default the value of a stored key/value pair. All iterators also provide
 three specialised methods `nextKey()`, `nextValue()` and `nextEntry()` to return only the key, only the 
