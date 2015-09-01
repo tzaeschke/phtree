@@ -1,9 +1,10 @@
 
+
 2015-08-31
 ==========
 - (TZ) Proper NoGC iterator for avoiding any object creation (+bug fix)
 - (TZ) Changed iterator recursion to loops
-- (TZ) Removed some old iterators
+- (TZ) Removed some old iterators and NV usage
 
 2015-08-03
 ==========
@@ -22,6 +23,19 @@
        See TestIndexQueries.testBug64Neg_2() 
 - Fixed bug that caused queryAll to skip some matching keys. 
 
+2015-06-01
+==========
+- (TZ) Fixed bug that prevented internal iterators from being reused
+
+2015-05-25
+==========
+- (TZ) Fixed another bug that caused queryAll to skip some matching keys.
+       See TestIndexQueries.testBug64Neg_2() 
+
+2015-05-24
+==========
+- (TZ) Fixed bug that caused queryAll to skip some matching keys.
+
 2015-05-03
 ==========
 - API change! Refactored the API for simplification and removal of old non-value API.
@@ -33,3 +47,4 @@
   GC problems.
 - New queryAll() function that returns a list of results instead of an iterator. This should
   be faster especially for small expected result sets.
+ 
