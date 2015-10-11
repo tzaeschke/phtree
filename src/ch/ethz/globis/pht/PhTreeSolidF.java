@@ -47,7 +47,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * @param dim number of dimensions
 	 */
 	private PhTreeSolidF(int dim) {
-		this(PhTree.create(dim*2, 64));
+		this(PhTree.create(dim*2));
 	}
 	
 	/**
@@ -113,14 +113,14 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 	
 	/**
-	 * @see #put(double[], double[], T)
+	 * @see #put(double[], double[], Object)
 	 */
 	public T put(PhEntrySF<T> e, T value) {
 		return put(e.lower(), e.upper(), value);
 	}
 	
 	/**
-	 * @see #remove(double[], double[], T)
+	 * @see #remove(double[], double[])
 	 */
 	public T remove(PhEntrySF<T> e) {
 		return remove(e.lower(), e.upper());

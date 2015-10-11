@@ -220,10 +220,10 @@ public abstract class PhTreeNV {
 	public abstract boolean update(long[] oldKey, long[] newKey);
 	
 	/**
-	 * Same as {@link #queryIntersect(double[], double[])}, except that it returns a list
+	 * Same as {@link #query(long[], long[])}, except that it returns a list
 	 * instead of an iterator. This may be faster for small result sets. 
-	 * @param lower
-	 * @param upper
+	 * @param min
+	 * @param max
 	 * @return List of query results
 	 */
 	public abstract List<PhEntry<Object>> queryAll(long[] min, long[] max);

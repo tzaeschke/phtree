@@ -41,7 +41,7 @@ public class PhTreeF<T> {
     }
 
 	private PhTreeF(int dim) {
-		pht = PhTree.create(dim, Double.SIZE);
+		pht = PhTree.create(dim);
 		pre = new EmptyPP();
 	}
 	
@@ -255,10 +255,10 @@ public class PhTreeF<T> {
 	}
 
 	/**
-	 * Same as {@link #queryIntersect(double[], double[])}, except that it returns a list
+	 * Same as {@link #query(double[], double[])}, except that it returns a list
 	 * instead of an iterator. This may be faster for small result sets. 
-	 * @param lower
-	 * @param upper
+	 * @param min
+	 * @param max
 	 * @return List of query results
 	 */
 	public List<PhEntryF<T>> queryAll(double[] min, double[] max) {

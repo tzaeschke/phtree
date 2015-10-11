@@ -236,7 +236,7 @@ public abstract class PhTreeHelper {
      * becomes
      * 000, 000, 011, 101
      * 
-     * @param Value
+     * @param valSet
      * @return Transposed value
      */
     public static long[] transposeValue(long[] valSet, int DEPTH) {
