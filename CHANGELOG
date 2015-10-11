@@ -1,5 +1,9 @@
 
 
+2015-10-11
+==========
+- (TZ) Fixed possible NPE (in Critbit64COW) when using trees with k>6
+
 2015-08-31
 ==========
 - (TZ) Proper NoGC iterator for avoiding any object creation (+bug fix)
