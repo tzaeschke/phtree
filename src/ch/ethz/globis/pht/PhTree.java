@@ -123,7 +123,7 @@ public interface PhTree<T> {
 	 * @param dim number of dimensions
 	 */
     public static <T> PhTree<T> create(int dim) {
-    	return new PhTree8<T>(dim, 64);
+    	return new PhTree8<T>(dim);
     }
 
 	/**
@@ -131,9 +131,10 @@ public interface PhTree<T> {
 	 * 
 	 * @param dim number of dimensions
 	 * @param depth the number of bits per dimension (1..64)
+	 * @deprecated 'depth' is ignored and always set to 64 now.
 	 */
     public static <T> PhTree<T> create(int dim, int depth) {
-    	return new PhTree8<T>(dim, depth);
+    	return new PhTree8<T>(dim);
     }
 
     public static interface PhIterator<T> extends PhIteratorBase<long[], T, PhEntry<T>> {}

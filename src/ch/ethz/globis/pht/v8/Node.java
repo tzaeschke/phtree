@@ -124,6 +124,14 @@ class Node<T> {
 		return new Node<T>(original, dim);
 	}
 
+	NodeEntry<T> createNodeEntry(Node<T> sub) {
+		return new NodeEntry<>(sub, this.getClass() != Node.class);
+	}
+	
+	NodeEntry<T> createNodeEntry(long[] key, T value) {
+		return new NodeEntry<>(key, value, this.getClass() != Node.class);
+	}
+	
 	boolean hasInfixes() {
 		return infixLen > 0;
 	}
@@ -521,15 +529,15 @@ class Node<T> {
 	NodeEntry<T> niPut(long hcPos, long[] key, T value) {
 		long[] copy = new long[key.length];
 		System.arraycopy(key, 0, copy, 0, key.length);
-		return ind.put(hcPos, new NodeEntry<T>(copy, value));
+		return ind.put(hcPos, createNodeEntry(copy, value));
 	}
 
 	NodeEntry<T> niPutNoCopy(long hcPos, long[] key, T value) {
-		return ind.put(hcPos, new NodeEntry<T>(key, value));
+		return ind.put(hcPos, createNodeEntry(key, value));
 	}
 
 	NodeEntry<T> niPut(long hcPos, Node<T> subNode) {
-		return ind.put(hcPos, new NodeEntry<T>(subNode));
+		return ind.put(hcPos, createNodeEntry(subNode));
 	}
 
     NodeEntry<T> niRemove(long hcPos) {
@@ -956,7 +964,7 @@ class Node<T> {
 			offs += postLen;
 		}
 		int valPos = offs2ValPos(offsPostKey, hcPos, key.length);
-		return new NodeEntry<T>(key, values[valPos]);
+		return createNodeEntry(key, values[valPos]);
 	}
 
 
@@ -1013,7 +1021,7 @@ class Node<T> {
 			offs += postLen;
 		}
 		int valPos = offs2ValPos(offsPostKey, hcPos, key.length);
-		return new NodeEntry<T>(key, values[valPos]);
+		return createNodeEntry(key, values[valPos]);
 	}
 
 
@@ -1091,7 +1099,7 @@ class Node<T> {
 //			}
 			offs += postLen;
 		}
-		return new NodeEntry<T>(key, val);
+		return createNodeEntry(key, val);
 	}
 
 	/**

@@ -3,6 +3,7 @@
 2015-10-11
 ==========
 - (TZ) Fixed possible NPE (in Critbit64COW) when using trees with k>6
+- (TZ) Fixed memory waste in NodeEntries
 
 2015-08-31
 ==========

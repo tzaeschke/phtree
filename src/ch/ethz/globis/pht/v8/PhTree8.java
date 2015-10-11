@@ -85,16 +85,18 @@ public class PhTree8<T> implements PhTree<T> {
     private final long[] MAX;
     
 	static final class NodeEntry<T> extends PhEntry<T> {
-        transient ReentrantLock lock = new ReentrantLock();
+        transient ReentrantLock lock;
 
 		Node<T> node;
-		NodeEntry(long[] key, T value) {
+		NodeEntry(long[] key, T value, boolean useLock) {
 			super(key, value);
 			this.node = null;
+			lock = useLock ? new ReentrantLock() : null;
 		}
-		NodeEntry(Node<T> node) {
+		NodeEntry(Node<T> node, boolean useLock) {
 			super(null, null);
 			this.node = node;
+			lock = useLock ? new ReentrantLock() : null;
 		}
 
 		void setNode(Node<T> node) {
@@ -118,7 +120,7 @@ public class PhTree8<T> implements PhTree<T> {
         this.root = newRoot;
     }
 
-	public PhTree8(int dim, int depth) {
+	public PhTree8(int dim) {
 		DIM = dim;
 		MIN = new long[DIM];
 		Arrays.fill(MIN, Long.MIN_VALUE);
