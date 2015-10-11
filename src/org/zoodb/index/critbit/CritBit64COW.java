@@ -18,6 +18,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * Currently write/update access is limited to one thread at a time.
  * Read access guarantees full snapshot consistency for all read access including iterators.
  * 
+ * Version 1.3.3
+ * - Fixed 64COW iterators returning empty Entry for queries that shouldn't return anything. 
+ * 
  * Version 1.3.2
  * - Improved mask checking in QueryWithMask
  * 
@@ -551,7 +554,8 @@ public class CritBit64COW<V> implements Iterable<V> {
         newInfo.size--;
     }
 
-    public CBIterator<V> iterator() {
+    @Override
+	public CBIterator<V> iterator() {
         return new CBIterator<V>(this, DEPTH);
     }
 
@@ -710,6 +714,7 @@ public class CritBit64COW<V> implements Iterable<V> {
             }
             Node<V> n = info.root;
             if (!checkMatch(info.rootKey, n.posDiff-1)) {
+            	hasNext = false;
                 return;
             }
             stack[++stackTop] = info.root;
@@ -882,6 +887,7 @@ public class CritBit64COW<V> implements Iterable<V> {
             }
             Node<V> n = info.root;
             if (!checkMatch(info.rootKey, n.posDiff-1)) {
+            	hasNext = false;
                 return;
             }
             stack[++stackTop] = info.root;
