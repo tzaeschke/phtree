@@ -9,6 +9,7 @@ package ch.ethz.globis.pht.v8;
 import java.util.NoSuchElementException;
 
 import ch.ethz.globis.pht.PhEntry;
+import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhTree.PhQuery;
 import ch.ethz.globis.pht.PhTreeHelper;
 
@@ -41,17 +42,27 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 
 		public boolean prepare(Node<T> node) {
 			if (!PhTree8.checkAndApplyInfix(node, valTemplate, rangeMin, rangeMax)) {
-				STAT_NODES_PREFIX_FAILED++;
 				return false;
 			}
 
+			if (checker != null) {
+				long mask = (-1L) << (node.getPostLen() + 1);
+				for (int i = 0; i < valTemplate.length; i++) {
+					valTemplate[i] &= mask;  //TODO do somewhere else??
+				}
+				//skip this for postLen>=63
+				if (node.getPostLen() < (PhTree8.DEPTH_64-1) &&
+						!checker.isValid(node.getPostLen()+1, valTemplate)) {
+					return false;
+				}
+			}
 			NodeIteratorNoGC<T> ni = stack[size++];
 			if (ni == null)  {
 				ni = new NodeIteratorNoGC<>(DIM, valTemplate);
 				stack[size-1] = ni;
 			}
 			
-			ni.init(rangeMin, rangeMax, valTemplate, node);
+			ni.init(rangeMin, rangeMax, valTemplate, node, checker);
 			return true;
 		}
 
@@ -64,31 +75,26 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 		}
 	}
 
-	public static int STAT_NODES_CHECKED = 0;
-	public static int STAT_NODES_IGNORED = 0;
-	public static int STAT_NODES_PREFIX_FAILED = 0;
-	public static int STAT_NODES_EARLY_IRE_CHECK = 0;
-	public static int STAT_NODES_EARLY_IRE_ABORT_I = 0;
-	public static int STAT_NODES_EARLY_IRE_ABORT_E = 0;
-	public static long MBB_TIME = 0;
-	
 	private final int DIM;
 	private final PhIteratorStack stack;
 	private final long[] valTemplate;
 	private long[] rangeMin;
 	private long[] rangeMax;
+	private PhFilter checker;
 	private final PhTree8<T> pht;
 	
 	private PhEntry<T> result;
 	boolean isFinished = false;
 	
-	public PhIteratorNoGC(PhTree8<T> pht, int DIM) {
-		this.DIM = DIM;
+	public PhIteratorNoGC(PhTree8<T> pht, PhFilter checker) {
+		this.DIM = pht.getDim();
+		this.checker = checker;
 		this.stack = new PhIteratorStack();
 		this.valTemplate = new long[DIM];
 		this.pht = pht;
 	}	
 		
+	@Override
 	public void reset(long[] rangeMin, long[] rangeMax) {	
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
@@ -156,9 +162,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 
 	@Override
 	public PhEntry<T> nextEntry() {
-		PhEntry<T> internal = nextEntryReuse();
-		PhEntry<T> e = new PhEntry<T>(internal.getKey().clone(), internal.getValue());
-		return e;
+		return new PhEntry<T>(nextEntryReuse());
 	}
 	
 	@Override
@@ -170,12 +174,12 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 	 * Special 'next' method that avoids creating new objects internally by reusing Entry objects.
 	 * Advantage: Should completely avoid any GC effort.
 	 * Disadvantage: Returned PhEntries are not stable and are only valid until the
-	 * next call to next(). After that they may change state. Modifying returned entries may
-	 * invalidate the backing tree.
+	 * next call to next(). After that they may change state.
 	 * @return The next entry
 	 */
+	@Override
 	public PhEntry<T> nextEntryReuse() {
-		if (!hasNext()) {
+		if (isFinished) {
 			throw new NoSuchElementException();
 		}
 		PhEntry<T> ret = result;

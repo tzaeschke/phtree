@@ -7,13 +7,15 @@
 package ch.ethz.globis.pht;
 
 /**
- * Calculate the distance for integer values.
+ * Calculate the euclidean distance for integer values.
  * 
  * @see PhDistance
  * 
  * @author ztilmann
  */
 public class PhDistanceL implements PhDistance {
+
+	public static final PhDistanceL THIS = new PhDistanceL();
 
 	/**
 	 * Calculate the distance for integer values.
@@ -28,5 +30,14 @@ public class PhDistanceL implements PhDistance {
 			d += dl*dl;
 		}
 		return Math.sqrt(d);
+	}
+
+	@Override
+	public void toMBB(double distance, long[] center, long[] outMin,
+			long[] outMax) {
+		for (int i = 0; i < center.length; i++) {
+			outMin[i] = (long) (center[i] - distance);
+			outMax[i] = (long) (center[i] + distance);
+		}
 	}
 }

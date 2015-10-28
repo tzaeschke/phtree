@@ -15,15 +15,16 @@ import static ch.ethz.globis.pht.PhTreeHelper.posInArray;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 import ch.ethz.globis.pht.PhDimFilter;
 import ch.ethz.globis.pht.PhDistance;
+import ch.ethz.globis.pht.PhDistanceL;
 import ch.ethz.globis.pht.PhEntry;
+import ch.ethz.globis.pht.PhFilterDistance;
 import ch.ethz.globis.pht.PhPredicate;
+import ch.ethz.globis.pht.PhRangeQuery;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.PhTreeConfig;
 import ch.ethz.globis.pht.PhTreeHelper;
@@ -59,6 +60,8 @@ import ch.ethz.globis.pht.util.StringBuilderLn;
  *
  * @author ztilmann (Tilmann Zaeschke)
  *
+ * @param <T> The value type of the tree 
+ *
  */
 public class PhTree8<T> implements PhTree<T> {
 
@@ -66,10 +69,6 @@ public class PhTree8<T> implements PhTree<T> {
 	static final boolean HCI_ENABLED = true; 
 	
 	static final int DEPTH_64 = 64;
-
-	/** If the minMask is larger than the threshold, then the first value in a node iterator
-	 * is looked up by binary search instead of full search. */
-	static final int USE_MINMASK_BINARY_SEARCH_THRESHOLD = 10;
 
 	//Dimension. This is the number of attributes of an entity.
 	private final int DIM;
@@ -129,7 +128,7 @@ public class PhTree8<T> implements PhTree<T> {
 		debugCheck();
 	}
 
-	protected PhTree8(PhTreeConfig cnf) {
+	public PhTree8(PhTreeConfig cnf) {
 		DIM = cnf.getDimActual();
 		MIN = new long[DIM];
 		MAX = new long[DIM];
@@ -388,7 +387,7 @@ public class PhTree8<T> implements PhTree<T> {
     }
 
     void insertRoot(long[] key, T value) {
-        root = operations.createNode(this, 0, DEPTH_64-1, 1, DIM);
+        root = operations.createNode(this, 0, DEPTH_64-1, 1);
         //calcPostfixes(valueSet, root, 0);
         long pos = posInArray(key, root.getPostLen());
         root.addPost(pos, key, value);
@@ -400,11 +399,11 @@ public class PhTree8<T> implements PhTree<T> {
 		if (getRoot() == null) {
 			return false;
 		}
-		return contains(key, 0, getRoot());
+		return contains(key, getRoot());
 	}
 
 
-	private boolean contains(long[] key, int currentDepth, Node<T> node) {
+	private boolean contains(long[] key, Node<T> node) {
 		if (node.getInfixLen() > 0) {
 			long mask = ~((-1l)<<node.getInfixLen()); // e.g. (0-->0), (1-->1), (8-->127=0x01111111)
 			int shiftMask = node.getPostLen()+1;
@@ -416,7 +415,6 @@ public class PhTree8<T> implements PhTree<T> {
 					return false;
 				}
 			}
-			currentDepth += node.getInfixLen();
 		}
 
 		long pos = posInArray(key, node.getPostLen());
@@ -427,7 +425,7 @@ public class PhTree8<T> implements PhTree<T> {
 			if (e == null) {
 				return false;
 			} else if (e.node != null) {
-				return contains(key, currentDepth + 1, e.node);
+				return contains(key, e.node);
 			}
 			return node.postEquals(e.getKey(), key);
 		}
@@ -435,7 +433,7 @@ public class PhTree8<T> implements PhTree<T> {
 		//check sub-node (more likely than postfix, because there can be more than one value)
 		Node<T> sub = node.getSubNode(pos, DIM);
 		if (sub != null) {
-			return contains(key, currentDepth + 1, sub);
+			return contains(key, sub);
 		}
 
 		//check postfix
@@ -452,11 +450,11 @@ public class PhTree8<T> implements PhTree<T> {
 		if (getRoot() == null) {
 			return null;
 		}
-		return get(key, 0, getRoot());
+		return get(key, getRoot());
 	}
 
 
-	private T get(long[] key, int currentDepth, Node<T> node) {
+	private T get(long[] key, Node<T> node) {
 		if (node.getInfixLen() > 0) {
 			long mask = (1l<<node.getInfixLen()) - 1l; // e.g. (0-->0), (1-->1), (8-->127=0x01111111)
 			int shiftMask = node.getPostLen()+1;
@@ -468,7 +466,6 @@ public class PhTree8<T> implements PhTree<T> {
 					return null;
 				}
 			}
-			currentDepth += node.getInfixLen();
 		}
 
 		long pos = posInArray(key, node.getPostLen());
@@ -476,7 +473,7 @@ public class PhTree8<T> implements PhTree<T> {
 		//check sub-node (more likely than postfix, because there can be more than one value)
 		Node<T> sub = node.getSubNode(pos, DIM);
 		if (sub != null) {
-			return get(key, currentDepth + 1, sub);
+			return get(key, sub);
 		}
 
 		//check postfix
@@ -537,22 +534,21 @@ public class PhTree8<T> implements PhTree<T> {
 	public String toStringPlain() {
 		StringBuilderLn sb = new StringBuilderLn();
 		if (getRoot() != null) {
-			toStringPlain(sb, 0, getRoot(), new long[DIM]);
+			toStringPlain(sb, getRoot(), new long[DIM]);
 		}
 		return sb.toString();
 	}
 
-	private void toStringPlain(StringBuilderLn sb, int currentDepth, Node<T> node, long[] key) {
+	private void toStringPlain(StringBuilderLn sb, Node<T> node, long[] key) {
 		//for a leaf node, the existence of a sub just indicates that the value exists.
 		node.getInfix(key);
-		currentDepth += node.getInfixLen();
 
 		for (int i = 0; i < 1L << DIM; i++) {
 			applyHcPos(i, node.getPostLen(), key);
 			//inner node?
 			Node<T> sub = node.getSubNode(i, DIM);
 			if (sub != null) {
-				toStringPlain(sb, currentDepth + 1, sub, key);
+				toStringPlain(sb, sub, key);
 			}
 
 			//post-fix?
@@ -614,207 +610,16 @@ public class PhTree8<T> implements PhTree<T> {
 
 
 	@Override
-	public PhIterator<T> queryExtent() {
-		if (DIM < 10) {
-			return new NDFullIterator<T>(getRoot(), DIM);
-		} else {
-			return new NDFullIterator2<T>(getRoot(), DIM);
-		}
-	}
-
-	private static class NDFullIterator<T> implements PhIterator<T> {
-		private final int DIM;
-		private final Stack<Pos<T>> stack = new Stack<Pos<T>>();
-		private static class Pos<T> {
-			Pos(Node<T> node) {
-				this.node = node;
-				this.pos = -1;
-			}
-			Node<T> node;
-			int pos;
-		}
-		private final long[] valTemplate;// = new long[DIM];
-		private long[] nextKey = null;
-		private T nextVal = null;
-
-		public NDFullIterator(Node<T> root, final int DIM) {
-			this.DIM = DIM;
-			valTemplate = new long[DIM];
-			if (root == null) {
-				//empty index
-				return;
-			}
-			stack.push(new Pos<T>(root));
-			findNextElement();
-		}
-
-		private void findNextElement() {
-			while (true) {
-				Pos<T> p = stack.peek();
-				while (p.pos+1 < (1L<<DIM)) {
-					p.pos++;
-					p.node.getInfix(valTemplate);
-					Node<T> sub = p.node.getSubNode(p.pos, DIM); 
-					if (sub != null) {
-						applyHcPos(p.pos, p.node.getPostLen(), valTemplate);
-						stack.push(new Pos<T>(sub));
-						findNextElement();
-						return;
-					}
-					int pob = p.node.getPostOffsetBits(p.pos, DIM);
-					if (pob >= 0) {
-						//get value
-						long[] key = new long[DIM];
-						System.arraycopy(valTemplate, 0, key, 0, DIM);
-						applyHcPos(p.pos, p.node.getPostLen(), key);
-						nextVal = p.node.getPostPOB(pob, p.pos, key);
-						nextKey = key;
-						return;
-					}
-				}
-				stack.pop();
-				if (stack.isEmpty()) {
-					//finished
-					nextKey = null;
-					nextVal = null;
-					return;
-				}
-			}
-		}
-
-		@Override
-		public boolean hasNext() {
-			return nextKey != null;
-		}
-
-		@Override
-		public long[] nextKey() {
-			if (!hasNext()) {
-				throw new NoSuchElementException();
-			}
-			long[] res = nextKey;
-			findNextElement();
-			return res;
-		}
-
-		@Override
-		public T nextValue() {
-			T ret = nextVal;
-			nextKey();
-			return ret;
-		}
-
-		@Override
-		public PhEntry<T> nextEntry() {
-			PhEntry<T> ret = new PhEntry<>(nextKey, nextVal);
-			nextKey();
-			return ret;
-		}
-
-		@Override
-		public T next() {
-			return nextValue();
-		}
-
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException("Not implemented yet.");
-		}
-
-	}
-
-
-	private static class NDFullIterator2<T> implements PhIterator<T> {
-		private final int DIM;
-		private final Stack<NodeIteratorFull<T>> stack = new Stack<>();
-		private final long[] valTemplate;
-		private long[] nextKey = null;
-		private T nextVal = null;
-
-		public NDFullIterator2(Node<T> root, final int DIM) {
-			this.DIM = DIM;
-			valTemplate = new long[DIM];
-			if (root == null) {
-				//empty index
-				return;
-			}
-			stack.push(new NodeIteratorFull<T>(root, DIM, valTemplate));
-			findNextElement();
-		}
-
-		private void findNextElement() {
-			while (true) {
-				NodeIteratorFull<T> p = stack.peek();
-				if (p.hasNext()) {
-					long pos = p.getCurrentPos();
-
-					if (p.isNextSub()) {
-						applyHcPos(pos, p.node().getPostLen(), valTemplate);
-						stack.push(
-								new NodeIteratorFull<T>(p.getCurrentSubNode(), DIM, valTemplate));
-						findNextElement();
-					} else {
-						nextVal = p.getCurrentPostVal();
-						nextKey = p.getCurrentPostKey();
-					}
-					p.increment();
-					return;
-				}
-				stack.pop();
-				if (stack.isEmpty()) {
-					//finished
-					nextKey = null;
-					nextVal = null;
-					return;
-				}
-			}
-		}
-
-		@Override
-		public boolean hasNext() {
-			return nextKey != null;
-		}
-
-		@Override
-		public long[] nextKey() {
-			if (!hasNext()) {
-				throw new NoSuchElementException();
-			}
-			long[] res = nextKey;
-			findNextElement();
-			return res;
-		}
-
-		@Override
-		public T nextValue() {
-			T ret = nextVal;
-			nextKey();
-			return ret;
-		}
-
-		@Override
-		public PhEntry<T> nextEntry() {
-			PhEntry<T> ret = new PhEntry<>(nextKey, nextVal);
-			nextKey();
-			return ret;
-		}
-
-		@Override
-		public T next() {
-			return nextValue();
-		}
-
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException("Not implemented yet.");
-		}
+	public PhExtent<T> queryExtent() {
+		return new PhIteratorFullNoGC<T>(this, null).reset();
 	}
 
 
 	/**
-	 * Performs a range query. The parameters are the min and max values.
-	 * @param min
-	 * @param max
+	 * Performs a rectangular window query. The parameters are the min and max keys which 
+	 * contain the minimum respectively the maximum keys in every dimension.
+	 * @param min Minimum values
+	 * @param max Maximum values
 	 * @return Result iterator.
 	 */
 	@Override
@@ -824,15 +629,16 @@ public class PhTree8<T> implements PhTree<T> {
 					" / " + max.length + "  DIM=" + DIM);
 		}
 		//return new PhIteratorHighK<T>(getRoot(), min, max, DIM, DEPTH);
-		PhQuery<T> q = new PhIteratorNoGC<>(this, DIM); 
+		PhQuery<T> q = new PhIteratorNoGC<>(this, null);
 		q.reset(min, max);
 		return q;
 	}
 
 	/**
-	 * Performs a range query. The parameters are the min and max values.
-	 * @param min
-	 * @param max
+	 * Performs a rectangular window query. The parameters are the min and max keys which 
+	 * contain the minimum respectively the maximum keys in every dimension.
+	 * @param min Minimum values
+	 * @param max Maximum values
 	 * @return Result list.
 	 */
 	@Override
@@ -841,9 +647,10 @@ public class PhTree8<T> implements PhTree<T> {
 	}
 	
 	/**
-	 * Performs a range query. The parameters are the min and max values.
-	 * @param min
-	 * @param max
+	 * Performs a rectangular window query. The parameters are the min and max keys which 
+	 * contain the minimum respectively the maximum keys in every dimension.
+	 * @param min Minimum values
+	 * @param max Maximum values
 	 * @return Result list.
 	 */
 	@Override
@@ -880,9 +687,11 @@ public class PhTree8<T> implements PhTree<T> {
 			int postLen = node.getPostLen();
 
 			//assign infix
-			int postHcInfixLen = postLen + 1 + infixLen;
-			long maskClean = postHcInfixLen==64 ? //currentDepth == 0 && DEPTH == 64 
-					0 : ((0xFFFFFFFFFFFFFFFFL<<postHcInfixLen));
+            //Shift in two steps in case they add up to 64.
+			//int postHcInfixLen = postLen + 1 + infixLen;
+  			long maskClean = (-1L) << (postLen + infixLen);
+			maskClean <<= 1;
+
 			//first, clean trailing bits
 			//Mask for comparing the tempVal with the ranges, except for bit that have not been
 			//extracted yet.
@@ -904,25 +713,70 @@ public class PhTree8<T> implements PhTree<T> {
 	}
 
 	@Override
-	public int getDIM() {
+	public int getDim() {
 		return DIM;
 	}
 
 	@Override
-	public int getDEPTH() {
+	public int getBitDepth() {
 		return PhTree8.DEPTH_64;
 	}
 
 	/**
 	 * Locate nearest neighbours for a given point in space.
-	 * @param nMin number of values to be returned. More values may be returned with several have
-	 * 				the same distance.
+	 * @param nMin number of values to be returned. More values may or may not be returned when 
+	 * several have	the same distance.
 	 * @param v
-	 * @return List of neighbours.
+	 * @return Result iterator.
 	 */
 	@Override
-	public ArrayList<long[]> nearestNeighbour(int nMin, long... v) {
-		throw new UnsupportedOperationException();
+	public PhKnnQuery<T> nearestNeighbour(int nMin, long... v) {
+		return new PhQueryKnnMbbPP<T>(this).reset(nMin, PhDistanceL.THIS, v);
+	}
+
+	@Override
+	public PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist,
+			PhDimFilter dimsFilter, long... center) {
+		return new PhQueryKnnMbbPP<T>(this).reset(nMin, dist, center);
+	}
+
+	@Override
+	public PhRangeQuery<T> rangeQuery(double dist, long... center) {
+		return rangeQuery(dist, null, center);
+	}
+
+	@Override
+	public PhRangeQuery<T> rangeQuery(double dist, PhDistance optionalDist, long...center) {
+		PhFilterDistance filter = new PhFilterDistance();
+		if (optionalDist == null) {
+			optionalDist = PhDistanceL.THIS;
+		}
+		filter.set(center, optionalDist, dist);
+		PhQuery<T> q = new PhIteratorNoGC<T>(this, filter);
+		PhRangeQuery<T> qr = new PhRangeQuery<>(q, this, optionalDist, filter);
+		qr.reset(dist, center);
+		return qr;
+	}
+
+	@Override
+	public T update(long[] oldKey, long[] newKey) {
+        return operations.update(oldKey, newKey);
+	}
+	
+
+	/**
+	 * Remove all entries from the tree.
+	 */
+	@Override
+	public void clear() {
+		root = null;
+		nEntries.set(0);
+		nNodes.set(0);
+	}
+
+	void adjustCounts(int deletedPosts, int deletedNodes) {
+		nEntries.addAndGet(-deletedPosts);
+		nNodes.addAndGet(-deletedNodes);
 	}
 
 
@@ -945,33 +799,6 @@ public class PhTree8<T> implements PhTree<T> {
 		//latter can happen if there is only one possible value (all filter bits are set).
 		//The <= is also owed to the bug tested in testBugDecrease()
 		//return (r <= v) ? -1 : r;
-	}
-
-	@Override
-	public List<long[]> nearestNeighbour(int nMin, PhDistance dist,
-			PhDimFilter dims, long... key) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public T update(long[] oldKey, long[] newKey) {
-        return operations.update(oldKey, newKey);
-	}
-	
-
-	/**
-	 * Remove all entries from the tree.
-	 */
-	@Override
-	public void clear() {
-		root = null;
-		nEntries.set(0);
-		nNodes.set(0);
-	}
-
-	void adjustCounts(int deletedPosts, int deletedNodes) {
-		nEntries.addAndGet(-deletedPosts);
-		nNodes.addAndGet(-deletedNodes);
 	}
 }
 

@@ -6,8 +6,6 @@
  */
 package ch.ethz.globis.pht.test;
 
-import org.junit.Test;
-
 import ch.ethz.globis.pht.util.Bits;
 
 public class TestJavaBitOps {

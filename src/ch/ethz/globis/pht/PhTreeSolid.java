@@ -55,8 +55,8 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	 * @param tree the backing tree
 	 */
 	public PhTreeSolid(PhTree<T> tree) {
-		this.DIM = tree.getDIM()/2;
-		if (DIM*2 != tree.getDIM()) {
+		this.DIM = tree.getDim()/2;
+		if (DIM*2 != tree.getDim()) {
 			throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");
 		}
 		pht = tree;
@@ -253,7 +253,7 @@ public class PhTreeSolid<T> implements Iterable<T> {
 			q.reset(lLow, lUpp);
 		}
 	}
-
+	
 	/**
 	 * Entries in a PH-tree with ranged objects. 
 	 */

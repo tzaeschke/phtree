@@ -7,7 +7,7 @@
 package ch.ethz.globis.pht.pre;
 
 
-public class IntegerPP implements PreProcessorPoint {
+public class IntegerPP implements PreProcessorPointF {
 
 	private final double preMult;
 	private final double postMult;

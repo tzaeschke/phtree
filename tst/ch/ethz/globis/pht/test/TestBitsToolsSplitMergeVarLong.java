@@ -12,7 +12,6 @@ import java.util.Random;
 import org.junit.Test;
 
 import ch.ethz.globis.pht.util.BitTools;
-import ch.ethz.globis.pht.util.BitsInt;
 
 
 /**
@@ -315,7 +314,7 @@ public class TestBitsToolsSplitMergeVarLong {
 		};
 
 	private static final long[] MortonTable65536 = new long[65536];
-	private static final long[] MortonTableInverse65536 = new long[65536];
+	//private static final long[] MortonTableInverse65536 = new long[65536];
 	static {
 		long l = 0;
 		long mask = 0xAAAAAAAAAAAAAAAAL;

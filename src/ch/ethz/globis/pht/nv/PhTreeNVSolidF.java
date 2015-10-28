@@ -13,8 +13,8 @@ import java.util.List;
 import ch.ethz.globis.pht.PhPredicate;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.nv.PhTreeNV.PhIteratorNV;
-import ch.ethz.globis.pht.pre.EmptyPPRD;
-import ch.ethz.globis.pht.pre.PreProcessorRangeD;
+import ch.ethz.globis.pht.pre.EmptyPPRF;
+import ch.ethz.globis.pht.pre.PreProcessorRangeF;
 import ch.ethz.globis.pht.util.PhMapperK;
 import ch.ethz.globis.pht.util.PhMapperKey;
 
@@ -29,7 +29,7 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 
 	private final int DIM;
 	private final PhTreeNV pht;
-	private final PreProcessorRangeD pre;
+	private final PreProcessorRangeF pre;
 	private final double[] MIN;
 	private final double[] MAX;
 	
@@ -49,7 +49,7 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	 * @param tree the backing tree
 	 */
 	public PhTreeNVSolidF(PhTreeNV tree) {
-		this(tree, new EmptyPPRD());
+		this(tree, new EmptyPPRF());
 	}
 	
 	/**
@@ -58,7 +58,7 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	 * 
 	 * @param tree the backing tree
 	 */
-	public PhTreeNVSolidF(PhTreeNV tree, PreProcessorRangeD preprocessor) {
+	public PhTreeNVSolidF(PhTreeNV tree, PreProcessorRangeF preprocessor) {
 		this.DIM = tree.getDIM()/2;
 		if (DIM*2 != tree.getDIM()) {
 			throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");

@@ -39,7 +39,7 @@ public class TestIndexPrint {
 		Iterator<long[]> it = ind.queryExtent();
 		while (it.hasNext()) {
 			long[] v = it.next();
-			keys.add(Bits.toBinary(v, ind.getDEPTH()));
+			keys.add(Bits.toBinary(v, ind.getBitDepth()));
 		}
 	
 		String out = ind.toStringPlain();
@@ -63,7 +63,7 @@ public class TestIndexPrint {
 		Iterator<long[]> it = ind.queryExtent();
 		while (it.hasNext()) {
 			long[] v = it.next();
-			keys.add(Bits.toBinary(v, ind.getDEPTH()));
+			keys.add(Bits.toBinary(v, ind.getBitDepth()));
 		}
 	
 		String out = ind.toStringPlain();

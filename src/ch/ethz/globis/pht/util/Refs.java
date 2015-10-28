@@ -82,8 +82,8 @@ public class Refs {
 		//return (nObjects+1) & (~1);
 		int arraySize = (nObjects+PhTreeHelper.ALLOC_BATCH_REF);// & (~1);
 		int size = PhTreeHelper.ALLOC_BATCH_SIZE * 2;
-		//arraySize = (arraySize/size) * size;
-		arraySize = Math.floorDiv(arraySize, size) * size;
+		//Integer div.
+		arraySize = (arraySize/size) * size;
 		return arraySize;
 	}
 

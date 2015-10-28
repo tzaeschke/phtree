@@ -8,15 +8,23 @@ package ch.ethz.globis.pht;
 
 public class PhTreeConfig {
 
+	/** Concurrency via copy on write. */
+	public static final int CONCURRENCY_NONE = 0;
+	/** Concurrency via copy on write. */
+	public static final int CONCURRENCY_COW = 1;
+	/** Concurrency via copy on write and optimistic locking. */
+	public static final int CONCURRENCY_OL_COW = 2;
+	/** Concurrency via copy on write and hand over hand locking. */
+	public static final int CONCURRENCY_HOH_COW = 3;
+	
 	private int dimUser;
 	private int dimActual;
-	private int depth;
 	private boolean[] unique; 
+	private int concurrencyType = CONCURRENCY_NONE;
 	
-	public PhTreeConfig(int dim, int depth) {
+	public PhTreeConfig(int dim) {
 		this.dimUser = dim;
 		this.dimActual = dim;
-		this.depth = depth;
 		this.unique = new boolean[dimUser];
 	}
 	
@@ -46,7 +54,7 @@ public class PhTreeConfig {
 	 * @return Depth in bits.
 	 */
 	public int getDepth() {
-		return depth;
+		return 64;
 	}
 
 	public int[] getDimsToSplit() {
@@ -59,5 +67,13 @@ public class PhTreeConfig {
 			}
 		}
 		return ret;
+	}
+
+	public void setConcurrencyType(int concurrencyType) {
+		this.concurrencyType = concurrencyType;
+	}
+
+	public int getConcurrencyType() {
+		return concurrencyType;
 	}
 }

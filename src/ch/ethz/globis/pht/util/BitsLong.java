@@ -563,6 +563,7 @@ public class BitsLong {
     	//int arraySize = (nBits+63)>>>6;
     	int arraySize = (nBits+PhTreeHelper.ALLOC_BATCH_SIZE_LONG)>>>6;
     	int size = PhTreeHelper.ALLOC_BATCH_SIZE;
+    	//integer division!
     	arraySize = (arraySize/size) * size;
     	return arraySize;
     }

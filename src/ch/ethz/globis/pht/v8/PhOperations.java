@@ -12,7 +12,7 @@ public interface PhOperations<T> {
     public Node<T> createNode(Node<T> original, int dim);
 
 	public Node<T> createNode(PhTree8<T> parent, int infixLen, int postLen, 
-			int estimatedPostCount, final int DIM);
+			int estimatedPostCount);
 
     public T put(long[] key, T value);
 

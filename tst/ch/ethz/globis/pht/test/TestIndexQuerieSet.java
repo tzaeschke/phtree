@@ -248,5 +248,4 @@ public class TestIndexQuerieSet extends TestSuper {
 		}
 	}
 	
-	
 }

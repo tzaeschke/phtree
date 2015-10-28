@@ -12,8 +12,8 @@ import java.util.List;
 import ch.ethz.globis.pht.PhTree.PhIterator;
 import ch.ethz.globis.pht.PhTree.PhQuery;
 import ch.ethz.globis.pht.nv.PhTreeNV;
-import ch.ethz.globis.pht.pre.EmptyPPRD;
-import ch.ethz.globis.pht.pre.PreProcessorRangeD;
+import ch.ethz.globis.pht.pre.EmptyPPRF;
+import ch.ethz.globis.pht.pre.PreProcessorRangeF;
 import ch.ethz.globis.pht.util.PhIteratorBase;
 import ch.ethz.globis.pht.util.PhMapper;
 
@@ -28,7 +28,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 
 	private final int DIM;
 	private final PhTree<T> pht;
-	private final PreProcessorRangeD pre;
+	private final PreProcessorRangeF pre;
 	private final double[] MIN;
 	private final double[] MAX;
 	
@@ -39,6 +39,15 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 */
     public static <T> PhTreeSolidF<T> create(int dim) {
     	return new PhTreeSolidF<T>(dim);
+    }
+	
+	/**
+	 * Create a new tree with the specified number of dimensions.
+	 * 
+	 * @param dim number of dimensions
+	 */
+    public static <T> PhTreeSolidF<T> create(int dim, PreProcessorRangeF pre) {
+    	return new PhTreeSolidF<T>(PhTree.create(dim*2), pre);
     }
 	
 	/**
@@ -57,12 +66,22 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * @param tree the backing tree
 	 */
 	public PhTreeSolidF(PhTree<T> tree) {
-		this.DIM = tree.getDIM()/2;
-		if (DIM*2 != tree.getDIM()) {
+		this(tree, new EmptyPPRF());
+	}
+	
+	/**
+	 * Create a new {@code double} tree backed by the the specified tree.
+	 * Note that the backing tree's dimensionality must be a multiple of 2.
+	 * 
+	 * @param tree the backing tree
+	 */
+	public PhTreeSolidF(PhTree<T> tree, PreProcessorRangeF pre) {
+		this.DIM = tree.getDim()/2;
+		if (DIM*2 != tree.getDim()) {
 			throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");
 		}
 		pht = tree;
-		pre = new EmptyPPRD();
+		this.pre = pre;
 		MIN = new double[DIM];
 		Arrays.fill(MIN, Double.NEGATIVE_INFINITY);
 		MAX = new double[DIM];
@@ -178,8 +197,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	public static class PhIteratorSF<T> implements PhIteratorBase<double[], T, PhEntrySF<T>> {
 		protected final PhIterator<T> iter;
 		private final int DIM;
-		protected final PreProcessorRangeD pre;
-		private PhIteratorSF(PhIterator<T> iter, int DIM, PreProcessorRangeD pre) {
+		protected final PreProcessorRangeF pre;
+		private PhIteratorSF(PhIterator<T> iter, int DIM, PreProcessorRangeF pre) {
 			this.iter = iter;
 			this.DIM = DIM;
 			this.pre = pre;
@@ -231,7 +250,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		private final double[] MAX;
 		private final boolean intersect;
 		
-		private PhQuerySF(PhQuery<T> iter, int DIM, PreProcessorRangeD pre, boolean intersect) {
+		private PhQuerySF(PhQuery<T> iter, int DIM, PreProcessorRangeF pre, boolean intersect) {
 			super(iter, DIM, pre);
 			q = iter;
 			MIN = new double[DIM];
@@ -396,5 +415,13 @@ public class PhTreeSolidF<T> implements Iterable<T> {
      */
 	void clear() {
 		pht.clear();
+	}
+
+	/**
+	 * 
+	 * @return The PhTree that backs this tree.
+	 */
+	public PhTree<T> getInternalTree() {
+		return pht;
 	}
 }

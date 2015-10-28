@@ -401,7 +401,7 @@ public class TestIndexInsertion extends TestSuper {
 				{-4637609027661021004L, 4629629509168111823L, -4637609027590652259L, 4629629516767936194L, }
 		};
 		
-		PhTreeNV ind = new PhTreeVProxy(4, 64);
+		PhTreeNV ind = new PhTreeVProxy(4);
 		for (long[] v: vA) {
 			ind.insert(v);
 		}

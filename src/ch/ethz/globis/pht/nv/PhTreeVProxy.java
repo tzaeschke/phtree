@@ -13,6 +13,7 @@ import ch.ethz.globis.pht.PhEntry;
 import ch.ethz.globis.pht.PhPredicate;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.PhTree.PhIterator;
+import ch.ethz.globis.pht.PhTree.PhKnnQuery;
 import ch.ethz.globis.pht.PhTreeHelper;
 import ch.ethz.globis.pht.util.PhMapperKey;
 import ch.ethz.globis.pht.util.PhTreeQStats;
@@ -29,7 +30,7 @@ public class PhTreeVProxy extends PhTreeNV {
 	
 	private final PhTree<Object> tree;
 	
-	public PhTreeVProxy(int dim, int depth) {
+	public PhTreeVProxy(int dim) {
 		tree = PhTree.create(dim);
 	}
 	
@@ -104,22 +105,23 @@ public class PhTreeVProxy extends PhTreeNV {
 	
 	@Override
 	public int getDIM() {
-		return tree.getDIM();
+		return tree.getDim();
 	}
 
 	@Override
 	public int getDEPTH() {
-		return tree.getDEPTH();
+		return tree.getBitDepth();
 	}
 
 	@Override
-	public List<long[]> nearestNeighbour(int nMin, long... v) {
+	public PhKnnQuery<long[]> nearestNeighbour(int nMin, long... v) {
 //		ArrayList<long[]> ret = new ArrayList<>();
 //		for (PhEntry<Object> e: ) {
 //			ret.add(e.getKey());
 //		}
 //		return ret;
-		return tree.nearestNeighbour(nMin, v);
+		throw new UnsupportedOperationException();
+//		return tree.nearestNeighbour(nMin, v);
 	}
 
 	private static class IteratorProxy<T> implements PhIteratorNV {

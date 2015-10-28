@@ -17,7 +17,8 @@ public class Tools {
 	
 	public static long printMemUsed(String txt, long prev, int n) {
 		long current = getMemUsed();
-		System.out.println(txt + ": " + (current-prev) + "   per item: " + (current-prev)/n);
+		System.out.println(txt + ": " + (current-prev) + "   per item: " + 
+				((n==0) ? "NaN" : (current-prev)/n));
 		return current-prev;
 	}
 	

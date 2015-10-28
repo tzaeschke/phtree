@@ -6,10 +6,11 @@
  */
 package ch.ethz.globis.pht.v8;
 
-import org.zoodb.index.critbit.CritBit64COW.Entry;
-import org.zoodb.index.critbit.CritBit64COW.QueryIteratorMask;
+import org.zoodb.index.critbit.CritBit64.Entry;
+import org.zoodb.index.critbit.CritBit64.QueryIteratorMask;
 
 import ch.ethz.globis.pht.PhEntry;
+import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhTreeHelper;
 import ch.ethz.globis.pht.v8.PhTree8.NodeEntry;
 
@@ -24,6 +25,9 @@ import ch.ethz.globis.pht.v8.PhTree8.NodeEntry;
  * @param <T>
  */
 public class NodeIteratorNoGC<T> {
+	
+	private static final long FINISHED = Long.MAX_VALUE; 
+	
 	private final int DIM;
 	private boolean isPostHC;
 	private boolean isPostNI;
@@ -50,8 +54,10 @@ public class NodeIteratorNoGC<T> {
 	private long[] rangeMax;
 	private boolean usePostHcIncrementer;
 	private boolean useSubHcIncrementer;
+	private boolean useNiHcIncrementer;
 	private boolean isPostFinished;
 	private boolean isSubFinished;
+	private PhFilter checker;
 	private final PhEntry<T> nextPost1;
 	private final PhEntry<T> nextPost2;
 	private boolean isNextPost1free;
@@ -59,14 +65,8 @@ public class NodeIteratorNoGC<T> {
 
 	/**
 	 * 
-	 * @param node
 	 * @param DIM
 	 * @param valTemplate A null indicates that no values are to be extracted.
-	 * @param lower The minimum HC-Pos that a value should have.
-	 * @param upper
-	 * @param minValue The minimum value that any found value should have. If the found value is
-	 *  lower, the search continues.
-	 * @param maxValue
 	 */
 	public NodeIteratorNoGC(int DIM, long[] valTemplate) {
 		this.DIM = DIM;
@@ -75,7 +75,18 @@ public class NodeIteratorNoGC<T> {
 		this.nextPost2 = new PhEntry<T>(new long[DIM], null);
 	}
 	
-	private void reinit(Node<T> node, long[] rangeMin, long[] rangeMax, long lower, long upper) {
+	/**
+	 * 
+	 * @param node
+	 * @param rangeMin The minimum value that any found value should have. If the found value is
+	 *  lower, the search continues.
+	 * @param rangeMax
+	 * @param lower The minimum HC-Pos that a value should have.
+	 * @param upper
+	 * @param checker result verifier, can be null.
+	 */
+	private void reinit(Node<T> node, long[] rangeMin, long[] rangeMax, long lower, long upper, 
+			PhFilter checker) {
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
 		next = -1;
@@ -85,9 +96,9 @@ public class NodeIteratorNoGC<T> {
 		currentOffsetPostKey = 0;
 		currentOffsetPostVal = 0;
 		currentOffsetSub = 0;
-		niIterator = null;
 		nPostsFound = 0;
 		posSubLHC = -1; //position in sub-node LHC array
+		this.checker = checker;
 	
 		this.node = node;
 		this.isPostHC = node.isPostHC();
@@ -98,6 +109,12 @@ public class NodeIteratorNoGC<T> {
 		nMaxSub = node.getSubCount();
 		isPostFinished = (nMaxPost <= 0);
 		isSubFinished = (nMaxSub <= 0);
+		if (isPostFinished) {
+			nextPost = FINISHED;
+		}
+		if (isSubFinished) {
+			nextSub = FINISHED;
+		}
 		this.maskLower = lower;
 		this.maskUpper = upper;
 		//Position of the current entry
@@ -122,6 +139,7 @@ public class NodeIteratorNoGC<T> {
 
 		useSubHcIncrementer = false;
 		usePostHcIncrementer = false;
+		useNiHcIncrementer = false;
 
 		if (DIM > 3) {
 			//LHC, NI, ...
@@ -136,9 +154,9 @@ public class NodeIteratorNoGC<T> {
 				boolean useHcIncrementer = (nChild > nPossibleMatch*(double)logNChild*2);
 				//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
 				if (useHcIncrementer && PhTree8.HCI_ENABLED && DIM < 50) {
-					niIterator = null;
+					useNiHcIncrementer = true;
 				} else {
-					niIterator = node.ind().queryWithMask(maskLower, maskUpper);
+					useNiHcIncrementer = false;
 				}
 			} else if (PhTree8.HCI_ENABLED){
 				if (isPostHC) {
@@ -156,6 +174,13 @@ public class NodeIteratorNoGC<T> {
 				}
 			}
 		}
+		
+		if (isPostNI && !useNiHcIncrementer) {
+			if (niIterator == null) {
+				niIterator = new QueryIteratorMask<>();
+			}
+			niIterator.reset(node.ind(), maskLower, maskUpper);
+		}
 	}
 
 	/**
@@ -171,7 +196,7 @@ public class NodeIteratorNoGC<T> {
 	 */
 	boolean increment() {
 		next = getNext(isNextPost1free ? nextPost1 : nextPost2);
-		return next != -1;
+		return next != FINISHED;
 	}
 
 	long getCurrentPos() {
@@ -201,8 +226,11 @@ public class NodeIteratorNoGC<T> {
 		long[] key = result.getKey();
 		System.arraycopy(valTemplate, 0, key, 0, DIM);
 		PhTreeHelper.applyHcPos(pos, postLen, key);
-
 		if (!node.getPostPOB(offsPostKey, pos, result, rangeMin, rangeMax)) {
+			return false;
+		}
+
+		if (checker != null && !checker.isValid(key)) {
 			return false;
 		}
 		
@@ -223,6 +251,9 @@ public class NodeIteratorNoGC<T> {
 				return false;
 			}
 		}
+		if (checker != null && !checker.isValid(eKey)) {
+			return false;
+		}
 		System.arraycopy(eKey, 0, result.getKey(), 0, DIM);
 		result.setValue(e.getValue());
 		nextSubNode = null;
@@ -241,7 +272,7 @@ public class NodeIteratorNoGC<T> {
 				currentPos = PhTree8.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					isPostFinished = true;
-					return -1;
+					return FINISHED;
 				}
 			}
 			if (!isPostNI) {
@@ -265,7 +296,7 @@ public class NodeIteratorNoGC<T> {
 				currentPos = PhTree8.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					isSubFinished = true;
-					return -1;
+					return FINISHED;
 				}
 			}
 			if (isSubHC) {
@@ -317,24 +348,14 @@ public class NodeIteratorNoGC<T> {
 			} else {
 				getNextSubLHC();
 			}
-//			if (nextSub >= 0 && nextSub < nextPost && !isSubFinished) {
-//				return nextSub;
-//			}
 		}
 
-		if (isPostFinished && isSubFinished) {
-			return -1;
-		} 
-		if (!isPostFinished && !isSubFinished) {
 			return (nextSub < nextPost) ? nextSub : nextPost;
 		}
-		return isPostFinished ? nextSub : nextPost;
-	}
 	
 	private void getNextPostAHC(PhEntry<T> result) {
 		//while loop until 1 is found.
 		long currentPos = nextPost; 
-		nextPost = -1;
 		while (!isPostFinished) {
 			if (currentPos >= 0) {
 				currentPos++;  //pos w/o bit-offset
@@ -344,6 +365,7 @@ public class NodeIteratorNoGC<T> {
 			}
 			if (currentPos >= (1<<DIM)) {
 				isPostFinished = true;
+				nextPost = FINISHED;
 				break;
 			}
 			boolean bit = Bits.getBit(node.ba, currentOffsetPostKey);
@@ -353,6 +375,7 @@ public class NodeIteratorNoGC<T> {
 				if (!checkHcPos(currentPos)) {
 					if (currentPos > maskUpper) {
 						isPostFinished = true;
+						nextPost = FINISHED;
 						break;
 					}
 					continue;
@@ -369,10 +392,10 @@ public class NodeIteratorNoGC<T> {
 	}
 	
 	private void getNextPostLHC(PhEntry<T> result) {
-		nextPost = -1;
 		while (!isPostFinished) {
 			if (++nPostsFound > nMaxPost) {
 				isPostFinished = true;
+				nextPost = FINISHED;
 				break;
 			}
 			int offs = currentOffsetPostKey;
@@ -382,6 +405,7 @@ public class NodeIteratorNoGC<T> {
 			if (!checkHcPos(currentPos)) {
 				if (currentPos > maskUpper) {
 					isPostFinished = true;
+					nextPost = FINISHED;
 					break;
 				}
 				continue;
@@ -398,7 +422,6 @@ public class NodeIteratorNoGC<T> {
 	private void getNextSubAHC() {
 		int currentPos = (int) nextSub;  //We use (int) because arrays are always (int).
 		int maxPos = 1<<DIM; 
-		nextSub = -1;
 		while (!isSubFinished) {
 			if (currentPos < 0) {
 				currentPos = (int) maskLower;
@@ -407,6 +430,7 @@ public class NodeIteratorNoGC<T> {
 			}
 			if (currentPos >= maxPos) {
 				isSubFinished = true;
+				nextSub = FINISHED;
 				break;
 			}
 			if (node.subNRef(currentPos) != null) {
@@ -414,6 +438,7 @@ public class NodeIteratorNoGC<T> {
 				if (!checkHcPos(currentPos)) {
 					if (currentPos > maskUpper) {
 						isSubFinished = true;
+						nextSub = FINISHED;
 						break;
 					}
 					continue;
@@ -426,10 +451,10 @@ public class NodeIteratorNoGC<T> {
 	} 
 	
 	private void getNextSubLHC() {
-		nextSub = -1;
 		while (!isSubFinished) {
 			if (posSubLHC + 1  >= nMaxSub) {
 				isSubFinished = true;
+				nextSub = FINISHED;
 				break;
 			}
 			long currentPos = Bits.readArray(node.ba, currentOffsetSub, Node.SIK_WIDTH(DIM));
@@ -439,6 +464,7 @@ public class NodeIteratorNoGC<T> {
 			if (!checkHcPos(currentPos)) {
 				if (currentPos > maskUpper) {
 					isSubFinished = true;
+					nextSub = FINISHED;
 					break;
 				}
 				continue;
@@ -451,7 +477,7 @@ public class NodeIteratorNoGC<T> {
 
 	private void niFindNext(PhEntry<T> result) {
 		//iterator?
-		if (niIterator != null) {
+		if (!useNiHcIncrementer) {
 			while (niIterator.hasNext()) {
 				Entry<NodeEntry<T>> e = niIterator.nextEntry();
 				next = e.key();
@@ -464,7 +490,7 @@ public class NodeIteratorNoGC<T> {
 				return;
 			}
 
-			next = -1;
+			next = FINISHED;
 			return;
 		}
 
@@ -505,7 +531,7 @@ public class NodeIteratorNoGC<T> {
 				return;
 			}
 		} while (true);
-		next = -1;
+		next = FINISHED;
 	}
 
 
@@ -521,7 +547,8 @@ public class NodeIteratorNoGC<T> {
 		return node;
 	}
 
-	void init(long[] rangeMin, long[] rangeMax, long[] valTemplate, Node<T> node) {
+	void init(long[] rangeMin, long[] rangeMax, 
+			long[] valTemplate, Node<T> node, PhFilter checker) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -555,8 +582,6 @@ public class NodeIteratorNoGC<T> {
 				}
 			}
 		} else {
-			//currentDepth==0
-
 			//special treatment for signed longs
 			//The problem (difference) here is that a '1' at the leading bit does indicate a
 			//LOWER value, opposed to indicating a HIGHER value as in the remaining 63 bits.
@@ -580,7 +605,7 @@ public class NodeIteratorNoGC<T> {
 				}
 			}
 		}
-		reinit(node, rangeMin, rangeMax, lowerLimit, upperLimit);
+		reinit(node, rangeMin, rangeMax, lowerLimit, upperLimit, checker);
 	}
 
 }

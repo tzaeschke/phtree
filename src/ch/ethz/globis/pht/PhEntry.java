@@ -17,6 +17,11 @@ public class PhEntry<T> {
 		this.value = value;
 	}
 	
+	public PhEntry(PhEntry<T> e) {
+		this.key = Arrays.copyOf(e.getKey(), e.getKey().length);
+		this.value = e.getValue();
+	}
+	
 	public long[] getKey() {
 		return key;
 	}
@@ -79,5 +84,10 @@ public class PhEntry<T> {
 
 	public void setValue(T value) {
 		this.value = value;
+	}
+	
+	@Override
+	public String toString() {
+		return Arrays.toString(key);
 	}
 }

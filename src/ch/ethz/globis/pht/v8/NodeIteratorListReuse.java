@@ -8,8 +8,8 @@ package ch.ethz.globis.pht.v8;
 
 import java.util.ArrayList;
 
-import org.zoodb.index.critbit.CritBit64COW.Entry;
-import org.zoodb.index.critbit.CritBit64COW.QueryIteratorMask;
+import org.zoodb.index.critbit.CritBit64.Entry;
+import org.zoodb.index.critbit.CritBit64.QueryIteratorMask;
 
 import ch.ethz.globis.pht.PhPredicate;
 import ch.ethz.globis.pht.PhTreeHelper;

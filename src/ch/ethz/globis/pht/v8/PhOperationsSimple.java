@@ -10,7 +10,8 @@ import static ch.ethz.globis.pht.PhTreeHelper.applyHcPos;
 import static ch.ethz.globis.pht.PhTreeHelper.getMaxConflictingBits;
 import static ch.ethz.globis.pht.PhTreeHelper.posInArray;
 
-import org.zoodb.index.critbit.CritBit64COW;
+import org.zoodb.index.critbit.CritBit64.CBIterator;
+import org.zoodb.index.critbit.CritBit64.Entry;
 
 import ch.ethz.globis.pht.v8.PhTree8.NodeEntry;
 
@@ -45,8 +46,8 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
 
     @Override
 	public Node<T> createNode(PhTree8<T> parent, int infixLen, int postLen, 
-			int estimatedPostCount, final int DIM) {
-		return Node.createNode(parent, infixLen, postLen, estimatedPostCount, DIM);
+			int estimatedPostCount) {
+		return Node.createNode(parent, infixLen, postLen, estimatedPostCount);
 	}
 
     @Override
@@ -55,34 +56,31 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
             tree.insertRoot(key, value);
             return null;
         }
-        return insert(key, value, 0, tree.getRoot(), null, -1);
+        return insert(key, value, tree.getRoot(), null, -1);
     }
 
     /*
             Insertion navigation methods.
      */
 
-    protected T insert(long[] key, T value, int currentDepth, Node<T> node, Node<T> parent, 
+    protected T insert(long[] key, T value, Node<T> node, Node<T> parent, 
     		long posInParent) {
-        int DIM = tree.getDIM();
-
-        currentDepth += node.getInfixLen();
         //for a leaf node, the existence of a sub just indicates that the value may exist.
         long pos = posInArray(key, node.getPostLen());
-        if (currentDepth+1 < tree.getDEPTH()) {
+        if (node.getPostLen() > 0) {
             if (node.isPostNI()) {
-                return insertNI(key, value, currentDepth, node, pos, parent);
+                return insertNI(key, value, node, pos);
             }
-            Node<T> sub = node.getSubNode(pos, DIM);
+            Node<T> sub = node.getSubNode(pos, key.length);
             if (sub == null) {
-                return insertNoSub(key, value, currentDepth, node, pos, parent, posInParent);
+                return insertNoSub(key, value, node, pos, parent, posInParent);
             } else {
                 if (sub.hasInfixes() && conflictingInfix(sub, key)) {
                     //splitting may be required, the node has infixes
-                    return insertSplit(key, value, sub, currentDepth + 1, node, pos);
+                    return insertSplit(key, value, sub, node, pos);
                 }
                 //splitting not necessary
-                return insert(key, value, currentDepth+1, sub, node, pos);
+                return insert(key, value, sub, node, pos);
             }
         } else {
             //is leaf
@@ -90,8 +88,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         }
     }
 
-    protected T insertNI(long[] key, T value, int currentDepth, Node<T> node, long pos, 
-    		Node<T> parent) {
+    protected T insertNI(long[] key, T value, Node<T> node, long pos) {
         NodeEntry<T> e = node.getChildNI(pos);
 
         //check if we need to recurse
@@ -100,20 +97,21 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
             //sub found
             if (sub.hasInfixes() && conflictingInfix(sub, key)) {
                 //splitting may be required, the node has infixes
-                return insertSplit(key, value, sub, currentDepth+1, node, pos);
+                return insertSplit(key, value, sub, node, pos);
             }
             //splitting not necessary
-            return insert(key, value, currentDepth+1, sub, node, pos);
+            return insert(key, value, sub, node, pos);
         }
 
         //or apply the changes to the current node
-        return performInsertionNI(tree, key, value, currentDepth, node, e, pos);
+        return performInsertionNI(tree, key, value, node, e, pos);
     }
 
     /*
         Insertion mutation methods.
      */
-    protected T performInsertionNI(PhTree8<T> tree, long[] key, T value, int currentDepth, Node<T> node, NodeEntry<T> e, long pos) {
+    protected final T performInsertionNI(PhTree8<T> tree, long[] key, T value, 
+    		Node<T> node, NodeEntry<T> e, long pos) {
         if (e == null) {
             //nothing found at all
             //insert as postfix
@@ -132,7 +130,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
 
             //existing value
             //Create a new node that contains the existing and the new value.
-            Node<T> sub = calcPostfixes(key, value, e.getKey(), prevVal, currentDepth+1);
+            Node<T> sub = calcPostfixes(key, value, e.getKey(), prevVal, node.getPostLen());
 
             //replace value with new leaf
             node.setPostCount(node.getPostCount()-1);
@@ -150,15 +148,13 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
      * @param key
      * @param value
      * @param node
-     * @param currentDepth
      * @param parent
      * @param posInParent
-     * @return
+     * @return The value
      */
-    protected T insertSplit(long[] key, T value, Node<T> node, int currentDepth, Node<T> parent,
+    protected T insertSplit(long[] key, T value, Node<T> node, Node<T> parent,
                   long posInParent) {
-        int DIM = tree.getDIM();
-        int DEPTH = PhTree8.DEPTH_64;
+        int DIM = key.length;
 
         //check if splitting is necessary
         long[] infix = new long[DIM];
@@ -166,15 +162,16 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         int maxConflictingBits = tree.getConflictingInfixBits(key, infix, node);
 
         //do the splitting
-        //newLocalLen: -1 for the bit stored in the map
-        byte newLocalLen = (byte) (DEPTH-currentDepth-maxConflictingBits);
-        int newSubInfLen = node.getInfixLen() - newLocalLen - 1;
+
+        //newLocalLen
+        int newLocalInfLen = node.getInfixLen() + 1 + node.getPostLen() - maxConflictingBits;
+        int newSubInfLen = node.getInfixLen() - newLocalInfLen - 1;
 
         //What does 'splitting' mean:
         //The current node has an infix that is not (or only partially) compatible with the new key.
         //The new key should end up as post-fix for the current node. All current post-fixes
         //and sub-nodes are moved to a new sub-node. We know that there are more than two children
-        //(posts+subs), otherwise the node wshould have been removed already.
+        //(posts+subs), otherwise the node should have been removed already.
 
         //How splitting works:
         //We insert a new node between the current and the parent node.
@@ -182,12 +179,12 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         //infix.
 
         //We use the infixes as references, because they provide the correct location for the new sub
-        long posOfNewSub = tree.posInArrayFromInfixes(node, newLocalLen);
+        long posOfNewSub = tree.posInArrayFromInfixes(node, newLocalInfLen);
 
         //create new middle node
-        int newPostLen = (DEPTH-currentDepth-newLocalLen-1);
-        Node<T> newNode = createNode(tree, newLocalLen, newPostLen, 1, DIM);
-        if (newLocalLen > 0) {
+        int newPostLen = maxConflictingBits-1;
+        Node<T> newNode = createNode(tree, newLocalInfLen, newPostLen, 1);
+        if (newLocalInfLen > 0) {
             newNode.writeInfix(infix);
         }
 
@@ -217,7 +214,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
     }
 
     protected boolean conflictingInfix(Node<T> node, long[] key) {
-        int DIM = tree.getDIM();
+        int DIM = tree.getDim();
 
         long[] infix = new long[DIM];
         node.getInfixNoOverwrite(infix);
@@ -225,9 +222,9 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         return (maxConflictingBits != 0);
     }
 
-    protected T insertNoSub(long[] key, T value, int currentDepth, Node<T> node, 
+    protected T insertNoSub(long[] key, T value, Node<T> node, 
     		long pos, Node<T> parent, long posInParent) {
-        int DIM = tree.getDIM();
+        int DIM = key.length;
 
         //do we have a postfix at that position?
         int pob = node.getPostOffsetBits(pos, DIM);
@@ -243,7 +240,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
             long[] prevKey = new long[DIM];
             T prevVal = node.getPostPOB(pob, pos, prevKey);
             //Create a new node that contains the existing and the new value.
-            sub = calcPostfixes(key, value, prevKey, prevVal, currentDepth+1);
+            sub = calcPostfixes(key, value, prevKey, prevVal, node.getPostLen());
 
             node.removePostPOB(pos, pob, DIM);
 
@@ -258,7 +255,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
     }
 
     protected T insertLeaf(long[] key, T value, Node<T> node, long pos) {
-        int DIM = tree.getDIM();
+        int DIM = key.length;
 
         int pob = node.getPostOffsetBits(pos, DIM);
         if (pob < 0) {
@@ -274,15 +271,12 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         throw new IllegalStateException();
     }
 
-    private Node<T> calcPostfixes(long[] key1, T val1, long[] key2, T val2, int currentDepth) {
-        int DEPTH = tree.getDEPTH();
-        int DIM = tree.getDIM();
-
+    private Node<T> calcPostfixes(long[] key1, T val1, long[] key2, T val2, int parentPostLen) {
         //determine length of infix
-        int mcb = getMaxConflictingBits(key1, key2, DEPTH-currentDepth);
-        int infLen = DEPTH - currentDepth - mcb;
+        int mcb = getMaxConflictingBits(key1, key2, parentPostLen);
+        int infLen = parentPostLen - mcb;
         int postLen = mcb-1;
-        Node<T> node = createNode(tree, infLen, postLen, 2, DIM);
+        Node<T> node = createNode(tree, infLen, postLen, 2);
 
         node.writeInfix(key1);
         long posSub1 = posInArray(key1, postLen);
@@ -297,7 +291,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         if (tree.getRoot() == null) {
             return null;
         }
-        return delete(key, tree.getRoot(), 0, null, PhTree8.UNKNOWN, null, null);
+        return delete(key, tree.getRoot(), null, PhTree8.UNKNOWN, null, null);
     }
 
     /*
@@ -305,7 +299,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
 
         Merging occurs if a node is not the root node and has after deletion less than two children.
      */
-    protected T delete(long[] key, Node<T> node, int currentDepth, Node<T> parent, long posInParent,
+    protected T delete(long[] key, Node<T> node, Node<T> parent, long posInParent,
                      long[] newKey, int[] insertRequired) {
         //first, check infix!
         //second, check post/sub
@@ -313,18 +307,16 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
 
         //check infix
         if (node.getInfixLen() > 0) {
-            if (checkInfixMatch(node, key)) {
-                currentDepth += node.getInfixLen();
-            } else {
+            if (!checkInfixMatch(node, key)) {
                 return null;
             }
         }
 
         //NI-node?
         if (node.isPostNI()) {
-            T ret = deleteNI(key, node, currentDepth, parent, posInParent, newKey, insertRequired);
+            T ret = deleteNI(key, node, parent, posInParent, newKey, insertRequired);
             if (insertRequired != null && insertRequired[0] < node.getPostLen()) {
-                insert(newKey, ret, currentDepth-node.getInfixLen(), node, parent, posInParent);
+                insert(newKey, ret, node, parent, posInParent);
                 insertRequired[0] = NO_INSERT_REQUIRED;
             }
             return ret;
@@ -332,11 +324,11 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
 
         //check for sub
         final long pos = posInArray(key, node.getPostLen());
-        Node<T> sub1 = node.getSubNode(pos, tree.getDIM());
+        Node<T> sub1 = node.getSubNode(pos, key.length);
         if (sub1 != null) {
-            T ret = delete(key, sub1, currentDepth+1, node, pos, newKey, insertRequired);
+            T ret = delete(key, sub1, node, pos, newKey, insertRequired);
             if (insertRequired != null && insertRequired[0] < node.getPostLen()) {
-                insert(newKey, ret, currentDepth-node.getInfixLen(), node, parent, posInParent);
+                insert(newKey, ret, node, parent, posInParent);
                 insertRequired[0] = NO_INSERT_REQUIRED;
             }
             return ret;
@@ -346,13 +338,11 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
     }
 
     protected boolean checkInfixMatch(Node<T> node, long[] key) {
-        int DIM = tree.getDIM();
-
         long mask = (1l<<node.getInfixLen()) - 1l; // e.g. (0-->0), (1-->1), (8-->127=0x01111111)
         int shiftMask = (node.getPostLen()+1);
         //mask <<= shiftMask; //last bit is stored in bool-array
         mask = shiftMask==64 ? 0 : mask<<shiftMask;
-        for (int i = 0; i < DIM; i++) {
+        for (int i = 0; i < key.length; i++) {
             if (((key[i] ^ node.getInfix(i)) & mask) != 0) {
                 //infix does not match
                 return false;
@@ -361,7 +351,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         return true;
     }
 
-    protected T deleteNI(long[] key, Node<T> node, int currentDepth, Node<T> parent, long posInParent,
+    protected T deleteNI(long[] key, Node<T> node, Node<T> parent, long posInParent,
                          long[] newKey, int[] insertRequired) {
         final long pos = posInArray(key, node.getPostLen());
         NodeEntry<T> e = node.getChildNI(pos);
@@ -369,9 +359,9 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
             return null;
         }
         if (e.node != null) {
-            T ret = delete(key, e.node, currentDepth+1, node, pos, newKey, insertRequired);
+            T ret = delete(key, e.node, node, pos, newKey, insertRequired);
             if (insertRequired != null && insertRequired[0] < node.getPostLen()) {
-                insert(newKey, ret, currentDepth, node, parent, posInParent);
+                insert(newKey, ret, node, parent, posInParent);
                 insertRequired[0] = NO_INSERT_REQUIRED;
             }
             return ret;
@@ -383,7 +373,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
 
     protected T performDeletionNI(PhTree8<T> tree, long[] key, NodeEntry<T> e, Node<T> node,
     		Node<T> parent, long posInParent, long[] newKey, int[] insertRequired, long pos) {
-        int DIM = tree.getDIM();
+        int DIM = key.length;
 
         if (!node.postEquals(e.getKey(), key)) {
             //value does not exist
@@ -433,8 +423,8 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         T oldValue = e.getValue();
 
         //locate the other entry
-        CritBit64COW.CBIterator<NodeEntry<T>> iter = node.niIterator();
-        CritBit64COW.Entry<NodeEntry<T>> ie = iter.nextEntry();
+        CBIterator<NodeEntry<T>> iter = node.niIterator();
+        Entry<NodeEntry<T>> ie = iter.nextEntry();
         if (ie.key() == pos) {
             //pos2 is the entry to be deleted, find the other entry for pos2
             ie = iter.nextEntry();
@@ -464,7 +454,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
     T performDeletion(long[] key, Node<T> node, Node<T> parent, long posInParent,
                       long[] newKey, int[] insertRequired, long pos) {
 
-        int DIM = tree.getDIM();
+        int DIM = key.length;
 
         //check matching post
         int pob = node.getPostOffsetBits(pos, DIM);
@@ -541,7 +531,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         }
 
         //connect sub to parent
-        Node<T> sub2 = getSubNode(node, pos2, posSubLHC);
+        Node<T> sub2 = getSubNode(node, pos2, posSubLHC,DIM);
 
         performDeletionWithSub(node, parent, posInParent, sub2, pos2, DIM);
 
@@ -562,7 +552,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         node.setRemoved(true);
     }
 
-    protected Node<T> getSubNode(Node<T> node, long pos2, int posSubLHC) {
+    protected Node<T> getSubNode(Node<T> node, long pos2, int posSubLHC, int dim) {
         Node<T> sub2 = node.getSubNodeWithPos(pos2, posSubLHC);
         return sub2;
     }
@@ -573,7 +563,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
             return null;
         }
         final int[] insertRequired = new int[]{NO_INSERT_REQUIRED};
-        T v = delete(oldKey, tree.getRoot(), 0, null, PhTree8.UNKNOWN, newKey, insertRequired);
+        T v = delete(oldKey, tree.getRoot(), null, PhTree8.UNKNOWN, newKey, insertRequired);
         if (insertRequired[0] != NO_INSERT_REQUIRED) {
             //this is only 'true' if the value existed AND if oldKey was not replaced with newKey,
             //because they wouldn't be in the same location.
@@ -584,8 +574,8 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
 
     protected Node<T> copyNodeAndReplaceInParent(Node<T> node, Node<T> parent, long posInParent) {
         if (parent != null) {
-            node = createNode(node, tree.getDIM());
-            parent.replaceSub(posInParent, node, tree.getDIM());
+            node = createNode(node, tree.getDim());
+            parent.replaceSub(posInParent, node, tree.getDim());
         }
         return node;
     }
@@ -594,7 +584,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         NodeEntry<T> e = node.getChildNI(childPos);
         if (e != null) {
             if (e.node != null) {
-                node.niPut(childPos, createNode(e.node, tree.getDIM()));
+                node.niPut(childPos, createNode(e.node, tree.getDim()));
             } else {
                 node.niPut(childPos, e.getKey(), e.getValue());
             }

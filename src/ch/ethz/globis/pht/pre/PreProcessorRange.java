@@ -21,8 +21,8 @@ public interface PreProcessorRange {
 	 * @param pre pre-processed data (output, must be non-null and same size as input array)
 	 */
 	public void pre(long[] raw1, long[] raw2, long[] pre);
-
-
+	
+	
 	/**
 	 * @param pre pre-processed data (input)
 	 * @param post1 post-processed data (output, must be non-null and same size as input array)

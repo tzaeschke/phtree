@@ -1,4 +1,12 @@
 
+2015-10-28
+==========
+- (TZ) Addek kNN-queries
+- (TZ) Added (spherical) range queries
+- (TZ) Numerous fixes, improvements, clean-up
+- (TZ) Some API changesm getDIM() -> getDim(), ...
+- (TZ) Added PhTreeRevisited.pdf
+
 
 2015-10-11
 ==========

@@ -27,9 +27,8 @@ import ch.ethz.globis.pht.test.util.TestUtil;
 
 public class TestValuesD extends TestSuper {
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <T> PhTreeF<T> createTree(int dim) {
-    	return new PhTreeF(TestUtil.newTree(dim, 64));
+    	return PhTreeF.wrap(TestUtil.newTree(dim, 64));
     }
     
 	@Test

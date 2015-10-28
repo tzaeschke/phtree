@@ -29,13 +29,7 @@ import ch.ethz.globis.pht.util.Bits;
 
 public class TestIndexQueries extends TestSuper {
 
-	private static final Object O = new Object();
-	
-	private PhTree<long[]> createNV(int dim, int depth) {
-		return TestUtil.newTree(dim, depth);
-	}
-
-	private PhTree<Object> create(int dim, int depth) {
+	private PhTree<long[]> create(int dim, int depth) {
 		return TestUtil.newTree(dim, depth);
 	}
 
@@ -43,7 +37,7 @@ public class TestIndexQueries extends TestSuper {
 	public void testQuerySingle() {
 		final int N = 30000;
 
-		PhTree<long[]> ind = createNV(1, 16);
+		PhTree<long[]> ind = create(1, 16);
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[]{i};
 			ind.put(v, v);
@@ -79,7 +73,7 @@ public class TestIndexQueries extends TestSuper {
 	public void testQuerySingle_Bug1() {
 		final int N = 20;
 
-		PhTree<long[]> ind = createNV(1, 16);
+		PhTree<long[]> ind = create(1, 16);
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[]{i};
 			ind.put(v, v);
@@ -105,7 +99,7 @@ public class TestIndexQueries extends TestSuper {
 				}; 
 		
 		for (int d = 0; d < DIM; d++) {
-			PhTree<long[]> ind = createNV(DIM, 32);
+			PhTree<long[]> ind = create(DIM, 32);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int dd = 0; dd < DIM; dd++) {
@@ -131,7 +125,7 @@ public class TestIndexQueries extends TestSuper {
 		final int N = 10000;
 		
 		for (int d = 0; d < DIM; d++) {
-			PhTree<long[]> ind = createNV(DIM, 64);
+			PhTree<long[]> ind = create(DIM, 64);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				v[d] = i;
@@ -160,7 +154,7 @@ public class TestIndexQueries extends TestSuper {
 		
 		long[][] valsArr = new long[N][];
 
-		PhTree<long[]> ind = createNV(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[DIM];
 			v[0] = Math.abs(R.nextInt());
@@ -186,7 +180,7 @@ public class TestIndexQueries extends TestSuper {
 		
 		HashSet<Long> valsSet = new HashSet<Long>();
 
-		PhTree<long[]> ind = createNV(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[DIM];
 			v[0] = Math.abs(R.nextInt());
@@ -222,7 +216,7 @@ public class TestIndexQueries extends TestSuper {
 		HashSet<Long> valsSet = new HashSet<Long>();
 		long[][] valsArr = new long[N][];
 		for (int d = 0; d < DIM; d++) {
-			PhTree<long[]> ind = createNV(DIM, 64);
+			PhTree<long[]> ind = create(DIM, 64);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				v[d] = R.nextLong(); 
@@ -258,7 +252,7 @@ public class TestIndexQueries extends TestSuper {
 		final int N = 10000;
 		
 		for (int d = 0; d < DIM; d++) {
-			PhTree<long[]> ind = createNV(DIM, 16);
+			PhTree<long[]> ind = create(DIM, 16);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				v[d] = i;
@@ -285,7 +279,7 @@ public class TestIndexQueries extends TestSuper {
 		final int DEPTH = 16;
 		
 		for (int d = 0; d < DIM; d++) {
-			PhTree<long[]> ind = createNV(DIM, DEPTH);
+			PhTree<long[]> ind = create(DIM, DEPTH);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int j = 0; j < DIM; j++) {
@@ -365,7 +359,7 @@ public class TestIndexQueries extends TestSuper {
 		final Random R = new Random();
 		
 		for (int d = 0; d < DIM; d++) {
-			PhTree<long[]> ind = createNV(DIM, 64);
+			PhTree<long[]> ind = create(DIM, 64);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int j = 0; j < DIM; j++) {
@@ -418,7 +412,7 @@ public class TestIndexQueries extends TestSuper {
 		final Random R = new Random();
 		
 		for (int d = 0; d < DIM; d++) {
-			PhTree<long[]> ind = createNV(DIM, 64);
+			PhTree<long[]> ind = create(DIM, 64);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int j = 0; j < DIM; j++) {
@@ -476,7 +470,7 @@ public class TestIndexQueries extends TestSuper {
 	
 	@Test
 	public void testPrecision() {
-		PhTree<long[]> ind = createNV(2, 8);
+		PhTree<long[]> ind = create(2, 8);
 		ind.put(new long[]{2,2}, new long[]{2,2});
 		ind.put(new long[]{1,1}, new long[]{1,1});
 		ind.put(new long[]{1,3}, new long[]{1,3});
@@ -519,7 +513,7 @@ public class TestIndexQueries extends TestSuper {
 	
 	@Test
 	public void testPrecisionDouble() {
-		PhTree<long[]> ind = createNV(2, 64);
+		PhTree<long[]> ind = create(2, 64);
 		ind.put( d2l(2,2), d2l(2,2) );
 		assertTrue(ind.contains(d2l(2,2)));
 		ind.put( d2l(1,1), d2l(1,1) );
@@ -568,7 +562,7 @@ public class TestIndexQueries extends TestSuper {
 		
 	@Test
 	public void testPrecisionDoubleNeg() {
-		PhTree<long[]> ind = createNV(2, 64);
+		PhTree<long[]> ind = create(2, 64);
 		ind.put( d2l(2,2), d2l(2,2) );
 		ind.put( d2l(-1,-1), d2l(-1,-1) );
 		ind.put( d2l(-1,3), d2l(-1,3) );
@@ -639,7 +633,7 @@ public class TestIndexQueries extends TestSuper {
 		
 		for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
 			//System.out.println("d="+ DIM);
-			PhTree<long[]> ind = createNV(DIM, DEPTH);
+			PhTree<long[]> ind = create(DIM, DEPTH);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int j = 0; j < DIM; j++) {
@@ -700,7 +694,7 @@ public class TestIndexQueries extends TestSuper {
 		
 		for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
 			//System.out.println("d="+ DIM);
-			PhTree<long[]> ind = createNV(DIM, DEPTH);
+			PhTree<long[]> ind = create(DIM, DEPTH);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int j = 0; j < DIM; j++) {
@@ -760,7 +754,7 @@ public class TestIndexQueries extends TestSuper {
 		
 		for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
 			//System.out.println("d="+ DIM);
-			PhTree<long[]> ind = createNV(DIM, DEPTH);
+			PhTree<long[]> ind = create(DIM, DEPTH);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int j = 0; j < DIM; j++) {
@@ -823,7 +817,7 @@ public class TestIndexQueries extends TestSuper {
 		final int DIM = 6;
 		Random R = new Random(0);
 		
-		PhTree<long[]> ind = createNV(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		long[] v = new long[DIM];
 		for (int j = 0; j < DIM; j++) {
 			v[j] = R.nextLong();
@@ -863,7 +857,7 @@ public class TestIndexQueries extends TestSuper {
 		final int DIM = 3;
 		
 		//System.out.println("d="+ DIM);
-		PhTree<long[]> ind = createNV(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[DIM];
 			for (int j = 0; j < DIM; j++) {
@@ -900,17 +894,17 @@ public class TestIndexQueries extends TestSuper {
 		Random R = new Random(0);
 		
 		//System.out.println("d="+ DIM);
-		PhTree<Object> ind = create(DIM, DEPTH);
+		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[DIM];
 			for (int j = 0; j < DIM; j++) {
 				v[j] = R.nextLong();
 			}
-			assertEquals(Bits.toBinary(v, DEPTH), null, ind.put(v, O));
+			assertEquals(Bits.toBinary(v, DEPTH), null, ind.put(v, v));
 		}
 
 		//check empty result
-		PhIterator<Object> it;
+		PhIterator<long[]> it;
 		int n = 0;
 		long[] min = new long[DIM];
 		long[] max = new long[DIM];
@@ -941,7 +935,7 @@ public class TestIndexQueries extends TestSuper {
 		
 		for (int DIM = 7; DIM <= MAX_DIM; DIM++) {
 			//System.out.println("d="+ DIM);
-			PhTree<long[]> ind = createNV(DIM, DEPTH);
+			PhTree<long[]> ind = create(DIM, DEPTH);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
 				for (int j = 0; j < DIM; j++) {

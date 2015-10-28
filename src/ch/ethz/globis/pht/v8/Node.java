@@ -10,9 +10,10 @@ import static ch.ethz.globis.pht.PhTreeHelper.DEBUG;
 import static ch.ethz.globis.pht.PhTreeHelper.DEBUG_FULL;
 import static ch.ethz.globis.pht.PhTreeHelper.applyHcPos;
 
+import org.zoodb.index.critbit.CritBit64;
 import org.zoodb.index.critbit.CritBit64COW;
-import org.zoodb.index.critbit.CritBit64COW.CBIterator;
-import org.zoodb.index.critbit.CritBit64COW.Entry;
+import org.zoodb.index.critbit.CritBit64.CBIterator;
+import org.zoodb.index.critbit.CritBit64.Entry;
 
 import ch.ethz.globis.pht.PhEntry;
 import ch.ethz.globis.pht.PhTreeHelper;
@@ -71,7 +72,7 @@ class Node<T> {
 	private byte postLen = 0;
 	private byte infixLen = 0; //prefix size
 
-	private CritBit64COW<NodeEntry<T>> ind = null;
+	private CritBit64<NodeEntry<T>> ind = null;
 
     @SuppressWarnings("unchecked")
 	protected Node(Node<T> original, int dim) {
@@ -94,7 +95,7 @@ class Node<T> {
         this.postLen = original.postLen;
         this.infixLen = original.infixLen;
         if (original.ind != null) {
-            this.ind = original.ind.copy();
+            this.ind = ((CritBit64COW<PhTree8.NodeEntry<T>>)original.ind).copy();
         }
         if (original.ba != null) {
             int nrBits = original.isPostNI() ? 
@@ -105,19 +106,19 @@ class Node<T> {
         }
     }
 
-	protected Node(int infixLen, int postLen, int estimatedPostCount, int DIM, PhTree8<T> tree) {
+	protected Node(int infixLen, int postLen, int estimatedPostCount, PhTree8<T> tree) {
 		this.infixLen = (byte) infixLen;
 		this.postLen = (byte) postLen;
 		tree.increaseNrNodes();
 		if (estimatedPostCount >= 0) {
-			int size = calcArraySizeTotalBits(estimatedPostCount, DIM);
+			int size = calcArraySizeTotalBits(estimatedPostCount, tree.getDim());
 			this.ba = Bits.arrayCreate(size);
 		}
 	}
 
 	static <T> Node<T> createNode(PhTree8<T> tree, int infixLen, int postLen, 
-			int estimatedPostCount, final int DIM) {
-		return new Node<T>(infixLen, postLen, estimatedPostCount, DIM, tree);
+			int estimatedPostCount) {
+		return new Node<T>(infixLen, postLen, estimatedPostCount, tree);
 	}
 
 	static <T> Node<T> createNode(Node<T> original, int dim) {
@@ -688,12 +689,20 @@ class Node<T> {
 		}
 	}
 
+	/**
+	 * WARNING: This is overloaded in subclasses of Node.
+	 * @return Index.
+	 */
+	CritBit64<NodeEntry<T>> createNiIndex() {
+		return CritBit64COW.create();
+	}
+	
 	void niBuild(int bufSubCnt, int bufPostCnt, int DIM) {
 		//Migrate node to node-index representation
 		if (ind != null || isPostNI() || isSubNI()) {
 			throw new IllegalStateException();
 		}
-		ind = CritBit64COW.create();
+		ind = createNiIndex();
 
 		//read posts 
 		if (isPostHC()) {
@@ -945,6 +954,7 @@ class Node<T> {
 	 * @param range After the method call, this contains the postfix if the postfix matches the
 	 * range. Otherwise it contains only part of the postfix.
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
+	 * @Deprecated Use next method instead.
 	 */
 	NodeEntry<T> getPostPOB(int offsPostKey, long hcPos, long[] key, 
 			long[] rangeMin, long[] rangeMax) {
@@ -1485,6 +1495,10 @@ class Node<T> {
 
 	/**
 	 * Adjust the infix in cases were the parent node is removed.
+	   * @param prefix 
+	   * @param infixLenOfParent 
+	   * @param postLenOfParent 
+	   * @param hcPos 
 	 * @param infix
 	 */
 	public void adjustInfix(long[] prefix, int infixLenOfParent, int postLenOfParent, long hcPos) {
@@ -1517,7 +1531,7 @@ class Node<T> {
 	Node<T> subNRef(int pos) {
 		return subNRef[pos];
 	}
-	CritBit64COW<NodeEntry<T>> ind() {
+	CritBit64<NodeEntry<T>> ind() {
 		return ind;
 	}
 
