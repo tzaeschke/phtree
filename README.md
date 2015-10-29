@@ -2,7 +2,8 @@
 
 The PH-tree is a multi-dimensional indexing and storage structure.
 By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used
-to efficiently store floating point values and/or ranged objects such as k-dimensional boxes.
+to efficiently store floating point values or k-dimensional rectangles.
+It supports kNN queries, range queries, window queries and fast update/moving of individual entries.
 
 The PH-tree was developed at ETH Zurich and first published in:
 "The PH-Tree: A Space-Efficient Storage Structure and Multi-Dimensional Index" ([PDF](http://globis.ethz.ch/?pubdownload=699)), 
@@ -86,10 +87,11 @@ is about twice as fast for small displacements and at least as fast as a `put()`
 
 ### Choose a Type of Query
 
-- `queryExtent()`: Fastest option when traversing (almost) all of the tree
-- `query()`:       Fastest option for for average result size > 50 (depending on data)
-- `queryAll()`:    Fastest option for for average result size < 50 (depending on data)
-
+- `queryExtent()`:      Fastest option when traversing (almost) all of the tree
+- `query()`:            Fastest option for for average result size > 50 (depending on data)
+- `queryAll()`:         Fastest option for for average result size < 50 (depending on data)
+- `nearestNeighbour()`: Nearest neighbour query
+- `rangeQuery()`:       Returns everything with a spherical range
 
 ### Iterators
 
