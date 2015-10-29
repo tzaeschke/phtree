@@ -20,18 +20,18 @@ Contact:
 
 ### Advantages
 
-- Memory efficient: Due to prefix sharing and other optimisations the tree may consume less memory than a flat array of integers/floats
+- Memory efficient: Due to prefix sharing and other optimisations the tree may consume less memory than a flat array of integers/floats.
 - Update efficiency: The performance of `insert()`, `update()` and `delete()` operations is almost independent of the size of the tree. For low dimensions performance may even improve with larger trees (> 1M entries).
-- Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more
-- Scalability with dimension: Updates and 'contains()' queries scale very well to the current maximum of 62 dimensions. Range queries and other operations are best used with up to 10-15 dimensions only.
+- Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more.
+- Scalability with dimension: Updates and 'contains()' scale very well to the current maximum of 62 dimensions. Queries may scale or not for k>10-15, depending on the dataset.
 - Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
 - Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
 
 ### Disadvantages
 
 - The current implementation will not work with more then 62 dimensions.
-- Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more
-- Performance/dimensionality: performance of range queries degrades when using data with more than 10-15 dimensions. Updates and `contains()` work fine for higher dimensions
+- Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more.
+- Performance/dimensionality: depending on the dataset, performance of queries may degrades when using data with more than 10-15 dimensions. 
 - Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better that traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
 - Storage: The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about [iterators](#iterators) below on some strategies to avoid this problem. 
 
@@ -39,8 +39,8 @@ Contact:
 
 ### Generally
 
-- The tree performs best with large datasets.
-- The tree performs best on range queries that return few result (1-1000) because of the comparatively high extraction cost of values. 
+- The tree performs best with large datasets with 1 million entries or more. Performance actually increases with large datasets.
+- The tree performs best on window queries that return few result (1-1000) because of the comparatively high extraction cost of values. 
 
 
 # Interfaces / Abstract Classes
@@ -131,6 +131,8 @@ above example would mainly constrain the 2nd and 3rd dimension, then the first d
 NOT be multiplied. In other words, the more selective queries are on a given dimension, the more
 wide should the dimension spread over the tree, i.e. the dimension should be given a higher 
 multiplier.
+
+Data preprocessing can be automated using the `IntegerPP` or `ExponentPP` preprocessors, see PDF documentation.
 
   
 # License
