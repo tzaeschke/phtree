@@ -4,7 +4,7 @@
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.pht.test;
+package ch.ethz.globis.pht.bits;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Random;

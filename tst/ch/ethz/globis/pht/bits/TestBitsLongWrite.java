@@ -6,7 +6,7 @@
  * 
  * Author: Tilmann Zaeschke
  */
-package ch.ethz.globis.pht.test;
+package ch.ethz.globis.pht.bits;
 
 import static org.junit.Assert.assertEquals;
 
