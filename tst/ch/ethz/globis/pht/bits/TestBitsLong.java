@@ -758,6 +758,37 @@ public class TestBitsLong {
 		check(b1, b2);
 	}
 	
+	@Test
+	public void copyBitsLeftBug7() {
+//		long[] s = new long[155];
+//		long[] b1 = new long[158];
+//		Arrays.fill(s,0x5555555555555555L);
+//		Arrays.fill(b1,0xAAAAAAAAAAAAAAAAL);
+//		long[] b2 = b1.clone();
+//
+//		int posSrc=9600+5;
+//		int posTrg=32 + 315*31;
+//		int nBits=315;
+		
+		long[] s = new long[2];
+		long[] b1 = new long[3];
+		Arrays.fill(s,0x5555555555555555L);
+		Arrays.fill(b1,0xAAAAAAAAAAAAAAAAL);
+		long[] b2 = b1.clone();
+
+		int posSrc=9600+5 - 150*64;
+		int posTrg=32 + 315*31 -152*64;
+		int nBits=315-64*3;
+
+//		System.out.println("s="+ posSrc + "  t=" + posTrg + "  l=" + nBits + "  158*64=" + 158*64);
+//		System.out.println("s+n= "+ (posSrc+nBits) + "  t+n=" + (posTrg+nBits));
+//		System.out.println("ori: " + BitsLong.toBinary(s));
+		copyBitsLeftSlow(s, posSrc, b2, posTrg, nBits);
+//		System.out.println("b2 : " + BitsLong.toBinary(b2));
+		BitsLong.copyBitsLeft(s, posSrc, b1, posTrg, nBits);
+		check(b1, b2);
+	}
+	
 	private void insertBitsSlow(long[] ba, int start, int nBits) {
 		int bitsToShift = ba.length*BITS - start - nBits;
 		for (int i = 0; i < bitsToShift; i++) {

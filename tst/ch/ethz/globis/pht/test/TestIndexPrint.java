@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -54,9 +54,14 @@ public class TestIndexPrint {
 		final Random R = new Random(4);
 		
 		PhTree<long[]> ind = create(3, 32);
+		long keysA[][] = new long[N][];
 		for (int i = 0; i < N; i++) {
 			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
 			ind.put(v, v);
+			keysA[i] = v;
+			for (int j = 0; j <= i; j++) {
+				assertTrue(ind.contains(keysA[j]));
+			}
 		}
 
 		ArrayList<String> keys = new ArrayList<>();

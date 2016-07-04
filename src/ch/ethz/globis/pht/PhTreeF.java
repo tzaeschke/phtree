@@ -1,18 +1,17 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
 package ch.ethz.globis.pht;
 
-import java.util.Arrays;
 import java.util.List;
 
 import ch.ethz.globis.pht.PhTree.PhExtent;
 import ch.ethz.globis.pht.PhTree.PhIterator;
-import ch.ethz.globis.pht.PhTree.PhQuery;
 import ch.ethz.globis.pht.PhTree.PhKnnQuery;
+import ch.ethz.globis.pht.PhTree.PhQuery;
 import ch.ethz.globis.pht.pre.EmptyPPF;
 import ch.ethz.globis.pht.pre.PreProcessorPointF;
 import ch.ethz.globis.pht.util.PhIteratorBase;
@@ -34,6 +33,16 @@ public class PhTreeF<T> {
 	private final PhTree<T> pht;
 	private final PreProcessorPointF pre;
 
+	private PhTreeF(int dim, PreProcessorPointF pre) {
+		this.pht = PhTree.create(dim);
+		this.pre = pre;
+	}
+
+	private PhTreeF(PhTree<T> tree) {
+		this.pht = tree;
+		this.pre = new EmptyPPF();
+	}
+
 	/**
 	 * Create a new tree with the specified number of dimensions.
 	 * 
@@ -41,7 +50,7 @@ public class PhTreeF<T> {
 	 * @return PhTreeF
 	 */
 	public static <T> PhTreeF<T> create(int dim) {
-		return new PhTreeF<T>(dim, new EmptyPPF());
+		return new PhTreeF<>(dim, new EmptyPPF());
 	}
 
 	/**
@@ -53,7 +62,7 @@ public class PhTreeF<T> {
 	 * @return PhTreeF
 	 */
 	public static <T> PhTreeF<T> create(int dim, PreProcessorPointF pre) {
-		return new PhTreeF<T>(dim, pre);
+		return new PhTreeF<>(dim, pre);
 	}
 
 	/**
@@ -63,17 +72,7 @@ public class PhTreeF<T> {
 	 * @return PhTreeF
 	 */
 	public static <T> PhTreeF<T> wrap(PhTree<T> tree) {
-		return new PhTreeF<T>(tree);
-	}
-
-	private PhTreeF(int dim, PreProcessorPointF pre) {
-		this.pht = PhTree.create(dim);
-		this.pre = pre;
-	}
-
-	private PhTreeF(PhTree<T> tree) {
-		this.pht = tree;
-		this.pre = new EmptyPPF();
+		return new PhTreeF<>(tree);
 	}
 
 	public int size() {
@@ -117,7 +116,7 @@ public class PhTreeF<T> {
 	}
 
 	public PhExtentF<T> queryExtent() {
-		return new PhExtentF<T>(pht.queryExtent(), pht.getDim(), pre);
+		return new PhExtentF<>(pht.queryExtent(), pht.getDim(), pre);
 	}
 
 
@@ -160,7 +159,7 @@ public class PhTreeF<T> {
 		long[] lKey = new long[center.length];
 		pre.pre(center, lKey);
 		PhRangeQuery<T> iter = pht.rangeQuery(dist, optionalDist, lKey);
-		return new PhRangeQueryF<T>(iter, pht, pre);
+		return new PhRangeQueryF<>(iter, pht, pre);
 	}
 
 	public int getDim() {
@@ -200,12 +199,14 @@ public class PhTreeF<T> {
 	public static class PhIteratorF<T> implements PhIteratorBase<double[], T, PhEntryF<T>> {
 		private final PhIterator<T> iter;
 		protected final PreProcessorPointF pre;
-		private final int DIM;
+		private final int dims;
+		private final PhEntryF<T> buffer;
 
-		private PhIteratorF(PhIterator<T> iter, int DIM, PreProcessorPointF pre) {
+		private PhIteratorF(PhIterator<T> iter, int dims, PreProcessorPointF pre) {
 			this.iter = iter;
 			this.pre = pre;
-			this.DIM = DIM;
+			this.dims = dims;
+			this.buffer = new PhEntryF<>(new double[dims], null);
 		}
 
 		@Override
@@ -220,15 +221,23 @@ public class PhTreeF<T> {
 
 		@Override
 		public PhEntryF<T> nextEntry() {
-			double[] d = new double[DIM];
+			double[] d = new double[dims];
 			PhEntry<T> e = iter.nextEntryReuse();
 			pre.post(e.getKey(), d);
-			return new PhEntryF<T>(d, e.getValue());
+			return new PhEntryF<>(d, e.getValue());
+		}
+
+		@Override
+		public PhEntryF<T> nextEntryReuse() {
+			PhEntry<T> e = iter.nextEntryReuse();
+			pre.post(e.getKey(), buffer.getKey());
+			buffer.setValue( e.getValue() );
+			return buffer;
 		}
 
 		@Override
 		public double[] nextKey() {
-			double[] d = new double[DIM];
+			double[] d = new double[dims];
 			pre.post(iter.nextEntryReuse().getKey(), d);
 			return d;
 		}
@@ -246,8 +255,8 @@ public class PhTreeF<T> {
 
 	public static class PhExtentF<T> extends PhIteratorF<T> {
 		private final PhExtent<T> iter;
-		private PhExtentF(PhExtent<T> iter, int DIM, PreProcessorPointF pre) {
-			super(iter, DIM, pre);
+		private PhExtentF(PhExtent<T> iter, int dims, PreProcessorPointF pre) {
+			super(iter, dims, pre);
 			this.iter = iter;
 		}		
 		
@@ -258,20 +267,15 @@ public class PhTreeF<T> {
 	}
 	
 	public static class PhQueryF<T> extends PhIteratorF<T> {
-		private final long[] lMin, lMax;
+		private final long[] lMin;
+		private final long[] lMax;
 		private final PhQuery<T> q;
-		private final double[] MIN;
-		private final double[] MAX;
 
-		private PhQueryF(PhQuery<T> iter, int DIM, PreProcessorPointF pre) {
-			super(iter, DIM, pre);
+		private PhQueryF(PhQuery<T> iter, int dims, PreProcessorPointF pre) {
+			super(iter, dims, pre);
 			q = iter;
-			MIN = new double[DIM];
-			Arrays.fill(MIN, Double.NEGATIVE_INFINITY);
-			MAX = new double[DIM];
-			Arrays.fill(MAX, Double.POSITIVE_INFINITY);
-			lMin = new long[DIM];
-			lMax = new long[DIM];
+			lMin = new long[dims];
+			lMax = new long[dims];
 		}
 
 		public void reset(double[] lower, double[] upper) {
@@ -285,10 +289,10 @@ public class PhTreeF<T> {
 		private final long[] lCenter;
 		private final PhKnnQuery<T> q;
 
-		private PhKnnQueryF(PhKnnQuery<T> iter, int DIM, PreProcessorPointF pre) {
-			super(iter, DIM, pre);
+		private PhKnnQueryF(PhKnnQuery<T> iter, int dims, PreProcessorPointF pre) {
+			super(iter, dims, pre);
 			q = iter;
-			lCenter = new long[DIM];
+			lCenter = new long[dims];
 		}
 
 		public PhKnnQueryF<T> reset(int nMin, PhDistance dist, double... center) {
@@ -301,13 +305,13 @@ public class PhTreeF<T> {
 	public static class PhRangeQueryF<T> extends PhIteratorF<T> {
 		private final long[] lCenter;
 		private final PhRangeQuery<T> q;
-		private final int DIM;
+		private final int dims;
 
 		private PhRangeQueryF(PhRangeQuery<T> iter, PhTree<T> tree, PreProcessorPointF pre) {
 			super(iter, tree.getDim(), pre);
-			this.DIM = tree.getDim();
+			this.dims = tree.getDim();
 			this.q = iter;
-			this.lCenter = new long[DIM];
+			this.lCenter = new long[dims];
 		}
 
 		public PhRangeQueryF<T> reset(double range, double... center) {
@@ -325,7 +329,7 @@ public class PhTreeF<T> {
 	 */
 	public static class PhEntryF<T> {
 		private final double[] key;
-		private final T value;
+		private T value;
 		public PhEntryF(double[] key, T value) {
 			this.key = key;
 			this.value = value;
@@ -337,6 +341,10 @@ public class PhTreeF<T> {
 
 		public T getValue() {
 			return value;
+		}
+
+		public void setValue(T value) {
+			this.value = value;
 		}
 	}
 

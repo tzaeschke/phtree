@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -277,10 +277,7 @@ public class NodeIteratorNoGC<T> {
 			}
 			if (!isPostNI) {
 				int pob = node.getPostOffsetBits(currentPos, DIM);
-				if (pob >= 0) {
-					if (!readValue(currentPos, pob, result)) {
-						continue;
-					}
+				if (pob >= 0 && readValue(currentPos, pob, result)) {
 					return currentPos;
 				}
 			}

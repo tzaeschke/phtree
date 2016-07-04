@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -47,6 +47,14 @@ public class TestValues extends TestSuper {
 	@Test
 	public void test2D_8() {
 		smokeTest(100, 2, 32, 2);
+	}
+	
+	@Test
+	public void test2D_8_Bug10b() {
+//		for (int i = 0; i < 10000; i++) {
+//			System.out.println("iii=" + i);
+			smokeTest(5, 2, 32, 1619);
+//		}
 	}
 	
 	@Test
@@ -151,8 +159,8 @@ public class TestValues extends TestSuper {
 		PhTree<Object> ind = createTree(DIM, 64);
 
 		Object V = new Object();
-		long[] buf = new long[DIM];
 		for (int i = 0; i < keysD.length; i++) {
+		long[] buf = new long[DIM];
 			for (int j = 0; j < DIM; j++) {
 				buf[j] = BitTools.toSortableLong(keysD[i][j]); 
 			}
@@ -323,11 +331,12 @@ public class TestValues extends TestSuper {
 		}
 
 		//full range query
+		List<PhEntry<Integer>> list;
 		long[] min = new long[DIM];
 		long[] max = new long[DIM];
 		Arrays.fill(min, Long.MIN_VALUE);
 		Arrays.fill(max, Long.MAX_VALUE);
-		List<PhEntry<Integer>> list = ind.queryAll(min, max);
+		list = ind.queryAll(min, max);
 		int n = 0;
 		for (PhEntry<Integer> e: list) {
 			assertNotNull(e);
@@ -339,7 +348,7 @@ public class TestValues extends TestSuper {
 		//spot queries
 		for (int i = 0; i < N; i++) {
 			list = ind.queryAll(keys[i], keys[i]);
-			assertFalse(list.isEmpty());
+			assertFalse("i=" + i, list.isEmpty());
 			PhEntry<Integer> e = list.iterator().next();
 			assertArrayEquals(keys[i], e.getKey());
 			assertEquals(i, (int)e.getValue());

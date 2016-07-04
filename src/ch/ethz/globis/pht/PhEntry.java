@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -27,6 +27,13 @@ public class PhEntry<T> {
 	}
 	
 	public T getValue() {
+		return value == PhTreeHelper.NULL ? null : value;
+	}
+
+	/**
+	 * This may return the NULL marker object. 
+	 */
+	protected T getValueInternal() {
 		return value;
 	}
 
@@ -64,13 +71,21 @@ public class PhEntry<T> {
     @SuppressWarnings("unchecked")
 	@Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof PhEntry)) return false;
+        if (this == o) {
+        	return true;
+        }
+        if (!(o instanceof PhEntry)) {
+        	return false;
+        }
 
         PhEntry<T> pvEntry = (PhEntry<T>) o;
 
-        if (!Arrays.equals(key, pvEntry.key)) return false;
-        if (value != null ? !value.equals(pvEntry.value) : pvEntry.value != null) return false;
+        if (!Arrays.equals(key, pvEntry.key)) {
+        	return false;
+        }
+        if (value != null ? !value.equals(pvEntry.value) : pvEntry.value != null) {
+        	return false;
+        }
 
         return true;
     }

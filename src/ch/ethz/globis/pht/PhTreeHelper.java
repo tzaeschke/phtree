@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -15,7 +15,8 @@ package ch.ethz.globis.pht;
 public abstract class PhTreeHelper {
 
 	public static final boolean DEBUG_FULL = false; //even more debug info, gets expensive
-	public static final boolean DEBUG = false | DEBUG_FULL;
+	public static final boolean DEBUG = false || DEBUG_FULL;
+	public static final Object NULL = new Object();
     
     private PhTreeHelper() {
     	//
@@ -62,7 +63,7 @@ public abstract class PhTreeHelper {
 	/** The maximum size of arrays that will be stored in the pool. The default is 1000, which
 	 * mean 8KB for long[] and 4KB for Object[]. Also, there a separate pools for long[] and 
 	 * Object[]. */
-	public static int ARRAY_POOLING_MAX_ARRAY_SIZE = 100;
+	public static int ARRAY_POOLING_MAX_ARRAY_SIZE = 10000;
 	
 	/** The maximum size of the pool (per array). The pool consists of several sub-pool, one for
 	 * each size of arrays. A max size of 100 means that there will be at most 100 arrays of each
@@ -91,52 +92,17 @@ public abstract class PhTreeHelper {
 //    	}
     }
     
-    // ===== Adrien =====
-    public void accept(PhTreeVisitor v) {
-    	v.visit(this);
-    }
-    
-    public abstract static class PhTreeVisitor {
-    	public abstract void visit(PhTreeHelper tree);
-    }
-    
-    
-    public static final class Stats {
-	    public int nNodes;
-	    public int nInnerNodes;
-	    public int nLeafNodes;
-	    public int nLonely;
-	    public int nLeafSingle;
-	    public int nLeafSingleNoPrefix;
-	    public long size;
-	    public int nSubOnly; 
-	    public int nChildren; //subs or posts
-	    public int nHCP;
-	    public int nHCS;
-	    public int nNI;
-	    public int nTooLarge;
-	    public int nTooLarge2;
-	    public int nTooLarge4;
-	    @Override
-	    public String toString() {
-	        return " nNodes=" + nNodes + "  nInner=" + nInnerNodes + " (" + nLonely +
-	        ")  nLeaf=" + nLeafNodes + " (" + nLeafSingle + "/" + nLeafSingleNoPrefix + ")" +
-	        "  size="+size + "/" + (size/1024) + "/" + (size/1024/1024) + "\n" +
-	        "  avgSub=" + (double)nSubOnly/(double)nInnerNodes + 
-	        "  avgChildren=" + (double)nChildren/(double)nNodes + "\n" +
-	        "  postHC=" + nHCP + "  subHC=" + nHCS + "  NI=" + nNI + "\n" +
-	        "  tooLarge=" + nTooLarge + "  tooLarge2=" + nTooLarge2 + "  tooLarge4=" + nTooLarge4 + "\n" +
-	        //"  sizeRef:" + nInnerNodes*DIM*DIM*4/1024 + " sizeBool:" + nLeafNodes*DIM*DIM/8/1024
-	        (DEBUG ? "DEBUG = TRUE\n" : "") +
-	        "";
-	    }
-	}
-
-
 	public static final int align8(int n) {
     	return (int) (8*Math.ceil(n/8.0));
     }
 
+	/**
+	 * 
+	 * @param v1
+	 * @param v2
+	 * @param bitsToCheck
+     * @return Position of the highest conflicting bit (counted from the right) or 0 if none.
+	 */
     public static final int getMaxConflictingBits(long[] v1, long[] v2, int bitsToCheck) {
     	if (bitsToCheck == 0) {
     		return 0;
@@ -146,11 +112,12 @@ public abstract class PhTreeHelper {
     }
     
     /**
-     * 
+     * Calculates the number of conflicting bits, consisting of the most significant bit
+     * and all bit 'right'of it (all less significant bits).
      * @param v1
      * @param v2
      * @param mask Mask that indicates which bits to check. Only bits where mask=1 are checked.
-     * @return Position of the highest conflicting bit (counted from the right) or 0 if none.
+     * @return Number of conflicting bits or 0 if none.
      */
     public static final int getMaxConflictingBitsWithMask(long[] v1, long[] v2, long mask) {
         long x = 0;
@@ -159,7 +126,7 @@ public abstract class PhTreeHelper {
             x |= v1[i] ^ v2[i];
         }
         x &= mask;
-        return (x==0) ? 0 : Long.SIZE - Long.numberOfLeadingZeros(x);
+        return Long.SIZE - Long.numberOfLeadingZeros(x);
     }
     
 
@@ -182,7 +149,7 @@ public abstract class PhTreeHelper {
         //Following formula was for inverse ordering of current ordering...
         //pos = sum (i=1..n, len/2^i) = sum (..., 2^(n-i))
 
-    	long valMask = (1l << (DEPTH-1-currentDepth));
+    	long valMask = (1L << (DEPTH-1-currentDepth));
     	
         long pos = 0;
         for (long v: valSet) {
@@ -216,13 +183,11 @@ public abstract class PhTreeHelper {
     	long valMask = 1l << postLen;
     	
         long pos = 0;
-        for (long v: valSet) {
+        for (int i = 0; i < valSet.length; i++) {
         	pos <<= 1;
         	//set pos-bit if bit is set in value
-            if ((valMask & v) != 0) {
-                pos |= 1L;
+            pos |= (valMask & valSet[i]) >>> postLen;
             }
-        }
         return pos;
     }
 
@@ -241,18 +206,21 @@ public abstract class PhTreeHelper {
      */
     public static long[] transposeValue(long[] valSet, int DEPTH) {
     	long[] tv = new long[DEPTH];
-    	long valMask = 1l << (DEPTH-1);
+    	long valMask = 1L << (DEPTH-1);
+    	int rightShift = DEPTH-1;
     	for (int j = 0; j < DEPTH; j++) {
 	    	long pos = 0;
 	        for (long v: valSet) {
 	        	pos <<= 1;
 	        	//set pos-bit if bit is set in value
-	            if ((valMask & v) != 0) {
-	                pos |= 1L;
+//	            if ((valMask & v) != 0) {
+//	                pos |= 1L;
+//	            }
+	        	pos |= (valMask & v) >>> rightShift;
 	            }
-	        }
 	        tv[j] = pos;
 	        valMask >>>= 1;
+    		rightShift--;
     	}
         return tv;
     }
@@ -312,12 +280,12 @@ public abstract class PhTreeHelper {
      */
     public static void applyHcPos(long pos, int currentPostLen, long[] val) {
     	long mask = 1L << currentPostLen;
-    	long posMask = 1L<<val.length;
-		for (int d = 0; d < val.length; d++) {
-			posMask >>>= 1;
-			long x = pos & posMask;
+    	pos = Long.rotateLeft(pos, currentPostLen); //leftmost bit is at position of mask
+    	for (int d = val.length-1; d >= 0; d--) {
 			//Hack to avoid branching. However, this is faster than rotating 'pos' i.o. posMask
-			val[d] = (val[d] & ~mask) | (Long.bitCount(x) * mask);
+			val[d] = (val[d] & ~mask) | (mask & pos);
+			pos = Long.rotateRight(pos, 1);
+			
 //			if (x != 0) {
 //				val[d] |= mask;
 //			} else {

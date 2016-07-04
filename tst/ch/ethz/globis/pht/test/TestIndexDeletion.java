@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -143,7 +143,7 @@ public class TestIndexDeletion extends TestSuper {
 		}
 
 		for (long[] v: vA) {
-			//ind.printTree();
+			//System.out.println(ind.toStringTree());
 			assertNotNull(ind.remove(v));
 		}
 	}
@@ -220,7 +220,7 @@ public class TestIndexDeletion extends TestSuper {
 		
 		for (int i = 0; i < vA.size(); i++) {
 			long[] v = vA.get(i);
-			//ind.printTree();
+			//System.out.println("Tree: " + ind.toStringTree());
 			//System.out.println("deleting i=" + i + "  " + Bits.toBinary(v, 32));
 			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
@@ -246,6 +246,7 @@ public class TestIndexDeletion extends TestSuper {
 		
 		for (int i = 0; i < N; i++) {
 			long[] v = vals[i];
+			//System.out.println(ind.toStringTree());
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
 			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
@@ -331,10 +332,13 @@ public class TestIndexDeletion extends TestSuper {
 		for (int i = 0; i < vA.size(); i++) {
 			long[] v = vA.get(i);
 			//System.out.println("i=" + i + "  " + Bits.toBinary(v, 32));
-			//ind.printTree();
+			//System.out.println(ind.toStringTree());
 			//System.out.println();
 			assertNotNull(ind.remove(v));
 			assertFalse(ind.contains(v));
+			for (int j = i+1; j < vA.size(); j++) {
+				assertTrue(ind.contains(vA.get(j)));
+			}
 			//try again.
 			assertNull(ind.remove(v));
 			assertFalse(ind.contains(v));
@@ -440,6 +444,45 @@ public class TestIndexDeletion extends TestSuper {
 		assertFalse(it.hasNext());
 
 		assertEquals(0, ind.size());
+	}
+
+	@Test
+	public void testHighD64NegBug3() {
+		final int N = 100;
+		final int DEPTH = 64;
+		int DIM = 8;
+		//TODO remove s?
+		for (int s = 0; s < 100; s++) {
+			Random R = new Random(s);
+		long[][] vals = new long[N][];
+		PhTree<long[]> ind = create(DIM, DEPTH);
+		for (int i = 0; i < N; i++) {
+			long[] v = new long[DIM];
+			for (int j = 0; j < DIM; j++) {
+				v[j] = R.nextLong();
+			}
+			vals[i] = v;
+			assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
+		}
+
+		//delete all
+		for (long[] v: vals) {
+			assertTrue("DIM=" + DIM + " s=" + s +" v=" + Bits.toBinary(v, DEPTH), ind.contains(v));
+			assertNotNull(ind.remove(v));
+		}
+
+		//check empty result
+		long[] min = new long[DIM];
+		long[] max = new long[DIM];
+		for (int i = 0; i < DIM; i++) {
+			min[i] = Long.MIN_VALUE;
+			max[i] = Long.MAX_VALUE;
+		}
+		Iterator<long[]> it = ind.query(min, max);
+		assertFalse(it.hasNext());
+
+		assertEquals(0, ind.size());
+		}
 	}
 
 	@Test

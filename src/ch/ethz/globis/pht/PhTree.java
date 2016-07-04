@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -10,8 +10,8 @@ import java.util.List;
 
 import ch.ethz.globis.pht.util.PhIteratorBase;
 import ch.ethz.globis.pht.util.PhMapper;
-import ch.ethz.globis.pht.util.PhTreeQStats;
-import ch.ethz.globis.pht.v8.PhTree8;
+import ch.ethz.globis.pht.util.PhTreeStats;
+import ch.ethz.globis.pht.v11.PhTree11;
 
 /**
  * k-dimensional index (quad-/oct-/n-tree).
@@ -31,27 +31,38 @@ import ch.ethz.globis.pht.v8.PhTree8;
 public interface PhTree<T> {
 
 
+	/**
+	 * @return The number of entries in the tree
+	 */
 	public int size();
 
-	public int getNodeCount();
-
-	public PhTreeQStats getQuality();
-
-	public abstract PhTreeHelper.Stats getStats();
-
-	public abstract PhTreeHelper.Stats getStatsIdealNoNode();
+	/**
+	 * @return PH-Tree statistics
+	 */
+	public PhTreeStats getStats();
 
 
 	/**
 	 * Insert an entry associated with a k dimensional key.
+	 * This will replace any entry that uses the same key.
 	 * @param key
 	 * @param value
 	 * @return the previously associated value or {@code null} if the key was found
 	 */
 	public abstract T put(long[] key, T value);
 
+	/**
+	 * Checks whether a give key exists in the tree.
+	 * @param key
+	 * @return true if the key exists, otherwise false
+	 */
 	public abstract boolean contains(long ... key);
 
+	/**
+	 * Get an entry associated with a k dimensional key.
+	 * @param key
+	 * @return the associated value or {@code null} if the key was found
+	 */
 	public abstract T get(long ... key);
 
 
@@ -62,10 +73,19 @@ public interface PhTree<T> {
 	 */
 	public abstract T remove(long... key);
 
+	/**
+	 * @return A string with a list of all entries in the tree.
+	 */
 	public abstract String toStringPlain();
 
+	/**
+	 * @return A string tree view of all entries in the tree.
+	 */
 	public abstract String toStringTree();
 
+	/**
+	 * @return an iterator over all entries in the tree
+	 */
 	public abstract PhExtent<T> queryExtent();
 
 
@@ -78,6 +98,10 @@ public interface PhTree<T> {
 	 */
 	public abstract PhQuery<T> query(long[] min, long[] max);
 
+	/**
+	 * 
+	 * @return the number of dimensions of the tree
+	 */
 	public abstract int getDim();
 
 	/**
@@ -143,6 +167,16 @@ public interface PhTree<T> {
 	 */
 	public List<PhEntry<T>> queryAll(long[] min, long[] max);
 
+	/**
+	 * Same as {@link #query(long[], long[])}, except that it returns a list
+	 * instead of an iterator. This may be faster for small result sets. 
+	 * @param min
+	 * @param max
+	 * @param maxResults
+	 * @param filter
+	 * @param mapper
+	 * @return List of query results
+	 */
 	public <R> List<R> queryAll(long[] min, long[] max, int maxResults, 
 			PhFilter filter, PhMapper<T, R> mapper);
 
@@ -153,7 +187,7 @@ public interface PhTree<T> {
 	 * @return PhTree
 	 */
 	public static <T> PhTree<T> create(int dim) {
-		return new PhTree8<T>(dim);
+		return new PhTree11<>(dim);
 	}
 
 	/**
@@ -163,21 +197,14 @@ public interface PhTree<T> {
 	 * @return PhTree
 	 */
 	public static <T> PhTree<T> create(PhTreeConfig cfg) {
-		return new PhTree8<T>(cfg);
+		return new PhTree11<>(cfg);
 	}
 
 	/**
-	 * Create a new tree with the specified number of dimensions.
+	 * Interface for iterators that can reuse entries to avoid garbage collection. 
 	 * 
-	 * @param dim number of dimensions
-	 * @param depth the number of bits per dimension (1..64)
-	 * @return PhTree
-	 * @deprecated Depth is not required anymore.
+	 * @param <T>
 	 */
-	public static <T> PhTree<T> create(int dim, int depth) {
-		return new PhTree8<T>(dim);
-	}
-
 	public static interface PhIterator<T> extends PhIteratorBase<long[], T, PhEntry<T>> {
 
 		/**
@@ -188,17 +215,30 @@ public interface PhTree<T> {
 		 * invalidate the backing tree.
 		 * @return The next entry
 		 */
+		@Override
 		PhEntry<T> nextEntryReuse();
 	}
 
+	/**
+	 * Interface for extents (query over all elements). The reset methods allows
+	 * reusing the iterator.
+	 * 
+	 * @param <T>
+	 */
 	public static interface PhExtent<T> extends PhIterator<T> {
 
 		/**
 		 * Reset the extent iterator.
+		 * @return the extent itself
 		 */
 		PhExtent<T> reset();
 	}
 
+	/**
+	 * Interface for queries. The reset methods allows reusing the query.
+	 * 
+	 * @param <T>
+	 */
 	public static interface PhQuery<T> extends PhIterator<T> {
 
 		/**
@@ -209,6 +249,11 @@ public interface PhTree<T> {
 		void reset(long[] min, long[] max);
 	}
 
+	/**
+	 * Interface for k nearest neighbor queries. The reset methods allows reusing the query.
+	 * 
+	 * @param <T>
+	 */
 	public static interface PhKnnQuery<T> extends PhIterator<T> {
 
 		/**
@@ -219,50 +264,6 @@ public interface PhTree<T> {
 		 * @return the query itself
 		 */
 		PhKnnQuery<T> reset(int nMin, PhDistance dist, long... center);
-	}
-
-	/**
-	 *  @param <T>
-	 *  @deprecated
-	 */
-	public static class ResetUOE<T> implements PhQuery<T> {
-		private final PhIterator<T> iter;
-		public ResetUOE(PhIterator<T> iter) {
-			this.iter = iter;
-		}
-		@Override
-		public long[] nextKey() {
-			return iter.nextKey();
-		}
-
-		@Override
-		public T nextValue() {
-			return iter.nextValue();
-		}
-
-		@Override
-		public PhEntry<T> nextEntry() {
-			return iter.nextEntry();
-		}
-
-		@Override
-		public boolean hasNext() {
-			return iter.hasNext();
-		}
-
-		@Override
-		public T next() {
-			return iter.next();
-		}
-
-		@Override
-		public void reset(long[] min, long[] max) {
-			throw new UnsupportedOperationException("reset() not supported.");
-		}
-		@Override
-		public PhEntry<T> nextEntryReuse() {
-			throw new UnsupportedOperationException("nextEntryReuse() not supported.");
-		}
 	}
 
 	/**

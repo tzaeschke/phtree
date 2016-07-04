@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -31,6 +31,10 @@ public class TestIndexQueries extends TestSuper {
 
 	private PhTree<long[]> create(int dim, int depth) {
 		return TestUtil.newTree(dim, depth);
+	}
+
+	private PhTree<long[]> create(int dim) {
+		return TestUtil.newTree(dim);
 	}
 
 	@Test
@@ -278,7 +282,6 @@ public class TestIndexQueries extends TestSuper {
 		final int N = 100;
 		final int DEPTH = 16;
 		
-		for (int d = 0; d < DIM; d++) {
 			PhTree<long[]> ind = create(DIM, DEPTH);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
@@ -343,9 +346,47 @@ public class TestIndexQueries extends TestSuper {
 				assertEquals(3, v[0]);
 			}
 			assertEquals(25, n);
+	}
 			
 			
+	@Test
+	public void testQueryND_Bug1() {
+		final int DIM = 5;
+		final int N = 5;
+		final int DEPTH = 16;
+		
+		PhTree<long[]> ind = create(DIM, DEPTH);
+		for (int i = 0; i < N; i++) {
+			long[] v = new long[DIM];
+			for (int j = 0; j < DIM; j++) {
+				v[j] = (i >> (j*2)) & 0x03;  //mask off sign bits
 		}
+			assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
+	}
+	
+		//check empty result
+		Iterator<long[]> it;
+		int n = 0;
+	
+		//check full result
+		//it = ind.query(0, 50, 0, 50, 0, 50, 0, 50, 0, 50);
+		it = ind.query(new long[]{0, 0, 0, 0, 0}, new long[]{50, 50, 50, 50, 50});
+		for (int i = 0; i < N; i++) {
+			long[] v = it.next();
+			assertNotNull(v);
+		}
+		assertFalse(it.hasNext());
+
+		//check partial result
+		n = 0;
+		//it = ind.query(1, 1, 0, 50, 0, 50, 0, 50, 0, 50);
+		it = ind.query(new long[]{1, 0, 0, 0, 0}, new long[]{1, 50, 50, 50, 50});
+		while (it.hasNext()) {
+			n++;
+			long[] v = it.next();
+			assertEquals(1, v[0]);
+		}
+		assertEquals(1, n);
 	}
 	
 	
@@ -774,7 +815,7 @@ public class TestIndexQueries extends TestSuper {
 				long[] v = it.next();
 				assertEquals(v[0], 0);
 				n++;
-				System.out.println("TIQ-1: " + Arrays.toString(v));
+				//System.out.println("TIQ-1: " + Arrays.toString(v));
 			}
 			assertFalse(it.hasNext());
 			assertEquals(0, n);
@@ -1013,4 +1054,31 @@ public class TestIndexQueries extends TestSuper {
 		assertTrue(it.hasNext());
 	}
 
+	
+	@Test
+	public void testNullValues() {
+		PhTree<long[]> ind = create(2);
+		ind.put(new long[]{0, 0}, null);
+		ind.put(new long[]{1, 1}, new long[]{1, 1});
+		ind.put(new long[]{2, 2}, null);
+
+		//check empty result
+		Iterator<long[]> it;
+
+		//check full result
+		//it = ind.query(0, 50, 0, 50, 0, 50, 0, 50, 0, 50);
+		it = ind.query(new long[]{0, 0}, new long[]{50, 50});
+		assertNull(it.next());
+		assertNotNull(it.next());
+		assertNull(it.next());
+		assertFalse(it.hasNext());
+
+		//check extent
+		it = ind.queryExtent();
+		assertNull(it.next());
+		assertNotNull(it.next());
+		assertNull(it.next());
+		assertFalse(it.hasNext());
+	}
+	
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -493,7 +493,12 @@ class Node<T> {
 	 */
 	boolean postEqualsPOB(int offsPostKey, long hcPos, long[] key) {
 		if (isPostNI()) {
-			long[] post = niGet(hcPos).getKey();
+			NodeEntry<T> e = niGet(hcPos);
+			if (e == null) {
+				//does not exist? Return 'unequal'.
+				return false;
+			}
+			long[] post = e.getKey();
 			long mask = ~((-1L) << postLen);
 			for (int i = 0; i < key.length; i++) {
 				//post requires a mask because we currently don't adjust it if the node moves 
@@ -1171,7 +1176,9 @@ class Node<T> {
 			return old;
 		} 
 
-		return niPutNoCopy(pos, key, value).getValue(); 
+		//We may have null here, because in case of NI, update() also called if no value exists. 
+		NodeEntry<T> e = niPutNoCopy(pos, key, value);
+		return e == null ? null : e.getValue(); 
 	}
 
 
@@ -1476,11 +1483,15 @@ class Node<T> {
 				if (DEBUG && pos > Integer.MAX_VALUE) {
 					throw new UnsupportedOperationException();
 				}
-				NodeEntry<T> e = niGet(pos);
-				if (e != null && e.getKey() != null) {
-					return (int)pos;
-				}
-				return (int) (-pos -1);
+				//For NI, this value is not used, because checking for presence is quite 
+				//expensive. However, we have to return a positive value to avoid abortion
+				//of search (negative indicates that no value exists). It is hack though...
+				return Integer.MAX_VALUE;
+//				NodeEntry<T> e = niGet(pos);
+//				if (e != null && e.getKey() != null) {
+//					return (int)pos;
+//				}
+//				return (int) (-pos -1);
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -263,13 +263,19 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
             tree.increaseNrEntries();
             return null;
         }
-        if (node.postEqualsPOB(pob, pos, key)) {
+        
+        if (node.isPostNI()) {
+        	//this can happen because getPostOffsetBits always return positive values for NI
+        	if (!node.hasPostFix(pos, DIM)) {
+                node.addPostPOB(pos, pob, key, value);
+                tree.increaseNrEntries();
+                return null;
+        	}
+        }
+        
             //value exists
             return node.updatePostValuePOB(pob, pos, key, DIM, value);
-            //return node.getPost(pos, key);
         }
-        throw new IllegalStateException();
-    }
 
     private Node<T> calcPostfixes(long[] key1, T val1, long[] key2, T val2, int parentPostLen) {
         //determine length of infix
@@ -496,9 +502,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         if (parent == null || nP + nS > 2) {
             //no merging required
             //value exists --> remove it
-            T ret = node.getPostValuePOB(pob, pos, DIM);
-            node.removePostPOB(pos, pob, DIM);
-            return ret;
+            return node.removePostPOB(pos, pob, DIM);
         }
 
         //okay, at his point we have a post that matches and (since it matches) we need to remove

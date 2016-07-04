@@ -1,3 +1,9 @@
+/*
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
+ *
+ * This software is the proprietary information of ETH Zurich.
+ * Use is subject to license terms.
+ */
 package ch.ethz.globis.pht.test.util;
 
 import ch.ethz.globis.pht.PhTree;
@@ -12,6 +18,11 @@ public class TestUtilInMemory implements TestUtilAPI {
 
 	@Override
 	public <T> PhTree<T> newTreeV(int dim, int depth) {
+		return PhTree.create(dim);
+	}
+
+	@Override
+	public <T> PhTree<T> newTreeV(int dim) {
 		return PhTree.create(dim);
 	}
 

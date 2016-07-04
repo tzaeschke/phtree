@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -146,7 +146,13 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 	public long[] nextKey() {
 		long[] key = nextEntryReuse().getKey();
 		long[] ret = new long[key.length];
+		if (DIM > 10) {
 		System.arraycopy(key, 0, ret, 0, key.length);
+		} else {
+			for (int i = 0; i < key.length; i++) {
+				ret[i] = key[i];
+			}
+		}
 		return ret;
 	}
 

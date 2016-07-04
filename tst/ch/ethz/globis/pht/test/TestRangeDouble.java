@@ -1,13 +1,16 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
 package ch.ethz.globis.pht.test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
@@ -18,9 +21,10 @@ import java.util.Random;
 import org.junit.Before;
 import org.junit.Test;
 
+import ch.ethz.globis.pht.PhTreeSolidF;
+import ch.ethz.globis.pht.PhTreeSolidF.PhEntrySF;
 import ch.ethz.globis.pht.nv.PhTreeNVSolidF;
 import ch.ethz.globis.pht.nv.PhTreeNVSolidF.PHREntry;
-import ch.ethz.globis.pht.test.util.TestUtil;
 
 public class TestRangeDouble {
 
@@ -166,8 +170,8 @@ public class TestRangeDouble {
 		assertFalse(iter.hasNext());
 	}
 	
-	public static PhTreeNVSolidF createTree(int dim) {
-    	return new PhTreeNVSolidF(TestUtil.newTreeNV(2*dim, 64));
+	private static <T> PhTreeSolidF<T> createTree(int dim) {
+    	return PhTreeSolidF.create(dim);
     }
     
 	@Test
@@ -175,7 +179,7 @@ public class TestRangeDouble {
 		int N = 1000;
 		int DIM = 3;
 		Random R = new Random(0);
-		PhTreeNVSolidF ind = createTree(DIM);
+		PhTreeSolidF<Integer> ind = createTree(DIM);
 		double[][] keys = new double[2*N][DIM];
 		for (int i = 0; i < N; i++) {
 			for (int d = 0; d < DIM; d++) {
@@ -187,7 +191,7 @@ public class TestRangeDouble {
 				continue;
 			}
 			//build
-			assertFalse(ind.insert(keys[2*i], keys[2*i+1]));
+			assertNull(ind.put(keys[2*i], keys[2*i+1], i));
 			assertTrue(ind.contains(keys[2*i], keys[2*i+1]));
 		}
 
@@ -196,14 +200,14 @@ public class TestRangeDouble {
 		double[] max = new double[DIM];
 		Arrays.fill(min, Double.NEGATIVE_INFINITY);
 		Arrays.fill(max, Double.POSITIVE_INFINITY);
-		List<PHREntry> list = ind.queryIntersectAll(min, max);
+		List<PhEntrySF<Integer>> list = ind.queryIntersectAll(min, max);
 		int n = 0;
-//		for (PHREntry e: list) {
-//			assertNotNull(e);
-//			assertArrayEquals(keys[2*i], e.lower());
-//			assertArrayEquals(keys[2*i+1], e.upper());
-//			n++;
-//		}
+		for (PhEntrySF<Integer> e: list) {
+			assertNotNull(e);
+			assertArrayEquals(keys[2*e.value()], e.lower(), 0);
+			assertArrayEquals(keys[2*e.value()+1], e.upper(), 0);
+			n++;
+		}
 		n = list.size();
 		assertEquals(N, n);
 		
@@ -212,7 +216,7 @@ public class TestRangeDouble {
 			list = ind.queryIntersectAll(keys[2*i], keys[2*i+1]);
 			assertFalse(list.isEmpty());
 			boolean found = false;
-			for (PHREntry e: list) {
+			for (PhEntrySF<Integer> e: list) {
 				if (Arrays.equals(keys[2*i], e.lower()) && Arrays.equals(keys[2*i+1], e.upper())) {
 					found = true;
 				}
@@ -224,7 +228,7 @@ public class TestRangeDouble {
 		for (int i = 0; i < N; i++) {
 			//System.out.println("Removing: " + Bits.toBinary(keys[i], 64));
 			//System.out.println("Tree: \n" + ind);
-			assertTrue(ind.delete(keys[2*i], keys[2*i+1]));
+			assertEquals(i, (int)ind.remove(keys[2*i], keys[2*i+1]));
 			assertFalse(ind.contains(keys[2*i], keys[2*i+1]));
 		}
 		

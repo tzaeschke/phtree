@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -15,15 +15,26 @@ package ch.ethz.globis.pht;
  */
 public class PhFilterDistance implements PhFilter {
 
+	/**  */
 	private static final long serialVersionUID = 1L;
 	
 	private long[] v;
 	private PhDistance dist;
 	private double maxDist;
 
+	/**
+	 * Set the parameters for this distance filter.
+	 * @param v
+	 * @param dist
+	 * @param maxDist
+	 */
 	public void set(long[] v, PhDistance dist, double maxDist) {
 		this.v = v;
 		this.dist = dist;
+		this.maxDist = maxDist;
+	}
+
+	public void setMaxDist(double maxDist) {
 		this.maxDist = maxDist;
 	}
 
@@ -45,6 +56,10 @@ public class PhFilterDistance implements PhFilter {
 			buf[i] = min > v[i] ? min : (max < v[i] ? max : v[i]); 
 		}
 		return dist.dist(v, buf) <= maxDist;
+	}
+
+	public PhDistance getDistance() {
+		return dist;
 	}
 
 }

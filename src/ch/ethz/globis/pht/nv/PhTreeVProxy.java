@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -14,9 +14,8 @@ import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.PhTree.PhIterator;
 import ch.ethz.globis.pht.PhTree.PhKnnQuery;
-import ch.ethz.globis.pht.PhTreeHelper;
 import ch.ethz.globis.pht.util.PhMapperKey;
-import ch.ethz.globis.pht.util.PhTreeQStats;
+import ch.ethz.globis.pht.util.PhTreeStats;
 
 /**
  * A proxy class that allows Value-PhTrees to be used as key-only PhTrees.
@@ -44,23 +43,8 @@ public class PhTreeVProxy extends PhTreeNV {
 	}
 
 	@Override
-	public int getNodeCount() {
-		return tree.getNodeCount();
-	}
-
-	@Override
-	public PhTreeQStats getQuality() {
-		return tree.getQuality();
-	}
-
-	@Override
-	public PhTreeHelper.Stats getStats() {
+	public PhTreeStats getQuality() {
 		return tree.getStats();
-	}
-
-	@Override
-	public PhTreeHelper.Stats getStatsIdealNoNode() {
-		return tree.getStatsIdealNoNode();
 	}
 
 	@Override

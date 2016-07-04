@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -26,29 +26,11 @@ import ch.ethz.globis.pht.util.PhMapper;
  */
 public class PhTreeSolidF<T> implements Iterable<T> {
 
-	private final int DIM;
+	private final int dims;
 	private final PhTree<T> pht;
 	private final PreProcessorRangeF pre;
-	private final double[] MIN;
-	private final double[] MAX;
-	
-	/**
-	 * Create a new tree with the specified number of dimensions.
-	 * 
-	 * @param dim number of dimensions
-	 */
-    public static <T> PhTreeSolidF<T> create(int dim) {
-    	return new PhTreeSolidF<T>(dim);
-    }
-	
-	/**
-	 * Create a new tree with the specified number of dimensions.
-	 * 
-	 * @param dim number of dimensions
-	 */
-    public static <T> PhTreeSolidF<T> create(int dim, PreProcessorRangeF pre) {
-    	return new PhTreeSolidF<T>(PhTree.create(dim*2), pre);
-    }
+	private final double[] qMIN;
+	private final double[] qMAX;
 	
 	/**
 	 * Create a new tree with the specified number of dimensions.
@@ -76,16 +58,34 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * @param tree the backing tree
 	 */
 	public PhTreeSolidF(PhTree<T> tree, PreProcessorRangeF pre) {
-		this.DIM = tree.getDim()/2;
-		if (DIM*2 != tree.getDim()) {
+		this.dims = tree.getDim()/2;
+		if (dims*2 != tree.getDim()) {
 			throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");
 		}
 		pht = tree;
 		this.pre = pre;
-		MIN = new double[DIM];
-		Arrays.fill(MIN, Double.NEGATIVE_INFINITY);
-		MAX = new double[DIM];
-		Arrays.fill(MAX, Double.POSITIVE_INFINITY);
+		qMIN = new double[dims];
+		Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
+		qMAX = new double[dims];
+		Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
+	}
+	
+	/**
+	 * Create a new tree with the specified number of dimensions.
+	 * 
+	 * @param dim number of dimensions
+	 */
+    public static <T> PhTreeSolidF<T> create(int dim) {
+    	return new PhTreeSolidF<>(dim);
+    }
+	
+	/**
+	 * Create a new tree with the specified number of dimensions.
+	 * 
+	 * @param dim number of dimensions
+	 */
+    public static <T> PhTreeSolidF<T> create(int dim, PreProcessorRangeF pre) {
+    	return new PhTreeSolidF<>(PhTree.create(dim*2), pre);
 	}
 	
 	/**
@@ -177,7 +177,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		long[] lLow = new long[lower.length << 1];
 		pre.pre(lower, lower, lLow);
 		pre.pre(upper, upper, lUpp);
-		return new PhQuerySF<T>(pht.query(lLow, lUpp), DIM, pre, false);
+		return new PhQuerySF<>(pht.query(lLow, lUpp), dims, pre, false);
 	}
 	
 	/**
@@ -189,19 +189,21 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	public PhQuerySF<T> queryIntersect(double[] lower, double[] upper) {
 		long[] lUpp = new long[lower.length << 1];
 		long[] lLow = new long[lower.length << 1];
-		pre.pre(MIN, lower, lLow);
-		pre.pre(upper, MAX, lUpp);
-		return new PhQuerySF<T>(pht.query(lLow, lUpp), DIM, pre, true);
+		pre.pre(qMIN, lower, lLow);
+		pre.pre(upper, qMAX, lUpp);
+		return new PhQuerySF<>(pht.query(lLow, lUpp), dims, pre, true);
 	}
 	
 	public static class PhIteratorSF<T> implements PhIteratorBase<double[], T, PhEntrySF<T>> {
 		protected final PhIterator<T> iter;
-		private final int DIM;
+		private final int dims;
 		protected final PreProcessorRangeF pre;
-		private PhIteratorSF(PhIterator<T> iter, int DIM, PreProcessorRangeF pre) {
+		private final PhEntrySF<T> buffer;
+		private PhIteratorSF(PhIterator<T> iter, int dims, PreProcessorRangeF pre) {
 			this.iter = iter;
-			this.DIM = DIM;
+			this.dims = dims;
 			this.pre = pre;
+			this.buffer = new PhEntrySF<>(new double[dims], new double[dims], null);
 		}
 		@Override
 		public boolean hasNext() {
@@ -218,24 +220,31 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		}
 		@Override
 		public double[] nextKey() {
-			double[] lower = new double[DIM];
-			double[] upper = new double[DIM];
+			double[] lower = new double[dims];
+			double[] upper = new double[dims];
             PhEntry<T> pvEntry = iter.nextEntry();
             pre.post(pvEntry.getKey(), lower, upper);
-            double[] ret = new double[2*DIM];
-            for (int i = 0; i < DIM; i++) {
+            double[] ret = new double[2*dims];
+            for (int i = 0; i < dims; i++) {
             	ret[i] = lower[i];
-            	ret[i+DIM] = lower[i];
+            	ret[i+dims] = lower[i];
             }
 			return ret;
 		}
 		@Override
 		public PhEntrySF<T> nextEntry() {
-			double[] lower = new double[DIM];
-			double[] upper = new double[DIM];
+			double[] lower = new double[dims];
+			double[] upper = new double[dims];
             PhEntry<T> pvEntry = iter.nextEntry();
             pre.post(pvEntry.getKey(), lower, upper);
 			return new PhEntrySF<>(lower, upper, pvEntry.getValue());
+		}
+		@Override
+		public PhEntrySF<T> nextEntryReuse() {
+			PhEntry<T> pvEntry = iter.nextEntryReuse();
+            pre.post(pvEntry.getKey(), buffer.lower, buffer.upper);
+            buffer.setValue( pvEntry.getValue() );
+			return buffer;
 		}
 		@Override
 		public void remove() {
@@ -244,28 +253,29 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 	
 	public static class PhQuerySF<T> extends PhIteratorSF<T> {
-		private final long[] lLow, lUpp;
+		private final long[] lLow;
+		private final long[] lUpp;
 		private final PhQuery<T> q;
-		private final double[] MIN;
-		private final double[] MAX;
+		private final double[] qMIN;
+		private final double[] qMAX;
 		private final boolean intersect;
 		
-		private PhQuerySF(PhQuery<T> iter, int DIM, PreProcessorRangeF pre, boolean intersect) {
-			super(iter, DIM, pre);
+		private PhQuerySF(PhQuery<T> iter, int dims, PreProcessorRangeF pre, boolean intersect) {
+			super(iter, dims, pre);
 			q = iter;
-			MIN = new double[DIM];
-			Arrays.fill(MIN, Double.NEGATIVE_INFINITY);
-			MAX = new double[DIM];
-			Arrays.fill(MAX, Double.POSITIVE_INFINITY);
+			qMIN = new double[dims];
+			Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
+			qMAX = new double[dims];
+			Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
 			this.intersect = intersect;
-			lLow = new long[DIM*2];
-			lUpp = new long[DIM*2];
+			lLow = new long[dims*2];
+			lUpp = new long[dims*2];
 		}
 
 		public void reset(double[] lower, double[] upper) {
 			if (intersect) {
-				pre.pre(MIN, lower, lLow);
-				pre.pre(upper, MAX, lUpp);
+				pre.pre(qMIN, lower, lLow);
+				pre.pre(upper, qMAX, lUpp);
 			} else {
 				//include
 				pre.pre(lower, lower, lLow);
@@ -282,12 +292,13 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 
 		private final double[] lower;
 		private final double[] upper;
-		private final T value;
+		private T value;
 
 		/**
 		 * Range object constructor.
 		 * @param lower
 		 * @param upper
+		 * @param value The value associated with the point
 		 */
 		public PhEntrySF(double[] lower, double[] upper, T value) {
 			this.lower = lower;
@@ -298,6 +309,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		/**
 		 * Range object constructor.
 		 * @param point lower and upper point in one array
+		 * @param value The value associated with the point
 		 */
 		public PhEntrySF(double[] point, T value) {
 			int dim = point.length>>1;
@@ -329,6 +341,10 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 			return upper;
 		}
 
+		void setValue(T value) {
+			this.value = value;
+		}
+
 		@SuppressWarnings("unchecked")
 		@Override
 		public boolean equals(Object obj) {
@@ -352,7 +368,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 
 	@Override
 	public PhIteratorSF<T> iterator() {
-		return new PhIteratorSF<T>(pht.queryExtent(), DIM, pre);
+		return new PhIteratorSF<>(pht.queryExtent(), dims, pre);
 	}
 
 	/**
@@ -388,12 +404,23 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 				});
 	}
 
+	/**
+	 * Same as {@link #queryIntersectAll(double[], double[], int, PhPredicate, PhMapper)}, 
+	 * except that it returns a list
+	 * instead of an iterator. This may be faster for small result sets. 
+	 * @param lower
+	 * @param upper
+	 * @param maxResults
+	 * @param filter
+	 * @param mapper
+	 * @return List of query results
+	 */
 	public <R> List<R> queryIntersectAll(double[] lower, double[] upper, int maxResults, 
 			PhFilter filter, PhMapper<T,R> mapper) {
 		long[] lUpp = new long[lower.length << 1];
 		long[] lLow = new long[lower.length << 1];
-		pre.pre(MIN, lower, lLow);
-		pre.pre(upper, MAX, lUpp);
+		pre.pre(qMIN, lower, lLow);
+		pre.pre(upper, qMAX, lUpp);
 		return pht.queryAll(lLow, lUpp, maxResults, filter, mapper);
 	}
 
@@ -404,6 +431,11 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		return pht.size();
 	}
 
+	/**
+	 * @param lower
+	 * @param upper
+	 * @return the element that has 'upper' and 'lower' as key. 
+	 */
 	public T get(double[] lower, double[] upper) {
 		long[] lVal = new long[lower.length*2];
 		pre.pre(lower, upper, lVal);

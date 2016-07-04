@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -19,7 +19,6 @@ import org.junit.Test;
 import org.zoodb.index.critbit.BitTools;
 
 import ch.ethz.globis.pht.PhEntry;
-import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.nv.PhTreeNV;
 import ch.ethz.globis.pht.test.util.TestSuper;
 import ch.ethz.globis.pht.test.util.TestUtil;
@@ -29,10 +28,6 @@ public class TestIndexQuerieSet extends TestSuper {
 
 	private PhTreeNV createNV(int dim, int depth) {
 		return TestUtil.newTreeNV(dim, depth);
-	}
-
-	private PhTree<long[]> create(int dim, int depth) {
-		return TestUtil.newTree(dim, depth);
 	}
 
 	@Test

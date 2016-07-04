@@ -1,10 +1,10 @@
+/*
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
+ *
+ * This software is the proprietary information of ETH Zurich.
+ * Use is subject to license terms.
+ */
 package ch.ethz.globis.pht.test.util;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
 
 import ch.ethz.globis.pht.bits.TestBitsInt;
 import ch.ethz.globis.pht.bits.TestBitsIntRemove;
@@ -18,15 +18,12 @@ import ch.ethz.globis.pht.bits.TestBitsToolsSplitMergeVarLong;
 import ch.ethz.globis.pht.bits.TestIncSuccessor;
 import ch.ethz.globis.pht.bits.TestIncrementor;
 import ch.ethz.globis.pht.bits.TestTranspose;
-import ch.ethz.globis.pht.test.TestHighDimensions;
-import ch.ethz.globis.pht.test.TestIndexDeletion;
-import ch.ethz.globis.pht.test.TestIndexInsertion;
-import ch.ethz.globis.pht.test.TestIndexPrint;
-import ch.ethz.globis.pht.test.TestIndexQueries;
-import ch.ethz.globis.pht.test.TestNearestNeighbour;
-import ch.ethz.globis.pht.test.TestRangeDouble;
-import ch.ethz.globis.pht.test.TestValues;
-import ch.ethz.globis.pht.test.TestValuesD;
+import ch.ethz.globis.pht.test.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
 
 @RunWith(Suite.class)

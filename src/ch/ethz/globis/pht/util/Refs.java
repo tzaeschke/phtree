@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -11,18 +11,21 @@ import java.util.Arrays;
 import ch.ethz.globis.pht.PhTreeHelper;
 
 
+/**
+ * Pool for Object[] instances.
+ * 
+ * @author ztilmann
+ */
 public class Refs {
 	
-	private static final int BYTES_PER_UNIT = 4;//bytes
-//	private static int statAExpand;
-//	private static int statACreate;
-//	private static int statATrim;
-	
-	public static final Object[] EMPTY_REF_ARRAY = {};
+	private static final Object[] EMPTY_REF_ARRAY = {};
     private static final ArrayPool POOL = 
     		new ArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE, 
     				PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
 
+    private Refs() {
+    	// empty
+    }
     
     private static class ArrayPool {
     	private final int maxArraySize;
@@ -48,14 +51,14 @@ public class Refs {
 	    		if (ps > 0) {
 	    			poolSize[size]--;
 	    			Object[] ret = pool[size][ps-1];
-	    			Arrays.fill(ret, null);
+	    			pool[size][ps-1] = null;
 	    			return ret;
 	    		}
     		}
     		return new Object[size];
     	}
     	
-    	synchronized void offer(Object[] a) {
+    	void offer(Object[] a) {
     		int size = a.length;
     		if (size == 0 || size > maxArraySize) {
     			return;
@@ -63,7 +66,7 @@ public class Refs {
     		synchronized (this) {
     			int ps = poolSize[size]; 
     			if (ps < maxArrayCount) {
-    				//System.err.println("s=" + size + " ps=" + ps);
+	    			Arrays.fill(a, null);
     				pool[size][ps] = a;
     				poolSize[size]++;
     			}
@@ -97,16 +100,12 @@ public class Refs {
     	T[] newA = arrayCreate(newSize);
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
     	POOL.offer(oldA);
-    	//statAExpand++;
     	return newA;
     }
     
     @SuppressWarnings("unchecked")
 	public static <T> T[] arrayCreate(int size) {
-    	//T[] newA = (T[]) new Object[calcArraySize(size)];
-    	T[] newA = (T[]) POOL.getArray(calcArraySize(size));
-    	//statACreate++;
-    	return newA;
+    	return (T[]) POOL.getArray(calcArraySize(size));
     }
     
     /**
@@ -122,8 +121,27 @@ public class Refs {
     	return arrayExpand(oldA, requiredSize);
     }
     
+    /**
+     * Discards oldA and returns newA.
+     * @param oldA
+     * @param newA
+     * @return newA.
+     */
+    public static <T> T[] arrayReplace(T[] oldA, T[] newA) {
+    	if (oldA != null) {
+    		POOL.offer(oldA);
+    	}
+    	return newA;
+    }
+    
+    public static <T> T[] arrayClone(T[] oldA) {
+    	T[] newA = arrayCreate(oldA.length);
+    	System.arraycopy(oldA, 0, newA, 0, oldA.length);
+    	return newA;
+    }
+    
     public static <T> boolean isCapacitySufficient(T[] a, int requiredSize) {
-    	return (a.length >= requiredSize);
+    	return a.length >= requiredSize;
     }
     
     @SuppressWarnings("unchecked")
@@ -132,31 +150,19 @@ public class Refs {
     	if (oldA.length == reqSize) {
     		return oldA;
     	}
-    	T[] newA = (T[]) POOL.getArray(reqSize);//new Object[reqSize];
+    	T[] newA = (T[]) POOL.getArray(reqSize);
      	System.arraycopy(oldA, 0, newA, 0, reqSize);
      	POOL.offer(oldA);
-    	//statATrim++;
     	return newA;
     }
 
-	public static int arraySizeInByte(Object[] ba) {
-		return ba.length*BYTES_PER_UNIT;
-	}
-	
-	public static int arraySizeInByte(int arrayLength) {
-		return arrayLength*BYTES_PER_UNIT;
-	}
-
-	
 	public static <T> void insertAtPos(T[] values, int pos, T value) {
-		//System.arraycopy(values, pos, values, pos+1, values.length-pos-1);
 		copyRight(values, pos, values, pos+1, values.length-pos-1);
 		values[pos] = value;
 	}
 	
 	public static <T> void removeAtPos(T[] values, int pos) {
 		if (pos < values.length-1) {
-			//System.arraycopy(values, pos+1, values, pos, values.length-pos-1);
 			copyLeft(values, pos+1, values, pos, values.length-pos-1);
 		}
 	}

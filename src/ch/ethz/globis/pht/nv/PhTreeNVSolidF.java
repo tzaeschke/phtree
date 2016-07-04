@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -272,10 +272,10 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 
 	public class PHREntryIteratorI implements Iterator<PHREntry> {
 		private final Iterator<long[]> iter;
-		private final int DIM;
+		private final int dims;
 		private PHREntryIteratorI(Iterator<long[]> iter, int DIM) {
 			this.iter = iter;
-			this.DIM = DIM;
+			this.dims = DIM;
 		}
 		@Override
 		public boolean hasNext() {
@@ -283,8 +283,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 		}
 		@Override
 		public PHREntry next() {
-			double[] lower = new double[DIM];
-			double[] upper = new double[DIM];
+			double[] lower = new double[dims];
+			double[] upper = new double[dims];
 			pre.post(iter.next(), lower, upper);
 			return new PHREntry(lower, upper);
 		}

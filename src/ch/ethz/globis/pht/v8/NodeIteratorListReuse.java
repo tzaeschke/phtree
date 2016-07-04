@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -246,10 +246,7 @@ public class NodeIteratorListReuse<T, R> {
 				}
 				if (!isPostNI) {
 					int pob = node.getPostOffsetBits(currentPos, DIM);
-					if (pob >= 0) {
-						if (!readValue(currentPos, pob)) {
-							continue;
-						}
+					if (pob >= 0 && readValue(currentPos, pob)) {
 						return currentPos;
 					}
 				}
@@ -602,8 +599,6 @@ public class NodeIteratorListReuse<T, R> {
 				}
 			}
 		} else {
-			//currentDepth==0
-
 			//special treatment for signed longs
 			//The problem (difference) here is that a '1' at the leading bit does indicate a
 			//LOWER value, opposed to indicating a HIGHER value as in the remaining 63 bits.

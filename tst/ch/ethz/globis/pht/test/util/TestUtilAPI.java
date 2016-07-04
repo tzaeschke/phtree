@@ -1,3 +1,9 @@
+/*
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
+ *
+ * This software is the proprietary information of ETH Zurich.
+ * Use is subject to license terms.
+ */
 package ch.ethz.globis.pht.test.util;
 
 import ch.ethz.globis.pht.PhTree;
@@ -8,6 +14,7 @@ public interface TestUtilAPI {
 	public PhTreeNV newTree(int dim, int depth);
 
 	public <T> PhTree<T> newTreeV(int dim, int depth);
+	public <T> PhTree<T> newTreeV(int dim);
 
 	public void close(PhTreeNV tree);
 	public <T> void close(PhTree<T> tree);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -30,7 +30,7 @@ public class TestIndexInsertion extends TestSuper {
 	
 	private void assertExists(PhTreeNV i, long... l) {
 		if (!i.contains(l)) {
-			i.printTree();
+			System.out.println(i.toStringPlain());
 			fail(Bits.toBinary(l, i.getDEPTH()));
 		}
 	}
@@ -55,14 +55,14 @@ public class TestIndexInsertion extends TestSuper {
 	@Test
 	public void test2() {
 		PhTreeNV i = create(1, 16);
-    	i.insert(165);
+    	i.insert(165);  //.10100101
     	//i.printTree();
-    	i.insert(118);
+    	i.insert(118);  //.01110110
     	//i.printTree();
-    	i.insert(110);
+    	i.insert(110);  //.01101110
     	assertExists(i, 110);
 //    	i.printTree();
-    	i.insert(84);
+    	i.insert(84);   //.01010100
 //    	i.printTree();
      	assertExists(i, 110);
     	assertExists(i, 84);
@@ -71,10 +71,10 @@ public class TestIndexInsertion extends TestSuper {
 	@Test
 	public void test3() {
 		PhTreeNV i = create(1, 16);
-    	i.insert(94);
+    	i.insert(94); //.01011110
     	i.insert(165);
     	assertExists(i, 165);
-    	i.insert(231);
+    	i.insert(231); //.11100111
     	assertExists(i, 165);
     	assertExists(i, 231);
     	i.insert(84);
@@ -83,6 +83,7 @@ public class TestIndexInsertion extends TestSuper {
     	assertExists(i, 165);
     	assertExists(i, 231);
     	assertExists(i, 84);
+    	assertExists(i, 94);
     	assertExists(i, 244);
     	
     	i.insert(198);
@@ -93,7 +94,7 @@ public class TestIndexInsertion extends TestSuper {
 	@Test
 	public void test4() {
 		PhTreeNV i = create(2, 16);
-		i.insert(125, 237);
+		i.insert(125, 237); //.01111101,.11101101
 		assertExists(i, 125, 237);
 		i.insert(97, 231);
 		assertExists(i, 125, 237);
@@ -114,7 +115,8 @@ public class TestIndexInsertion extends TestSuper {
 		PhTreeNV i = create(2, 32);
 		i.insert(584, 64024);
 		i.insert(11210, 64625);
-		i.insert(18225, 34844);
+		assertExists(i, 584, 64024);
+		i.insert(18225, 34844); //.01000111.0011001 - .10001000.00011100
 		assertExists(i, 584, 64024);
 		i.insert(13539, 56686);
 		i.insert(8738, 51126); 
@@ -182,7 +184,6 @@ public class TestIndexInsertion extends TestSuper {
 		i.insert( 163, 54);
 		i.insert( 204, 10);
 		i.insert( 139, 119);
-		//i.printTree();
 		i.insert( 176, 89);
 		assertExists(i, 176, 89);
 	}
@@ -318,14 +319,6 @@ public class TestIndexInsertion extends TestSuper {
 		for (long[] v: vA) {
 			assertTrue(ind.contains(v));
 		}
-	}
-	
-	@Test
-	public void testPostIncrementer() {
-		//TODO re-enable and fix post-incrementer!  (NodeIterator)
-		//throw new RuntimeException();
-		System.err.println("Test currently disabled: TestIndexInsertion.testPostIncrementer()");
-		//fail();
 	}
 	
 	@Test

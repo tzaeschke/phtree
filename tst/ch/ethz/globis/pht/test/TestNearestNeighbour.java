@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -441,6 +441,7 @@ public class TestNearestNeighbour {
 				double maxEps = Math.abs(d2-d1)/d1;
 				if (maxEps >= 1) {
 					System.out.println("WARNING: different values found: " + d1 + "/" + d2);
+					System.out.println("c1=" + Arrays.toString(v));
 					System.out.println("c1=" + Arrays.toString(c1));
 					System.out.println("c2=" + Arrays.toString(c2));
 					fail();

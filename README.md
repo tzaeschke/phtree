@@ -1,8 +1,7 @@
 # PH-Tree
 
 The PH-tree is a multi-dimensional indexing and storage structure.
-By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used
-to efficiently store floating point values or k-dimensional rectangles.
+By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values or k-dimensional rectangles.
 It supports kNN queries, range queries, window queries and fast update/moving of individual entries.
 
 The PH-tree was developed at ETH Zurich and first published in:
@@ -31,7 +30,7 @@ Contact:
 
 - The current implementation will not work with more then 62 dimensions.
 - Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more.
-- Performance/dimensionality: depending on the dataset, performance of queries may degrades when using data with more than 10-15 dimensions. 
+- Performance/dimensionality: depending on the dataset, performance of queries may degrade when using data with more than 10-15 dimensions. 
 - Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better that traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
 - Storage: The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about [iterators](#iterators) below on some strategies to avoid this problem. 
 
@@ -39,7 +38,7 @@ Contact:
 
 ### Generally
 
-- The tree performs best with large datasets with 1 million entries or more. Performance actually increases with large datasets.
+- The tree performs best with large datasets with 1 million entries or more. Performance may actually increase with large datasets.
 - The tree performs best on window queries that return few result (1-1000) because of the comparatively high extraction cost of values. 
 
 
@@ -59,8 +58,7 @@ The old non-value API is still available in the `tst` folder.
 All queries return specialised iterators that give direct access to key, value or entry.
 The `queryAll()` methods return lists of entries and are especially useful for small result sets. 
 
-The packages `ch.ethz.globis.pht.v*` contain different versions of the PH-tree. They are the actual
-implementations of the four interfaces mentioned above.
+The packages `ch.ethz.globis.pht.v*` contain different versions of the PH-tree. They are the actual implementations of the four interfaces mentioned above.
 A higher version number usually (not always) indicates better performance in terms of base speed,
 scalability (size and dimensionality) as well as storage requirements.
 
@@ -82,8 +80,7 @@ See also the section about [iterators](#iterators) on how to avoid GC from perfo
 
 ### Updates
 
-For updating the keys of entries (aka moving objects index), consider using `update()`. This function
-is about twice as fast for small displacements and at least as fast as a `put()`/`remove()` combo.
+For updating the keys of entries (aka moving objects index), consider using `update()`. This function is about twice as fast for small displacements and at least as fast as a `put()`/`remove()` combo.
 
 ### Choose a Type of Query
 
@@ -96,10 +93,7 @@ is about twice as fast for small displacements and at least as fast as a `put()`
 ### Iterators
 
 All iterators return by default the value of a stored key/value pair. All iterators also provide
-three specialised methods `nextKey()`, `nextValue()` and `nextEntry()` to return only the key, only the 
-value (just as `next()`) or the combined entry object. Iterating over the entry object has the 
-disadvantage that the entries need to be created and create load on the GC (garbage collector). However, the entries
-provide easy access to the key, especially for SOLID keys.
+three specialised methods `nextKey()`, `nextValue()` and `nextEntry()` to return only the key, only the value (just as `next()`) or the combined entry object. Iterating over the entry object has the disadvantage that the entries need to be created and create load on the GC (garbage collector). However, the entries provide easy access to the key, especially for SOLID keys.
 
 The `nextValue()` and `next()` methods do not cause any GC (garbage collector) load and simply return the value associated with the result key.
 The `nextKey()` and `nextEntry()` always create new key objects or new key and additional `PhEntry` objects respectively. There are two ways to avoid this:
@@ -136,6 +130,8 @@ Data preprocessing can be automated using the `IntegerPP` or `ExponentPP` prepro
 
   
 # License
+
+The code is licensed under the Apache License 2.0.
 
 The PH-tree (namespace `ch.ethz`) is copyright 2011-2015 by 
 ETH Zurich,

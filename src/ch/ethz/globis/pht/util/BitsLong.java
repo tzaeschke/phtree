@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -91,7 +91,6 @@ public class BitsLong {
         		synchronized (this) {
         			int ps = poolSize[size]; 
         			if (ps < maxArrayCount) {
-        				//System.err.println("s=" + size + " ps=" + ps);
         				pool[size][ps] = a;
         				poolSize[size]++;
         			}
@@ -430,6 +429,11 @@ public class BitsLong {
 //			throw new RuntimeException();
 //		}
 		
+		//see TestBitLong.copyBitsLeftBug7()
+		if (dstByteStart >= trg.length) {
+			return;
+		}
+		
 		int dstLocalEnd = posTrg + nBits;
 		if (srcByteStart > lastFullSrcByte) {// && rotRight >= (dstLocalEnd&UNIT_0x1F)) {
 			//already on the final stretch
@@ -517,6 +521,26 @@ public class BitsLong {
         }
 	}
 
+	/**
+	 * @param posBit Counts from left to right!!!
+	 * @return returns the position delta to the next '1' bit or -1.
+	 */
+    public static int findNext1Bit(long[] ba, int posBitStart, int posBitMax) {
+        int pA = posBitStart >>> UNIT_3;
+        //last three bit [0..7]
+        int posInSlot = posBitStart & UNIT_0x1F;
+        long x = ba[pA] << posInSlot;
+        if (x != 0) {
+        	return Long.numberOfLeadingZeros(x) + posInSlot; 
+        }
+        int pAMax = posBitMax >>> UNIT_3;
+        do {
+        	pA++;
+        } while (ba[pA] == 0 && pA < pAMax);
+       	int lz = Long.numberOfLeadingZeros(ba[pA]); 
+        int newPos = pA*UNIT_BITS + lz; 
+        return (newPos <= posBitMax) ? newPos : -1;
+	}
     
     /**
      * 
@@ -586,6 +610,24 @@ public class BitsLong {
     
     public static long[] arrayCreate(int nBits) {
     	long[] newA = POOL.getArray(calcArraySize(nBits));//new long[calcArraySize(nBits)];
+    	statACreate++;
+    	return newA;
+    }
+    
+    /**
+     * Discards oldA and returns newA.
+     * @param oldA
+     * @param newA
+     * @return
+     */
+    public static long[] arrayReplace(long[] oldA, long[] newA) {
+    	POOL.offer(oldA);
+    	return newA;
+    }
+    
+    public static long[] arrayClone(long[] oldA) {
+    	long[] newA = POOL.getArray(oldA.length);
+    	System.arraycopy(oldA, 0, newA, 0, oldA.length);
     	statACreate++;
     	return newA;
     }
@@ -673,6 +715,15 @@ public class BitsLong {
         return sb.toString();
     }
     
+	   public static String toBinary(double[] ba) {
+	        StringBuilder sb = new StringBuilder();
+	        for (double d: ba) {
+	        	sb.append(toBinary(BitTools.toSortableLong(d), UNIT_BITS));
+	            sb.append(", ");
+	        }
+	        return sb.toString();
+	    }
+	    
     public static String getStats() {
         return "Array create: " + Bits.statACreate + "  exp:" + Bits.statAExpand + 
         		"  trm:" + Bits.statATrim + 

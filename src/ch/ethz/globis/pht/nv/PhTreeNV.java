@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
@@ -8,17 +8,16 @@ package ch.ethz.globis.pht.nv;
 
 import static ch.ethz.globis.pht.PhTreeHelper.DEBUG;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 import ch.ethz.globis.pht.PhEntry;
 import ch.ethz.globis.pht.PhFilter;
+import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.PhTree.PhKnnQuery;
-import ch.ethz.globis.pht.PhTreeHelper;
 import ch.ethz.globis.pht.util.Bits;
 import ch.ethz.globis.pht.util.PhMapperKey;
-import ch.ethz.globis.pht.util.PhTreeQStats;
+import ch.ethz.globis.pht.util.PhTreeStats;
 import ch.ethz.globis.pht.util.StringBuilderLn;
 
 /**
@@ -108,17 +107,8 @@ public abstract class PhTreeNV {
         System.out.println(getQuality());
     }
 
-    public abstract int getNodeCount();
+    public abstract PhTreeStats getQuality();
     
-    protected final void assertExists(int i, long... la) {
-        if (!contains(la)) {
-            //printTree();
-            throw new IllegalStateException("i="+i + ": " + 
-            		Arrays.toString(la) + " = " + Bits.toBinary(la, getDEPTH()));
-        }
-    }
-
-    public abstract PhTreeQStats getQuality();
     
 
     
@@ -132,11 +122,6 @@ public abstract class PhTreeNV {
     }
     
     
-    public abstract PhTreeHelper.Stats getStats();
-
-    public abstract PhTreeHelper.Stats getStatsIdealNoNode();
-    
-
     protected final int align8(int n) {
     	return (int) (8*Math.ceil(n/8.0));
     }
@@ -168,21 +153,17 @@ public abstract class PhTreeNV {
     public abstract boolean delete(long... valueSet);
 
 
-    public final void print() {
-        System.out.println("Tree: ****************************************");
-        System.out.print(toStringPlain());
-        System.out.println("nodes: " + getNodeCount() + " ******************************");
-    }
-
+    /**
+     * @see PhTree#toStringPlain()
+     * @return output
+     */
     public abstract String toStringPlain();
     
-    public final void printTree() {
-        System.out.println("Tree: ****************************************");
-        System.out.print(toStringTree());
-        System.out.println("nodes: " + getNodeCount() + " ******************************");
-    }
-
     
+    /**
+     * @see PhTree#toStringTree()
+     * @return output
+     */
     public abstract String toStringTree();
     
     

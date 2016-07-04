@@ -1,12 +1,11 @@
 /*
- * Copyright 2011-2015 ETH Zurich. All Rights Reserved.
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  *
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
 package ch.ethz.globis.pht.v8;
 
-import static ch.ethz.globis.pht.PhTreeHelper.align8;
 import static ch.ethz.globis.pht.PhTreeHelper.applyHcPos;
 import static ch.ethz.globis.pht.PhTreeHelper.debugCheck;
 import static ch.ethz.globis.pht.PhTreeHelper.getMaxConflictingBitsWithMask;
@@ -28,7 +27,7 @@ import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.PhTreeConfig;
 import ch.ethz.globis.pht.PhTreeHelper;
 import ch.ethz.globis.pht.util.PhMapper;
-import ch.ethz.globis.pht.util.PhTreeQStats;
+import ch.ethz.globis.pht.util.PhTreeStats;
 import ch.ethz.globis.pht.util.StringBuilderLn;
 
 /**
@@ -158,25 +157,20 @@ public class PhTree8<T> implements PhTree<T> {
 	}
 
 	@Override
-	public int getNodeCount() {
-		return nNodes.get();
+	public PhTreeStats getStats() {
+		return getQuality(0, getRoot(), new PhTreeStats(DEPTH_64));
 	}
 
-	@Override
-	public PhTreeQStats getQuality() {
-		return getQuality(0, getRoot(), new PhTreeQStats(DEPTH_64));
-	}
-
-	private PhTreeQStats getQuality(int currentDepth, Node<T> node, PhTreeQStats stats) {
+	private PhTreeStats getQuality(int currentDepth, Node<T> node, PhTreeStats stats) {
 		stats.nNodes++;
 		if (node.isPostHC()) {
-			stats.nHCP++;
+			stats.nAHC++;
 		}
 		if (node.isSubHC()) {
-			stats.nHCS++;
+			stats.nNtNodes++;
 		}
 		if (node.isPostNI()) {
-			stats.nNI++;
+			stats.nNT++;
 		}
 		stats.infixHist[node.getInfixLen()]++;
 		stats.nodeDepthHist[currentDepth]++;
@@ -208,177 +202,6 @@ public class PhTree8<T> implements PhTree<T> {
 		return stats;
 	}
 
-
-	@Override
-	public PhTreeHelper.Stats getStats() {
-		return getStats(0, getRoot(), new PhTreeHelper.Stats());
-	}
-
-	private PhTreeHelper.Stats getStats(int currentDepth, Node<T> node, PhTreeHelper.Stats stats) {
-		final int REF = 4;//bytes for a reference
-		stats.nNodes++;
-		// this +  ref-SubNRef[] + ref-subB[] + refInd + refVal[] + infLen + infOffs
-		stats.size += align8(12 + REF + REF + REF +  REF + 1 + 1 + 1 + 1);
-
-		currentDepth += node.getInfixLen();
-		int nChildren = 0;
-		if (node.isPostNI()) {
-			nChildren += node.ind().size();
-			stats.size += (node.ind().size()-1) * 48 + 40;
-			if (node.getSubCount() == 0) {
-				stats.nLeafNodes++;
-			} else {
-				stats.nInnerNodes++;
-			}
-			for (NodeEntry<T> e: node.ind()) {
-				stats.size += 24; //e
-				if (e.node != null) {
-					getStats(currentDepth + 1, e.node, stats);
-				} else {
-					//count post-fixes
-					stats.size += 16 + e.getKey().length*8;
-				}
-			}
-		} else {
-			if (node.subNRef() != null) {
-				stats.size += 16 + align8(node.subNRef().length * REF);
-				stats.nInnerNodes++;
-				for (Node<T> sub: node.subNRef()) {
-					if (sub != null) {
-						nChildren++;
-						getStats(currentDepth + 1, sub, stats);
-					}
-				}
-				stats.nSubOnly += nChildren;
-			} else {
-				stats.nLeafNodes++;
-			}
-			nChildren += node.getPostCount();
-			//count post-fixes
-			stats.size += 16 + align8(Bits.arraySizeInByte(node.ba));
-		}
-
-
-		if (nChildren == 1 && nEntries.get() > 1) {
-			//This should not happen! Except for a root node if the tree has <2 entries.
-			System.err.println("WARNING: found lonely node..." + (node == getRoot()));
-			stats.nLonely++;
-		}
-		if (nChildren == 0) {
-			//This should not happen! Except for a root node if the tree has <2 entries.
-			System.err.println("WARNING: found ZOMBIE node..." + (node == getRoot()));
-			stats.nLonely++;
-		}
-		stats.nChildren += nChildren;
-		return stats;
-	}
-
-	@Override
-	public PhTreeHelper.Stats getStatsIdealNoNode() {
-		return getStatsIdealNoNode(0, getRoot(), new PhTreeHelper.Stats());
-	}
-
-	private PhTreeHelper.Stats getStatsIdealNoNode(int currentDepth, Node<T> node, PhTreeHelper.Stats stats) {
-		final int REF = 4;//bytes for a reference
-		stats.nNodes++;
-
-		// 16=object[] +  16=byte[] + value[]
-		stats.size += 16 + 16 + 16;
-
-		//  infixLen + isHC + + postlen 
-		stats.size += 1 + 1 + 1 + 4 * REF;
-
-		int sizeBA = 0;
-		sizeBA = node.calcArraySizeTotalBits(node.getPostCount(), DIM);
-		sizeBA = Bits.calcArraySize(sizeBA);
-		sizeBA = Bits.arraySizeInByte(sizeBA);
-		stats.size += align8(sizeBA);
-
-		currentDepth += node.getInfixLen();
-		int nChildren = 0;
-
-		if (node.isPostNI()) {
-			nChildren = node.ind().size();
-			stats.size += (nChildren-1) * 48 + 40;
-			if (node.getSubCount() == 0) {
-				stats.nLeafNodes++;
-			} else {
-				stats.nInnerNodes++;
-			}
-			for (NodeEntry<T> e: node.ind()) {
-				stats.size += 24; //e
-				if (e.node != null) {
-					getStatsIdealNoNode(currentDepth + 1, e.node, stats);
-				} else {
-					//count post-fixes
-					stats.size += 16 + e.getKey().length*8;
-				}
-			}
-		} else {
-			if (node.isSubHC()) {
-				stats.nHCS++;
-			}
-			if (node.subNRef() != null) {
-				//+ REF for the byte[]
-				stats.size += align8(node.getSubCount() * REF + REF);
-				stats.nInnerNodes++;
-				for (Node<T> sub: node.subNRef()) {
-					if (sub != null) {
-						nChildren++;
-						getStatsIdealNoNode(currentDepth + 1, sub, stats);
-					}
-				}
-				stats.nSubOnly += nChildren;
-			} else {
-				//byte[] ref
-				stats.size += align8(1 * REF);
-				stats.nLeafNodes++;
-			}
-
-			//count post-fixes
-			nChildren += node.getPostCount();
-			if (node.isPostHC()) {
-				stats.nHCP++;
-			}
-		}
-
-
-		stats.nChildren += nChildren;
-
-		//sanity checks
-		if (nChildren == 1) {
-			//This should not happen! Except for a root node if the tree has <2 entries.
-			System.err.println("WARNING: found lonely node..." + (node == getRoot()));
-			stats.nLonely++;
-		}
-		if (nChildren == 0) {
-			//This should not happen! Except for a root node if the tree has <2 entries.
-			System.err.println("WARNING: found ZOMBIE node..." + (node == getRoot()));
-			stats.nLonely++;
-		}
-		if (node.isPostHC() && node.isSubHC()) {
-			System.err.println("WARNING: Double HC found");
-		}
-		if (DIM<=31 && node.getPostCount() + node.getSubCount() > (1L<<DIM)) {
-			System.err.println("WARNING: Over-populated node found: pc=" + node.getPostCount() + 
-					"  sc=" + node.getSubCount());
-		}
-		//check space
-		int baS = node.calcArraySizeTotalBits(node.getPostCount(), DIM);
-		baS = Bits.calcArraySize(baS);
-		if (baS < node.ba.length) {
-			stats.nTooLarge++;
-			if ((node.ba.length - baS)==2) {
-				stats.nTooLarge2++;
-			} else if ((node.ba.length - baS)==4) {
-				stats.nTooLarge4++;
-			} else {
-				System.err.println("Array too large: " + node.ba.length + " - " + baS + " = " + 
-						(node.ba.length - baS));
-			}
-		}
-		return stats;
-	}
 
 	@Override
 	public T put(long[] key, T value) {
@@ -526,7 +349,9 @@ public class PhTree8<T> implements PhTree<T> {
 
 	@Override
 	public String toString() {
-		return toStringPlain();
+		return this.getClass().getSimpleName() + 
+				" HCI-on=" + HCI_ENABLED +  
+				" DEBUG=" + PhTreeHelper.DEBUG;
 	}
 
 	@Override
@@ -664,9 +489,6 @@ public class PhTree8<T> implements PhTree<T> {
 			return new ArrayList<>();
 		}
 		
-//		if (filter == null) {
-//			filter = PhFilter.ACCEPT_ALL;
-//		}
 //		if (mapper == null) {
 //			mapper = (PhMapper<T, R>) PhMapper.PVENTRY();
 //		}
