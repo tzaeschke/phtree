@@ -15,6 +15,8 @@ package ch.ethz.globis.pht;
  */
 public class PhFilterDistance implements PhFilter {
 
+	private static final long serialVersionUID = 1L;
+	
 	private long[] v;
 	private PhDistance dist;
 	private double maxDist;

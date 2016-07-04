@@ -6,29 +6,20 @@
  */
 package ch.ethz.globis.pht;
 
+import java.io.Serializable;
+
 /**
  * Interface for PhIterator filters. A checker is continuously checked 
  * during navigation to see whether subnodes or postfixes should be traversed. 
  * 
+ * This interface needs to be serializable because in the distributed version of the PhTree, 
+ * it is send from the client machine to the server machine.
  * 
  * @author Tilmann Zäschke
  *
  */
-public interface PhFilter {
+public interface PhFilter extends Serializable {
 
-	public static PhFilter ACCEPT_ALL = new PhFilter() {
-		
-		@Override
-		public boolean isValid(int bitsToIgnore, long[] prefix) {
-			return true;
-		}
-		
-		@Override
-		public boolean isValid(long[] key) {
-			return true;
-		}
-	};
-	
 	/**
 	 * 
 	 * @param key
