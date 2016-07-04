@@ -18,12 +18,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-import ch.ethz.globis.pht.PhDimFilter;
 import ch.ethz.globis.pht.PhDistance;
 import ch.ethz.globis.pht.PhDistanceL;
 import ch.ethz.globis.pht.PhEntry;
+import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhFilterDistance;
-import ch.ethz.globis.pht.PhPredicate;
 import ch.ethz.globis.pht.PhRangeQuery;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.PhTreeConfig;
@@ -643,7 +642,7 @@ public class PhTree8<T> implements PhTree<T> {
 	 */
 	@Override
 	public List<PhEntry<T>> queryAll(long[] min, long[] max) {
-		return queryAll(min, max, Integer.MAX_VALUE, PhPredicate.ACCEPT_ALL, PhMapper.PVENTRY());
+		return queryAll(min, max, Integer.MAX_VALUE, null, PhMapper.PVENTRY());
 	}
 	
 	/**
@@ -655,7 +654,7 @@ public class PhTree8<T> implements PhTree<T> {
 	 */
 	@Override
 	public <R> List<R> queryAll(long[] min, long[] max, int maxResults, 
-			PhPredicate filter, PhMapper<T, R> mapper) {
+			PhFilter filter, PhMapper<T, R> mapper) {
 		if (min.length != DIM || max.length != DIM) {
 			throw new IllegalArgumentException("Invalid number of arguments: " + min.length +  
 					" / " + max.length + "  DIM=" + DIM);
@@ -666,7 +665,7 @@ public class PhTree8<T> implements PhTree<T> {
 		}
 		
 //		if (filter == null) {
-//			filter = PhPredicate.ACCEPT_ALL;
+//			filter = PhFilter.ACCEPT_ALL;
 //		}
 //		if (mapper == null) {
 //			mapper = (PhMapper<T, R>) PhMapper.PVENTRY();
@@ -736,7 +735,7 @@ public class PhTree8<T> implements PhTree<T> {
 
 	@Override
 	public PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist,
-			PhDimFilter dimsFilter, long... center) {
+			PhFilter dimsFilter, long... center) {
 		return new PhQueryKnnMbbPP<T>(this).reset(nMin, dist, center);
 	}
 

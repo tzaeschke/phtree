@@ -16,6 +16,19 @@ package ch.ethz.globis.pht;
  */
 public interface PhFilter {
 
+	public static PhFilter ACCEPT_ALL = new PhFilter() {
+		
+		@Override
+		public boolean isValid(int bitsToIgnore, long[] prefix) {
+			return true;
+		}
+		
+		@Override
+		public boolean isValid(long[] key) {
+			return true;
+		}
+	};
+	
 	/**
 	 * 
 	 * @param key

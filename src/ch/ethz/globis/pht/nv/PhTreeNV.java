@@ -13,7 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import ch.ethz.globis.pht.PhEntry;
-import ch.ethz.globis.pht.PhPredicate;
+import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhTree.PhKnnQuery;
 import ch.ethz.globis.pht.PhTreeHelper;
 import ch.ethz.globis.pht.util.Bits;
@@ -77,7 +77,7 @@ import ch.ethz.globis.pht.util.StringBuilderLn;
  */
 public abstract class PhTreeNV {
 
-	public static PhTreeNV create(int dim, int depth) {
+	public static PhTreeNV create(int dim) {
 		//return new PhTree1(dim, depth);
 		//return new PhTree2_CB(dim, depth);
 		return new PhTreeVProxy(dim);
@@ -230,7 +230,7 @@ public abstract class PhTreeNV {
 	public abstract List<PhEntry<Object>> queryAll(long[] min, long[] max);
 
 	public abstract <R> List<R> queryAll(long[] min, long[] max, int maxResults, 
-			PhPredicate filter, PhMapperKey<R> mapper);
+			PhFilter filter, PhMapperKey<R> mapper);
 	
 	public interface PhIteratorNV extends Iterator<long[]> { 
 		public boolean hasNextKey();

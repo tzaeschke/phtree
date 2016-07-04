@@ -10,7 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import ch.ethz.globis.pht.PhEntry;
-import ch.ethz.globis.pht.PhPredicate;
+import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.PhTree.PhIterator;
 import ch.ethz.globis.pht.PhTree.PhKnnQuery;
@@ -171,7 +171,7 @@ public class PhTreeVProxy extends PhTreeNV {
 
 	@Override
 	public <R> List<R> queryAll(long[] min, long[] max, int maxResults, 
-			PhPredicate filter, PhMapperKey<R> mapper) {
+			PhFilter filter, PhMapperKey<R> mapper) {
 		if (mapper != null) {
 			return tree.queryAll(min, max, maxResults, filter, 
 					((e) -> mapper.map(e.getKey()))

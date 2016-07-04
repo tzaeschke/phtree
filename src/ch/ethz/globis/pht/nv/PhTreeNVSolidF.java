@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import ch.ethz.globis.pht.PhPredicate;
+import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.nv.PhTreeNV.PhIteratorNV;
 import ch.ethz.globis.pht.pre.EmptyPPRF;
@@ -39,7 +39,7 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	 * @param dim number of dimensions
 	 */
 	public PhTreeNVSolidF(int dim) {
-		this(PhTreeNV.create(dim*2, 64));
+		this(PhTreeNV.create(dim*2));
 	}
 	
 	/**
@@ -322,12 +322,12 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	 * @return List of query results
 	 */
 	public List<PHREntry> queryIntersectAll(double[] lower, double[] upper) {
-		return queryIntersectAll(lower, upper, Integer.MAX_VALUE, PhPredicate.ACCEPT_ALL,
-				((point) -> (new PHREntry(PhMapperK.toDouble(point)))));
+		return queryIntersectAll(lower, upper, Integer.MAX_VALUE, null,
+				point -> new PHREntry(PhMapperK.toDouble(point)));
 	}
 
 	public <R> List<R> queryIntersectAll(double[] lower, double[] upper, int maxResults, 
-			PhPredicate filter, PhMapperKey<R> mapper) {
+			PhFilter filter, PhMapperKey<R> mapper) {
 		long[] lUpp = new long[lower.length << 1];
 		long[] lLow = new long[lower.length << 1];
 		pre.pre(MIN, lower, lLow);

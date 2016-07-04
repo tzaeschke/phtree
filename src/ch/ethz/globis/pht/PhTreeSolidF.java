@@ -379,17 +379,17 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * @return List of query results
 	 */
 	public List<PhEntrySF<T>> queryIntersectAll(double[] lower, double[] upper) {
-		return queryIntersectAll(lower, upper, Integer.MAX_VALUE, PhPredicate.ACCEPT_ALL,
-				(e) -> {
+		return queryIntersectAll(lower, upper, Integer.MAX_VALUE, PhFilter.ACCEPT_ALL,
+				e -> {
 					double[] lo = new double[lower.length]; 
 					double[] up = new double[lower.length]; 
 					pre.post(e.getKey(), lo, up);
-					return new PhEntrySF<T>(lo, up, e.getValue());
+					return new PhEntrySF<>(lo, up, e.getValue());
 				});
 	}
 
 	public <R> List<R> queryIntersectAll(double[] lower, double[] upper, int maxResults, 
-			PhPredicate filter, PhMapper<T,R> mapper) {
+			PhFilter filter, PhMapper<T,R> mapper) {
 		long[] lUpp = new long[lower.length << 1];
 		long[] lLow = new long[lower.length << 1];
 		pre.pre(MIN, lower, lLow);

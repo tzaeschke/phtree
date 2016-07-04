@@ -531,7 +531,7 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         }
 
         //connect sub to parent
-        Node<T> sub2 = getSubNode(node, pos2, posSubLHC,DIM);
+        Node<T> sub2 = getSubNode(node, pos2, posSubLHC);
 
         performDeletionWithSub(node, parent, posInParent, sub2, pos2, DIM);
 
@@ -552,9 +552,8 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
         node.setRemoved(true);
     }
 
-    protected Node<T> getSubNode(Node<T> node, long pos2, int posSubLHC, int dim) {
-        Node<T> sub2 = node.getSubNodeWithPos(pos2, posSubLHC);
-        return sub2;
+    protected Node<T> getSubNode(Node<T> node, long pos2, int posSubLHC) {
+        return node.getSubNodeWithPos(pos2, posSubLHC);
     }
 
     @Override

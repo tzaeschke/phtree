@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import org.zoodb.index.critbit.CritBit64.Entry;
 import org.zoodb.index.critbit.CritBit64.QueryIteratorMask;
 
-import ch.ethz.globis.pht.PhPredicate;
+import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhTreeHelper;
 import ch.ethz.globis.pht.util.PhMapper;
 import ch.ethz.globis.pht.v8.PhTree8.NodeEntry;
@@ -58,7 +58,7 @@ public class NodeIteratorListReuse<T, R> {
 	private final int DIM;
 	private final ArrayList<R> results;
 	private final int maxResults;
-	private PhPredicate filter;
+	private PhFilter filter;
 	private PhMapper<T, R> mapper;
 	private final long[] valTemplate;
 	private long[] rangeMin;
@@ -188,17 +188,17 @@ public class NodeIteratorListReuse<T, R> {
 			}
 		}
 
+		@SuppressWarnings("unchecked")
 		private boolean checkAndAddResult(NodeEntry<T> e) {
-			if (filter == null) {
-				results.add((R)e);
-				return true;
-			} 
-			if (filter.test(e.getKey())) {
-				//results.add((R)e);
-				results.add(mapper.map(e));
-				return true;
+			if (filter != null && !filter.isValid(e.getKey())) {
+				return false;
 			}
-			return false;
+			if (mapper == null) {
+				results.add((R)e);
+			} else { 
+				results.add(mapper.map(e));
+			}
+			return true;
 		}
 
 		/**
@@ -530,7 +530,7 @@ public class NodeIteratorListReuse<T, R> {
 	
 	NodeIteratorListReuse(int DIM, long[] valTemplate, long[] rangeMin,
 			long[] rangeMax, ArrayList<R> results, 
-			int maxResults, PhPredicate filter, PhMapper<T, R> mapper) {
+			int maxResults, PhFilter filter, PhMapper<T, R> mapper) {
 		this.DIM = DIM;
 		this.valTemplate = valTemplate;
 		this.rangeMin = rangeMin;
@@ -544,7 +544,7 @@ public class NodeIteratorListReuse<T, R> {
 
 	static <T, R> ArrayList<R> query(Node<T> node, 
 			long[] rangeMin, long[] rangeMax, final int DIM,
-			int maxResults, PhPredicate filter, PhMapper<T, R> mapper) {
+			int maxResults, PhFilter filter, PhMapper<T, R> mapper) {
 		long[] valTemplate = new long[DIM];
 		ArrayList<R> results = new ArrayList<>();
 		if (!PhTree8.checkAndApplyInfix(node, valTemplate, rangeMin, rangeMax)) {
@@ -558,7 +558,7 @@ public class NodeIteratorListReuse<T, R> {
 	}
 	
 	ArrayList<?> resetAndRun(Node<T> node, long[] rangeMin, long[] rangeMax, 
-			PhPredicate filter, PhMapper<T, R> mapper) {
+			PhFilter filter, PhMapper<T, R> mapper) {
 		results.clear();
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;

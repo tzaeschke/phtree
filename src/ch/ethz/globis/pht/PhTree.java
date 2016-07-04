@@ -104,7 +104,7 @@ public interface PhTree<T> {
 	 * @param key
 	 * @return The query iterator.
 	 */
-	public abstract PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist, PhDimFilter dims, 
+	public abstract PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist, PhFilter dims, 
 			long... key);
 
 	/**
@@ -144,7 +144,7 @@ public interface PhTree<T> {
 	public List<PhEntry<T>> queryAll(long[] min, long[] max);
 
 	public <R> List<R> queryAll(long[] min, long[] max, int maxResults, 
-			PhPredicate filter, PhMapper<T, R> mapper);
+			PhFilter filter, PhMapper<T, R> mapper);
 
 	/**
 	 * Create a new tree with the specified number of dimensions.

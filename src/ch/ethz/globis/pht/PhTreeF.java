@@ -364,12 +364,12 @@ public class PhTreeF<T> {
 	 * @return List of query results
 	 */
 	public List<PhEntryF<T>> queryAll(double[] min, double[] max) {
-		return queryAll(min, max, Integer.MAX_VALUE, PhPredicate.ACCEPT_ALL,
-				((e) -> (new PhEntryF<T>(PhMapperK.toDouble(e.getKey()), e.getValue()))));
+		return queryAll(min, max, Integer.MAX_VALUE, null,
+				e -> new PhEntryF<T>(PhMapperK.toDouble(e.getKey()), e.getValue()));
 	}
 
 	public <R> List<R> queryAll(double[] min, double[] max, int maxResults, 
-			PhPredicate filter, PhMapper<T, R> mapper) {
+			PhFilter filter, PhMapper<T, R> mapper) {
 		long[] lUpp = new long[min.length];
 		long[] lLow = new long[max.length];
 		pre.pre(min, lLow);
