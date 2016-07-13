@@ -215,14 +215,13 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		}
 		@Override
 		public T nextValue() {
-            PhEntry<T> pvEntry = iter.nextEntry();
-			return pvEntry.getValue();
+            return iter.nextValue();
 		}
 		@Override
 		public double[] nextKey() {
 			double[] lower = new double[dims];
 			double[] upper = new double[dims];
-            PhEntry<T> pvEntry = iter.nextEntry();
+            PhEntry<T> pvEntry = iter.nextEntryReuse();
             pre.post(pvEntry.getKey(), lower, upper);
             double[] ret = new double[2*dims];
             for (int i = 0; i < dims; i++) {
@@ -235,7 +234,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		public PhEntrySF<T> nextEntry() {
 			double[] lower = new double[dims];
 			double[] upper = new double[dims];
-            PhEntry<T> pvEntry = iter.nextEntry();
+            PhEntry<T> pvEntry = iter.nextEntryReuse();
             pre.post(pvEntry.getKey(), lower, upper);
 			return new PhEntrySF<>(lower, upper, pvEntry.getValue());
 		}
