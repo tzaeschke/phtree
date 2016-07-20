@@ -156,17 +156,40 @@ public class Refs {
     	return newA;
     }
 
+    @Deprecated
 	public static <T> void insertAtPos(T[] values, int pos, T value) {
 		copyRight(values, pos, values, pos+1, values.length-pos-1);
 		values[pos] = value;
 	}
 	
+	public static <T> T[] insertSpaceAtPos(T[] values, int pos, int requiredSize) {
+    	T[] dst = values;
+		if (requiredSize > values.length) {
+			dst = arrayCreate(requiredSize);
+			copyRight(values, 0, dst, 0, pos);
+		}
+		copyRight(values, pos, dst, pos+1, requiredSize-1-pos);
+		return dst;
+	}
+	
+	@Deprecated
 	public static <T> void removeAtPos(T[] values, int pos) {
 		if (pos < values.length-1) {
 			copyLeft(values, pos+1, values, pos, values.length-pos-1);
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
+	public static <T> T[] removeSpaceAtPos(T[] values, int pos, int requiredSize) {
+    	int reqSize = calcArraySize(requiredSize);
+    	T[] dst = values;
+		if (reqSize < values.length) {
+			dst = (T[]) POOL.getArray(reqSize);
+			copyLeft(values, 0, dst, 0, pos);
+		}
+		copyLeft(values, pos+1, dst, pos, requiredSize-pos);
+		return dst;
+	}
 	public static <T> void copyLeft(T[] src, int srcPos, T[] dst, int dstPos, int len) {
 		if (len >= 7) {
 			System.arraycopy(src, srcPos, dst, dstPos, len);
