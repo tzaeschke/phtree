@@ -26,7 +26,8 @@ public class TestBitsLong {
 
 	private static final int BITS = 64;
 	
-	@Test void testMem() {
+	@Test 
+	public void testMem() {
 		System.out.println("XXXXXXXXXXXXXXX free memory = " + Runtime.getRuntime().freeMemory());
 		System.out.println("XXXXXXXXXXXXXXX total memory = " + Runtime.getRuntime().totalMemory());
 		System.out.println("XXXXXXXXXXXXXXX max memory = " + Runtime.getRuntime().maxMemory());
