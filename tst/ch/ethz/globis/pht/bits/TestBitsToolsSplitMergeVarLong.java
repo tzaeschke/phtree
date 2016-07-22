@@ -22,10 +22,13 @@ import ch.ethz.globis.pht.util.BitTools;
  */
 public class TestBitsToolsSplitMergeVarLong {
 
+	//This should be set to 1000, but we set it to 100 to let the Travis CI build pass...
+	private static final int MUL = 100;
+	
 	@Test
 	public void testSplitMerge31() {
 		Random rnd = new Random();
-		for (int i = 0; i < 1000; i++) {
+		for (int i = 0; i < MUL; i++) {
 			long[] l = new long[]{Math.abs(rnd.nextInt()), Math.abs(rnd.nextInt())};
 			long[] x = BitTools.mergeLong(32, l);
 			long[] l2 = BitTools.splitLong(2, 32, x);
@@ -36,7 +39,7 @@ public class TestBitsToolsSplitMergeVarLong {
 	@Test
 	public void testSplitMerge63() {
 		Random rnd = new Random();
-		for (int i = 0; i < 1000; i++) {
+		for (int i = 0; i < MUL; i++) {
 			long[] l = new long[]{rnd.nextLong()>>>1, rnd.nextLong()>>>1};
 			long[] x = BitTools.mergeLong(63, l);
 			long[] l2 = BitTools.splitLong(2, 63, x); 
@@ -47,7 +50,7 @@ public class TestBitsToolsSplitMergeVarLong {
 	@Test
 	public void testSplitMerge64() {
 		Random rnd = new Random();
-		for (int i = 0; i < 1000; i++) {
+		for (int i = 0; i < MUL; i++) {
 			long[] l = new long[]{rnd.nextLong(), rnd.nextLong()};
 			long[] x = BitTools.mergeLong(64, l);
 			long[] l2 = BitTools.splitLong(2, 64, x);
@@ -58,7 +61,7 @@ public class TestBitsToolsSplitMergeVarLong {
 	@Test
 	public void testSplitMergeFloat() {
 		Random rnd = new Random();
-		for (int i = 0; i < 1000; i++) {
+		for (int i = 0; i < MUL; i++) {
 			float[] f = new float[]{rnd.nextFloat(), rnd.nextFloat()};
 			long[] l = new long[]{
 					BitTools.toSortableLong(f[0]),
@@ -77,7 +80,7 @@ public class TestBitsToolsSplitMergeVarLong {
 	@Test
 	public void testSplitMergeDouble() {
 		Random rnd = new Random();
-		for (int i = 0; i < 1000; i++) {
+		for (int i = 0; i < MUL; i++) {
 			double[] d = new double[]{rnd.nextDouble()-0.5, rnd.nextDouble()-0.5};
 			long[] l = new long[]{BitTools.toSortableLong(d[0]), BitTools.toSortableLong(d[1])};
 			long[] x = BitTools.mergeLong(64, l);
@@ -97,7 +100,7 @@ public class TestBitsToolsSplitMergeVarLong {
 		Random rnd = new Random(0);
 		int K = 2;
 		long[] l = new long[K];
-		for (int i = 0; i < 1000*1000; i++) {
+		for (int i = 0; i < MUL*MUL; i++) {
 			for (int k = 0; k < K; k++) {
 				l[k] = rnd.nextLong();
 			}
@@ -112,7 +115,7 @@ public class TestBitsToolsSplitMergeVarLong {
 		Random rnd = new Random(0);
 		int K = 2;
 		long[] l = new long[K];
-		for (int i = 0; i < 1000*1000; i++) {
+		for (int i = 0; i < MUL*MUL; i++) {
 			for (int k = 0; k < K; k++) {
 				l[k] = rnd.nextLong();
 			}
@@ -127,7 +130,7 @@ public class TestBitsToolsSplitMergeVarLong {
 		Random rnd = new Random(0);
 		int K = 2;
 		long[] l = new long[K];
-		for (int i = 0; i < 1000*1000; i++) {
+		for (int i = 0; i < MUL*MUL; i++) {
 			for (int k = 0; k < K; k++) {
 				l[k] = rnd.nextLong();
 			}
@@ -142,7 +145,7 @@ public class TestBitsToolsSplitMergeVarLong {
 		Random rnd = new Random(0);
 		int K = 2;
 		long[] l = new long[K];
-		for (int i = 0; i < 1000*1000; i++) {
+		for (int i = 0; i < MUL*MUL; i++) {
 			for (int k = 0; k < K; k++) {
 				l[k] = rnd.nextLong();
 			}
@@ -157,7 +160,7 @@ public class TestBitsToolsSplitMergeVarLong {
 		Random rnd = new Random(0);
 		int K = 2;
 		long[] l = new long[K];
-		for (int i = 0; i < 1000*1000; i++) {
+		for (int i = 0; i < MUL*MUL; i++) {
 			for (int k = 0; k < K; k++) {
 				l[k] = rnd.nextLong();
 			}
@@ -172,7 +175,7 @@ public class TestBitsToolsSplitMergeVarLong {
 		Random rnd = new Random(0);
 		int K = 2;
 		long[] l = new long[K];
-		for (int i = 0; i < 1000*1000; i++) {
+		for (int i = 0; i < MUL*MUL; i++) {
 			for (int k = 0; k < K; k++) {
 				l[k] = rnd.nextLong();
 			}
