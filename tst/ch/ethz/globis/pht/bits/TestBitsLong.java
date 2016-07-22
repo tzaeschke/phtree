@@ -9,7 +9,6 @@ package ch.ethz.globis.pht.bits;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -25,19 +24,6 @@ import ch.ethz.globis.pht.util.BitsLong;
 public class TestBitsLong {
 
 	private static final int BITS = 64;
-	
-	@Test 
-	public void testMem() {
-		System.out.println("XXXXXXXXXXXXXXX free memory = " + Runtime.getRuntime().freeMemory());
-		System.out.println("XXXXXXXXXXXXXXX total memory = " + Runtime.getRuntime().totalMemory());
-		System.out.println("XXXXXXXXXXXXXXX max memory = " + Runtime.getRuntime().maxMemory());
-		String jvm = 
-				System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
-		String cp = System.getProperty("java.class.path");
-		System.out.println("XXX jvm " + jvm);
-		System.out.println("XXX cp " + cp);
-
-	}
 	
 	@Test
 	public void testCopy1() {
