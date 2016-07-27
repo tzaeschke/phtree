@@ -945,14 +945,6 @@ public class Node {
 		PhTreeHelper.applyHcPos(hcPos, postLen, outKey);
 	}
 
-	void infixToNI(int startBit, int infixLen, long[] outKey, long hcPos, long[] prefix, long mask) {
-		for (int d = 0; d < outKey.length; d++) {
-			outKey[d] = Bits.readArray(ba, startBit, postLen) | (prefix[d] & mask);
-			startBit += postLen;
-		}
-		PhTreeHelper.applyHcPos(hcPos, postLen, outKey);
-	}
-
 	void postFromNI(long[] ia, int startBit, long key[], int postLen) {
 		//insert postifx
 		for (int d = 0; d < key.length; d++) {
@@ -999,11 +991,7 @@ public class Node {
 					continue;
 				} 
 				int dataOffs = oldPostBitsVal + i*postLenTotal;
-				if (o instanceof Node) {
-					infixToNI(dataOffs, postLen, buffer, i, prefix, prefixMask);
-				} else {
-					postToNI(dataOffs, postLen, buffer, i, prefix, prefixMask);
-				}
+				postToNI(dataOffs, postLen, buffer, i, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
 				NodeTreeV11.addEntry(ind, i, buffer, o, null);
@@ -1017,11 +1005,7 @@ public class Node {
 				long p2 = Bits.readArray(ba, dataOffs, IK_WIDTH(dims));
 				dataOffs += IK_WIDTH(dims);
 				Object e = values[i];
-				if (e instanceof Node) {
-					infixToNI(dataOffs, postLen, buffer, p2, prefix, prefixMask);
-				} else {
-					postToNI(dataOffs, postLen, buffer, p2, prefix, prefixMask);
-				}
+				postToNI(dataOffs, postLen, buffer, p2, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
 				NodeTreeV11.addEntry(ind, p2, buffer, e, null);
@@ -1078,16 +1062,15 @@ public class Node {
 					continue;
 				}
 				int p2 = (int) pos;
-				int offsBitData = startBitData + postLen * dims * (int)pos;
+				int offsBitData = startBitData + postLen * dims * p2;
 				if (e.value() instanceof Node) {
 					//subnode
 					Node node = (Node) e.value();
 					infixFromNI(bia2, offsBitData, e.getKdKey(), node.getInfixLen());
-					v2[(int) pos] = node;
 				} else {
 					postFromNI(bia2, offsBitData, e.getKdKey(), postLen);
-					v2[p2] = e.value();
 				}
+				v2[p2] = e.value();
 			}
 			ba = Bits.arrayReplace(ba, bia2);
 			values = Refs.arrayReplace(values, v2);
@@ -1108,12 +1091,11 @@ public class Node {
 				//write hc-key
 				Bits.writeArray(bia2, entryPosLHC, IK_WIDTH(dims), pos);
 				entryPosLHC += IK_WIDTH(dims);
+				v2[n] = e.value();
 				if (e.value() instanceof Node) {
 					Node node = (Node) e.getValue();
-					v2[n] = node;
 					infixFromNI(bia2, entryPosLHC, e.getKdKey(), node.getInfixLen());
 				} else {
-					v2[n] = e.value();
 					postFromNI(bia2, entryPosLHC, e.getKdKey(), postLen);
 				}
 				entryPosLHC += postLenTotal;
