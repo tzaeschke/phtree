@@ -4,8 +4,11 @@
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.pht.v11.nt;
+package ch.ethz.globis.pht.util;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.Arrays;
 
 import ch.ethz.globis.pht.PhTreeHelper;
@@ -15,14 +18,14 @@ import ch.ethz.globis.pht.PhTreeHelper;
  * 
  * @author ztilmann
  */
-public class Longs {
+public class RefsLong {
 	
 	private static final long[] EMPTY_REF_ARRAY = {};
-    private static final ArrayPoolN POOL_N = 
+    private static final ArrayPoolN POOL = 
     		new ArrayPoolN(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE, 
     				PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
 
-    private Longs() {
+    private RefsLong() {
     	//nothing
     }
     
@@ -79,34 +82,37 @@ public class Longs {
      * @param nLong
      * @return array size.
      */
-	public static int calcArraySize(int nLong) {
+	private static int calcArraySize(int nLong) {
 		return nLong;
 	}
 
     /**
-     * Resize an array.
-     * @param oldA
-     * @param newSize
-     * @return New array larger array.
+     * Create an array.
+     * @param size
+     * @return a new array
      */
-    public static long[] arrayExpand(long[] oldA, int newSize) {
-    	long[] newA = arrayCreate(newSize);
-    	arraycopy(oldA, 0, newA, 0, oldA.length);
-    	POOL_N.offer(oldA);
-    	return newA;
-    }
-    
 	public static long[] arrayCreate(int size) {
-		return POOL_N.getArray(calcArraySize(size));
+		return POOL.getArray(calcArraySize(size));
     }
     
+	/**
+	 * Replaces an array with another array. The replaced array is returned to the pool.
+	 * @param oldA
+	 * @param newA
+	 * @return
+	 */
 	public static long[] arrayReplace(long[] oldA, long[] newA) {
 		if (oldA != null) {
-			POOL_N.offer(oldA);
+			POOL.offer(oldA);
 		}
 		return newA;
     }
     
+	/**
+	 * Clones an array.
+	 * @param oldA
+	 * @return a copy or the input array
+	 */
     public static long[] arrayClone(long[] oldA) {
     	long[] newA = arrayCreate(oldA.length);
     	arraycopy(oldA, 0, newA, 0, oldA.length);
@@ -114,60 +120,79 @@ public class Longs {
     }
     
     /**
-     * Ensure capacity of an array. Expands the array if required.
-     * @param oldA
-     * @param requiredSize
-     * @return Same array or expanded array.
+     * Write the src array into the dst array at position dstPos. 
+     * @param src
+     * @param dst
+     * @param dstPos
      */
-    public static long[] arrayEnsureSize(long[] oldA, int requiredSize) {
-    	if (isCapacitySufficient(oldA, requiredSize)) {
-    		return oldA;
-    	}
-    	return arrayExpand(oldA, requiredSize);
-    }
-    
-    public static boolean isCapacitySufficient(long[] a, int requiredSize) {
-    	return a.length >= requiredSize;
-    }
-    
-	public static long[] arrayTrim(long[] oldA, int requiredSize) {
-    	int reqSize = calcArraySize(requiredSize);
-    	if (oldA.length == reqSize) {
-    		return oldA;
-    	}
-    	long[] newA = POOL_N.getArray(reqSize);
-     	arraycopy(oldA, 0, newA, 0, reqSize);
-     	POOL_N.offer(oldA);
-    	return newA;
-    }
-    
-    public static void writeArray(long[] src, long[] dst, int dstPos, int length) {
-    	arraycopy(src, 0, dst, dstPos, length);
+    public static void writeArray(long[] src, long[] dst, int dstPos) {
+    	arraycopy(src, 0, dst, dstPos, src.length);
     }
 
+    /**
+     * Same a {@link #arraycopy(long[], int, long[], int, int)}. 
+     * @param src
+     * @param srcPos
+     * @param dst
+     * @param dstPos
+     * @param length
+     */
 	public static void writeArray(long[] src, int srcPos, long[] dst, int dstPos, int length) {
 		arraycopy(src, srcPos, dst, dstPos, length);
 	}
 
+	/**
+	 * Reads data from srcPos in src[] into dst[]. 
+	 * @param src
+	 * @param srcPos
+	 * @param dst
+	 */
 	public static void readArray(long[] src, int srcPos, long[] dst) {
 		arraycopy(src, srcPos, dst, 0, dst.length);
 	}
 
-	public static long[] insertArray(long[] oldA, long[] kdKey, int dstPos, int length) {
-		long[] ret = arrayCreate(oldA.length + kdKey.length);
+	/**
+	 * Creates a new array with from copying oldA and inserting insertA at position pos.
+	 * The old array is returned to the pool. 
+	 * @param oldA
+	 * @param insertA
+	 * @param dstPos
+	 * @param length
+	 * @return new array
+	 */
+	public static long[] insertArray(long[] oldA, long[] insertA, int dstPos) {
+		long[] ret = arrayCreate(oldA.length + insertA.length);
 		arraycopy(oldA, 0, ret, 0, dstPos);
-		arraycopy(kdKey, 0, ret, dstPos, length);
-		arraycopy(oldA, dstPos, ret, dstPos+length, oldA.length-dstPos);
+		arraycopy(insertA, 0, ret, dstPos, insertA.length);
+		arraycopy(oldA, dstPos, ret, dstPos+insertA.length, oldA.length-dstPos);
+		POOL.offer(oldA);
 		return ret;
 	}
 
+	/**
+	 * Creates a new array with from copying oldA and removing 'length' entries at position pos.
+	 * The old array is returned to the pool. 
+	 * @param oldA
+	 * @param dstPos
+	 * @param length
+	 * @return new array
+	 */
 	public static long[] arrayRemove(long[] oldA, int dstPos, int length) {
 		long[] ret = arrayCreate(oldA.length - length);
 		arraycopy(oldA, 0, ret, 0, dstPos);
 		arraycopy(oldA, dstPos+length, ret, dstPos, ret.length-dstPos);
+		POOL.offer(oldA);
 		return ret;
 	}
 
+	/**
+	 * Same as System.arraycopy(), but uses a faster copy-by-loop approach for small arrays.
+	 * @param src
+	 * @param srcPos
+	 * @param dst
+	 * @param dstPos
+	 * @param len
+	 */
 	public static void arraycopy(long[] src, int srcPos, long[] dst, int dstPos, int len) {
 		if (len < 10) {
 			for (int i = 0; i < len; i++) {
@@ -176,6 +201,34 @@ public class Longs {
 		} else {
 			System.arraycopy(src, srcPos, dst, dstPos, len);
 		}
+	}
+
+	/**
+	 * Writes a long array to a stream.
+	 * @param a
+	 * @param out
+	 * @throws IOException
+	 */
+	public static void write(long[] a, ObjectOutput out) throws IOException {
+		out.writeInt(a.length);
+		for (int i = 0; i < a.length; i++) {
+			out.writeLong(a[i]);
+		}
+	}
+
+	/**
+	 * Reads a long array from a stream.
+	 * @param in
+	 * @return the long array.
+	 * @throws IOException 
+	 */
+	public static long[] read(ObjectInput in) throws IOException {
+		int size = in.readInt();
+		long[] ret = POOL.getArray(size);
+		for (int i = 0; i < size; i++) {
+			ret[i] = in.readLong();
+		}
+		return ret;
 	}
 	
 }

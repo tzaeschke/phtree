@@ -10,8 +10,8 @@ import static ch.ethz.globis.pht.PhTreeHelper.posInArray;
 
 import ch.ethz.globis.pht.PhTreeHelper;
 import ch.ethz.globis.pht.util.Refs;
+import ch.ethz.globis.pht.util.RefsLong;
 import ch.ethz.globis.pht.v11.PhTree11.NodeEntry;
-import ch.ethz.globis.pht.v11.nt.Longs;
 import ch.ethz.globis.pht.v11.nt.NodeTreeV11;
 import ch.ethz.globis.pht.v11.nt.NtIteratorMask;
 import ch.ethz.globis.pht.v11.nt.NtIteratorMinMax;
@@ -512,7 +512,7 @@ public class Node {
 		}
 
 		long[] newPost = new long[dims];
-		Longs.arraycopy(key, 0, newPost, 0, key.length);
+		RefsLong.arraycopy(key, 0, newPost, 0, key.length);
 
 		long posInParent = PhTreeHelper.posInArray(key, parent.getPostLen());
 		int pinInParent = parent.getPosition(posInParent, dims);
