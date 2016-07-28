@@ -136,7 +136,7 @@ public class NodeIteratorListReuse<T, R> {
 			if (e != null) {
 				results.phReturnTemp(e);
 			}
-			if (results.phIsPrefixValid(valTemplate, node.getPostLen())) {
+			if (results.phIsPrefixValid(valTemplate, sub.getPostLen()+1)) {
 				run(sub);
 			}
 		}
