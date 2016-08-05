@@ -205,7 +205,8 @@ public class TestBitsIntRemove {
 	@Test
 	public void testRemoveRandom() {
 		Random r = new Random(0);
-		int N = 10*1000*1000;
+		//int N = 10*1000*1000;
+		int N = 1*1000*1000;
 		int[][] data = new int[N][];
 		int[][] data2 = new int[N][];
 		int[] start = new int[N];
