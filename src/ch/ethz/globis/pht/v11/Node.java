@@ -16,6 +16,7 @@ import ch.ethz.globis.pht.v11.nt.NodeTreeV11;
 import ch.ethz.globis.pht.v11.nt.NtIteratorMask;
 import ch.ethz.globis.pht.v11.nt.NtIteratorMinMax;
 import ch.ethz.globis.pht.v11.nt.NtNode;
+import ch.ethz.globis.pht.v11.nt.NtNodePool;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
 
@@ -136,6 +137,7 @@ public class Node {
 		Refs.arrayReplace(values, null);
 		entryCnt = 0;
 		NodePool.offer(this);
+		ind = null;
 	}
 	
 	int calcArraySizeTotalBits(int entryCount, final int dims) {
@@ -1105,6 +1107,7 @@ public class Node {
 			values = Refs.arrayReplace(values, v2);
 		}			
 
+		NtNodePool.offer(ind);
 		ind = null;
 		return oldValue;
 	}
