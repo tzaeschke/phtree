@@ -1,8 +1,8 @@
 # PH-Tree
 
 The PH-tree is a multi-dimensional indexing and storage structure.
-By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values or k-dimensional rectangles.
-It supports kNN queries, range queries, window queries and fast update/moving of individual entries.
+By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
+It supports kNN (k nearest neighbor) queries, range queries, window queries and fast update/moving of individual entries.
 
 The PH-tree was developed at ETH Zurich and first published in:
 "The PH-Tree: A Space-Efficient Storage Structure and Multi-Dimensional Index" ([PDF](http://globis.ethz.ch/?pubdownload=699)), 
@@ -22,16 +22,17 @@ Contact:
 - Memory efficient: Due to prefix sharing and other optimisations the tree may consume less memory than a flat array of integers/floats.
 - Update efficiency: The performance of `insert()`, `update()` and `delete()` operations is almost independent of the size of the tree. For low dimensions performance may even improve with larger trees (> 1M entries).
 - Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more.
-- Scalability with dimension: Updates and 'contains()' scale very well to the current maximum of 62 dimensions. Queries may scale or not for k>10-15, depending on the dataset.
+- Scalability with dimension: Updates and 'contains()' scale very well to the current maximum of 62 dimensions. Depending on the dataset, queries may scale up to 20 dimensions or more.
 - Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
-- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
+- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (maximum depth is 64, see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
+
 
 ### Disadvantages
 
 - The current implementation will not work with more then 62 dimensions.
 - Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more.
-- Performance/dimensionality: depending on the dataset, performance of queries may degrade when using data with more than 10-15 dimensions. 
-- Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better that traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
+- Performance/dimensionality: depending on the dataset, performance of queries may degrade when using data with more than 10-20 dimensions. 
+- Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better than traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
 - Storage: The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about [iterators](#iterators) below on some strategies to avoid this problem. 
 
 
@@ -39,7 +40,16 @@ Contact:
 ### Generally
 
 - The tree performs best with large datasets with 1 million entries or more. Performance may actually increase with large datasets.
-- The tree performs best on window queries that return few result (1-1000) because of the comparatively high extraction cost of values. 
+- The tree performs best on window queries or nearest neighbour queries that return few result (window queries: 1-1000) because of the comparatively high extraction cost of values. 
+
+
+### Differences to original PH-Tree
+
+- Support for rectangle data
+- Support for k nearest neighbour queries
+- Dedicated `update` method that combines `put` and `remove`
+- Automatic splitting of large nodes greatly improves update performance for data with more than 1- dimensions
+- General performance improvements and reduced garbage collection load
 
 
 # Interfaces / Abstract Classes
@@ -65,22 +75,23 @@ scalability (size and dimensionality) as well as storage requirements.
 
 # Tuning Memory Usage
 
-There is little point in using 32bit instead of 64bit values, because prefix sharing takes care of
-unused leading bits.
+There is little point in using 32bit instead of 64bit integer values, because prefix sharing takes care of unused leading bits.
 For floating point values, using a 32bit float instead of 64bit float should reduce memory usage
-somewhat. However it is usually better to convert floating point values to integer values by a
-constant. For example multiply by 10E6 to preserve 6 digit floating point precision.
+somewhat. However it is usually better to convert floating point values to integer values by multiplying them with a constant. For example multiply by 10E6 to preserve 6 digit floating point precision.
 Also, chose the multiplier such that it is not higher than the precision requires.
 For example, if you have a precision of 6 digits after the decimal point, then multiply all values
 by 1,000,000 before casting the to (long) and adding them to the tree.
 
 See also the section about [iterators](#iterators) on how to avoid GC from performing queries.
 
+
 # Perfomance Optimisation
+
+Suggestions for performance optimisation can also be found in the PDF "The PH-Tree revisited", which is available in this repository.
 
 ### Updates
 
-For updating the keys of entries (aka moving objects index), consider using `update()`. This function is about twice as fast for small displacements and at least as fast as a `put()`/`remove()` combo.
+For updating the keys of entries (AKA moving objects index), consider using `update()`. This function is about twice as fast for small displacements and at least as fast as a `put()`/`remove()` combination.
 
 ### Choose a Type of Query
 
@@ -101,19 +112,39 @@ The `nextKey()` and `nextEntry()` always create new key objects or new key and a
 - During extraction, we can use the `PhQuery.nextEntryReuse()` method that is available in every iterator. It reuse `PhEntry` objects and key objects by resetting their content. Several calls to `nextEntryReuse()` may return the same object, but always with the appropriate content. The returned object is only valid until the next call to `nextEntryReuse()`.
 The disadvantage is that the key and `PhEntry` objects need to be copied if they are needed locally beyond the next call to `nextEntryReuse()`.
 
-Another way to reduce GC is to reuse the iterators when performing multiple queries. This can be done by calling `PhQuery.reset(..)`, which will abort the current query and reset the iterator to the first element that fits the min/max values provided in the `reset(..)` call.
+Another way to reduce GC is to reuse the iterators when performing multiple queries. This can be done by calling `PhQuery.reset(..)`, which will abort the current query and reset the iterator to the first element that fits the min/max values provided in the `reset(..)` call. This can be useful because an iterator consists of more than hundred Java objects. In some scenarios this increased overall performance of about 20%.  
 
+
+### Wrappers
+
+Another optimization to avoid GC may be to avoid or reimplement the wrappers (`PhTreeF`, `PhTreeSolid` and `PhTreeSolidF`). With most calls they create internally temporary objects for coordinates that are passed on to the actual tree (for example it creates a `long[]` for every `put` or `contains`). A custom wrapper could reuse these temporary objects so that they cannot cause garbage collection.
 
 
 ### Data Preprocessing
 
-To improve speed, similar measures can be applied as suggested for MEMORY. For example it makes 
-sense to transform values into integers by multiplication with a constant.
+__** Default **__
 
-If data is stored as floats in IEEE representation (`BitTools.toSortableLong()`), consider adding
-or multiplying a constant such that the whole value domain falls into a single exponent. I.e.
+The default configuration of the PH-tree works quite well with most datasets. For floating point values it ensures that precision is fully maintained when points are converted to integer and back. The conversion is based on the IEEE bit representation, which is converted to an integer (see `BitTools.toSortableLong()`).   
+
+__** Multiply **__
+
+To optimise performance, it is usually worth trying to preprocess the data by multiplying it with a large integer and then cast it to `long`. The multiplier should be chosen such that the required precision is maintained. For example, if 6 fractional digits are required, the multiplier should be at least 10e6 or 10e7. There are some helper classes that provide predefined preprocessors that can be plugged into the trees. For example, a 3D rectangle-tree with an integer multiplier of 10e9 can be created with:  
+
+`PhTreeSolidF.create(3, new PreProcessorRangeF.Multiply(3, 10e9));`
+
+It is worth trying several multipliers, because performance may change considerably. For example,
+for one of our tests we multiplied with 10e9, which performed 10-20% better than 10e8 or 10e10.
+Typically, this oscillates with multiples of 1000, so 10e12 performs similar to 10e9. 
+
+__** Shift / Add **__
+
+If data should be stored as floats in IEEE representation (`BitTools.toSortableLong()`), consider adding a constant such that the whole value domain falls into a single exponent. I.e.
 shift the values such that all values have the same exponent. It can also help to shift values
 such that all values have a positive sign.
+
+__** Heterogeneous **__
+
+Heterogeneous data (different data types and value ranges in each dimension) can be problematic for the PH-Tree when performing queries (insert, update, delete, contains should not be affected).
 
 For heterogeneous data (combination of floats, integers, boolean, ...) consider shifting the
 values such that the min/max values in each dimension have a similar distance in the integer 
@@ -126,21 +157,23 @@ NOT be multiplied. In other words, the more selective queries are on a given dim
 wide should the dimension spread over the tree, i.e. the dimension should be given a higher 
 multiplier.
 
-Data preprocessing can be automated using the `IntegerPP` or `ExponentPP` preprocessors, see PDF documentation.
+__** API Support **__
+
+Data preprocessing can be automated using the `PreProcessor*` classes (partly known as `IntegerPP` or `ExponentPP` in the PDF documentation).
 
   
 # License
 
 The code is licensed under the Apache License 2.0.
 
-The PH-tree (namespace `ch.ethz`) is copyright 2011-2015 by 
+The PH-tree (namespace `ch.ethz`) is copyright 2011-2016 by 
 ETH Zurich,
 Institute for Information Systems,
 Universitätsstrasse 6,
 8092 Zurich,
 Switzerland.
 
-The critbit tree (namespace `org.zoodb`) is copyright 2009-2015 by
+The critbit tree (namespace `org.zoodb`) is copyright 2009-2016 by
 Tilmann Zäschke,
 zoodb@gmx.de.
 The critbit tree is also separately available here: https://github.com/tzaeschke/critbit

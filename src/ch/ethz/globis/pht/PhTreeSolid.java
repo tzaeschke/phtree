@@ -11,7 +11,6 @@ import java.util.Arrays;
 import ch.ethz.globis.pht.PhTree.PhIterator;
 import ch.ethz.globis.pht.PhTree.PhQuery;
 import ch.ethz.globis.pht.nv.PhTreeNV;
-import ch.ethz.globis.pht.pre.EmptyPPR;
 import ch.ethz.globis.pht.pre.PreProcessorRange;
 import ch.ethz.globis.pht.util.PhIteratorBase;
 
@@ -51,7 +50,7 @@ public class PhTreeSolid<T> implements Iterable<T> {
 			throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");
 		}
 		pht = tree;
-		pre = new EmptyPPR();
+		pre = new PreProcessorRange.Simple();
 		qMIN = new long[dims];
 		Arrays.fill(qMIN, Long.MIN_VALUE);
 		qMAX = new long[dims];

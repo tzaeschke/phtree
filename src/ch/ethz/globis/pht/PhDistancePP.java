@@ -6,7 +6,6 @@
  */
 package ch.ethz.globis.pht;
 
-import ch.ethz.globis.pht.pre.EmptyPPF;
 import ch.ethz.globis.pht.pre.PreProcessorPointF;
 
 
@@ -21,7 +20,7 @@ public class PhDistancePP implements PhDistance {
 
 	/** Euclidean distance with standard `double` encoding. */ 
 	public static final PhDistance DOUBLE = 
-			new PhDistancePP(new EmptyPPF());
+			new PhDistancePP(new PreProcessorPointF.IEEE());
 
 	private final PreProcessorPointF pre;
 

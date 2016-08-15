@@ -13,7 +13,6 @@ import java.util.List;
 import ch.ethz.globis.pht.PhFilter;
 import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.nv.PhTreeNV.PhIteratorNV;
-import ch.ethz.globis.pht.pre.EmptyPPRF;
 import ch.ethz.globis.pht.pre.PreProcessorRangeF;
 import ch.ethz.globis.pht.util.PhMapperK;
 import ch.ethz.globis.pht.util.PhMapperKey;
@@ -49,7 +48,7 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	 * @param tree the backing tree
 	 */
 	public PhTreeNVSolidF(PhTreeNV tree) {
-		this(tree, new EmptyPPRF());
+		this(tree, new PreProcessorRangeF.IEEE(tree.getDIM()));
 	}
 	
 	/**

@@ -12,7 +12,6 @@ import ch.ethz.globis.pht.PhTree.PhExtent;
 import ch.ethz.globis.pht.PhTree.PhIterator;
 import ch.ethz.globis.pht.PhTree.PhKnnQuery;
 import ch.ethz.globis.pht.PhTree.PhQuery;
-import ch.ethz.globis.pht.pre.EmptyPPF;
 import ch.ethz.globis.pht.pre.PreProcessorPointF;
 import ch.ethz.globis.pht.util.PhIteratorBase;
 import ch.ethz.globis.pht.util.PhMapper;
@@ -40,7 +39,7 @@ public class PhTreeF<T> {
 
 	private PhTreeF(PhTree<T> tree) {
 		this.pht = tree;
-		this.pre = new EmptyPPF();
+		this.pre = new PreProcessorPointF.IEEE();
 	}
 
 	/**
@@ -50,7 +49,7 @@ public class PhTreeF<T> {
 	 * @return PhTreeF
 	 */
 	public static <T> PhTreeF<T> create(int dim) {
-		return new PhTreeF<>(dim, new EmptyPPF());
+		return new PhTreeF<>(dim, new PreProcessorPointF.IEEE());
 	}
 
 	/**

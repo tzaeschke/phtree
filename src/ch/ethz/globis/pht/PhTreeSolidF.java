@@ -12,7 +12,6 @@ import java.util.List;
 import ch.ethz.globis.pht.PhTree.PhIterator;
 import ch.ethz.globis.pht.PhTree.PhQuery;
 import ch.ethz.globis.pht.nv.PhTreeNV;
-import ch.ethz.globis.pht.pre.EmptyPPRF;
 import ch.ethz.globis.pht.pre.PreProcessorRangeF;
 import ch.ethz.globis.pht.util.PhIteratorBase;
 import ch.ethz.globis.pht.util.PhMapper;
@@ -48,7 +47,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * @param tree the backing tree
 	 */
 	public PhTreeSolidF(PhTree<T> tree) {
-		this(tree, new EmptyPPRF());
+		this(tree, new PreProcessorRangeF.IEEE(tree.getDim()));
 	}
 	
 	/**
