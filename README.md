@@ -47,8 +47,8 @@ Contact:
 
 - Support for rectangle data
 - Support for k nearest neighbour queries
-- Dedicated `update` method that combines `put` and `remove`
-- Automatic splitting of large nodes greatly improves update performance for data with more than 1- dimensions
+- Dedicated `update()` method that combines `put()` and `remove()`
+- Automatic splitting of large nodes greatly improves update performance for data with more than 10 dimensions
 - General performance improvements and reduced garbage collection load
 
 
