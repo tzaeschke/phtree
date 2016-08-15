@@ -122,11 +122,11 @@ Another optimization to avoid GC may be to avoid or reimplement the wrappers (`P
 
 ### Data Preprocessing
 
-__** Default **__
+__**Default / IEEE**__
 
 The default configuration of the PH-tree works quite well with most datasets. For floating point values it ensures that precision is fully maintained when points are converted to integer and back. The conversion is based on the IEEE bit representation, which is converted to an integer (see `BitTools.toSortableLong()`).   
 
-__** Multiply **__
+__**Multiply**__
 
 To optimise performance, it is usually worth trying to preprocess the data by multiplying it with a large integer and then cast it to `long`. The multiplier should be chosen such that the required precision is maintained. For example, if 6 fractional digits are required, the multiplier should be at least 10e6 or 10e7. There are some helper classes that provide predefined preprocessors that can be plugged into the trees. For example, a 3D rectangle-tree with an integer multiplier of 10e9 can be created with:  
 
@@ -136,13 +136,13 @@ It is worth trying several multipliers, because performance may change considera
 for one of our tests we multiplied with 10e9, which performed 10-20% better than 10e8 or 10e10.
 Typically, this oscillates with multiples of 1000, so 10e12 performs similar to 10e9. 
 
-__** Shift / Add **__
+__**Shift / Add**__
 
 If data should be stored as floats in IEEE representation (`BitTools.toSortableLong()`), consider adding a constant such that the whole value domain falls into a single exponent. I.e.
 shift the values such that all values have the same exponent. It can also help to shift values
 such that all values have a positive sign.
 
-__** Heterogeneous **__
+__**Heterogeneous**__
 
 Heterogeneous data (different data types and value ranges in each dimension) can be problematic for the PH-Tree when performing queries (insert, update, delete, contains should not be affected).
 
@@ -157,7 +157,7 @@ NOT be multiplied. In other words, the more selective queries are on a given dim
 wide should the dimension spread over the tree, i.e. the dimension should be given a higher 
 multiplier.
 
-__** API Support **__
+__**API Support**__
 
 Data preprocessing can be automated using the `PreProcessor*` classes (partly known as `IntegerPP` or `ExponentPP` in the PDF documentation).
 
