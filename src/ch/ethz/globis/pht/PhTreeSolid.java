@@ -360,7 +360,7 @@ public class PhTreeSolid<T> implements Iterable<T> {
     /**
      * Clear the tree.
      */
-	void clear() {
+	public void clear() {
 		pht.clear();
 	}
 }

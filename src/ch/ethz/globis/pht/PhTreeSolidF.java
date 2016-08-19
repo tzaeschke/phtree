@@ -443,7 +443,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
     /**
      * Clear the tree.
      */
-	void clear() {
+	public void clear() {
 		pht.clear();
 	}
 

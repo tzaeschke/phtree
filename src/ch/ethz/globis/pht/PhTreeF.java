@@ -387,7 +387,7 @@ public class PhTreeF<T> {
 	/**
 	 * Clear the tree.
 	 */
-	void clear() {
+	public void clear() {
 		pht.clear();
 	}
 
