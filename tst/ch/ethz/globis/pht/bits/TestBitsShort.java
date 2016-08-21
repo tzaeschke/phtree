@@ -14,7 +14,7 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.util.BitsShort;
+import ch.ethz.globis.phtree.util.BitsShort;
 
 /**
  * 

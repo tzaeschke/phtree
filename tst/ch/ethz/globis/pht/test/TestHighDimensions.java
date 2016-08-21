@@ -17,9 +17,9 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.test.util.TestUtil;
-import ch.ethz.globis.pht.util.Bits;
+import ch.ethz.globis.phtree.PhTree;
+import ch.ethz.globis.phtree.util.Bits;
 
 /**
  *  This test harness contains all of the tests for trees whose number of dimensions k will

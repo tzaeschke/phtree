@@ -18,11 +18,11 @@ import java.util.Random;
 import org.junit.Test;
 import org.zoodb.index.critbit.BitTools;
 
-import ch.ethz.globis.pht.PhEntry;
-import ch.ethz.globis.pht.nv.PhTreeNV;
 import ch.ethz.globis.pht.test.util.TestSuper;
 import ch.ethz.globis.pht.test.util.TestUtil;
-import ch.ethz.globis.pht.util.Bits;
+import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.nv.PhTreeNV;
+import ch.ethz.globis.phtree.util.Bits;
 
 public class TestIndexQuerieSet extends TestSuper {
 

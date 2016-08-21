@@ -22,11 +22,11 @@ import java.util.Random;
 import org.junit.Test;
 import org.zoodb.index.critbit.BitTools;
 
-import ch.ethz.globis.pht.PhEntry;
-import ch.ethz.globis.pht.PhTree;
-import ch.ethz.globis.pht.PhTree.PhIterator;
 import ch.ethz.globis.pht.test.util.TestSuper;
 import ch.ethz.globis.pht.test.util.TestUtil;
+import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.PhTree;
+import ch.ethz.globis.phtree.PhTree.PhIterator;
 
 public class TestValues extends TestSuper {
 

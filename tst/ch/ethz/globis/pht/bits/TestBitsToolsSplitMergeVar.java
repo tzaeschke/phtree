@@ -11,7 +11,7 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.util.BitTools;
+import ch.ethz.globis.phtree.util.BitTools;
 
 
 /**

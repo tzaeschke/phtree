@@ -6,8 +6,8 @@
  */
 package ch.ethz.globis.pht.test.util;
 
-import ch.ethz.globis.pht.PhTree;
-import ch.ethz.globis.pht.nv.PhTreeNV;
+import ch.ethz.globis.phtree.PhTree;
+import ch.ethz.globis.phtree.nv.PhTreeNV;
 
 public abstract class TestUtil {
 

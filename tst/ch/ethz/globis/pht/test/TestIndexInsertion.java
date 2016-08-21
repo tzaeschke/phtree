@@ -15,12 +15,12 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.nv.PhTreeNV;
-import ch.ethz.globis.pht.nv.PhTreeVProxy;
 import ch.ethz.globis.pht.test.util.TestSuper;
 import ch.ethz.globis.pht.test.util.TestUtil;
-import ch.ethz.globis.pht.util.BitTools;
-import ch.ethz.globis.pht.util.Bits;
+import ch.ethz.globis.phtree.nv.PhTreeNV;
+import ch.ethz.globis.phtree.nv.PhTreeVProxy;
+import ch.ethz.globis.phtree.util.BitTools;
+import ch.ethz.globis.phtree.util.Bits;
 
 public class TestIndexInsertion extends TestSuper {
 

@@ -14,8 +14,8 @@ import java.util.Random;
 import org.junit.Test;
 import org.zoodb.index.critbit.BitTools;
 
-import ch.ethz.globis.pht.pre.ExponentPP;
-import ch.ethz.globis.pht.pre.ExponentPPAnalyzer;
+import ch.ethz.globis.phtree.pre.ExponentPP;
+import ch.ethz.globis.phtree.pre.ExponentPPAnalyzer;
 
 public class TestPP {
 

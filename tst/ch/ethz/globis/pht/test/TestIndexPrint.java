@@ -14,9 +14,9 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.PhTree;
 import ch.ethz.globis.pht.test.util.TestUtil;
-import ch.ethz.globis.pht.util.Bits;
+import ch.ethz.globis.phtree.PhTree;
+import ch.ethz.globis.phtree.util.Bits;
 
 public class TestIndexPrint {
 

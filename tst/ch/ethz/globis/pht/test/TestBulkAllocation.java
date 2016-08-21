@@ -10,9 +10,9 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.PhTreeHelper;
-import ch.ethz.globis.pht.util.BitsLong;
-import ch.ethz.globis.pht.util.Refs;
+import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.util.BitsLong;
+import ch.ethz.globis.phtree.util.Refs;
 
 public class TestBulkAllocation {
 

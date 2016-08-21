@@ -21,10 +21,10 @@ import java.util.Random;
 import org.junit.Before;
 import org.junit.Test;
 
-import ch.ethz.globis.pht.PhTreeSolidF;
-import ch.ethz.globis.pht.PhTreeSolidF.PhEntrySF;
-import ch.ethz.globis.pht.nv.PhTreeNVSolidF;
-import ch.ethz.globis.pht.nv.PhTreeNVSolidF.PHREntry;
+import ch.ethz.globis.phtree.PhTreeSolidF;
+import ch.ethz.globis.phtree.PhTreeSolidF.PhEntrySF;
+import ch.ethz.globis.phtree.nv.PhTreeNVSolidF;
+import ch.ethz.globis.phtree.nv.PhTreeNVSolidF.PHREntry;
 
 public class TestRangeDouble {
 

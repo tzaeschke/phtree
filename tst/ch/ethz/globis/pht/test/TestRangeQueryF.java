@@ -17,12 +17,12 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.PhDistanceF;
-import ch.ethz.globis.pht.PhTreeF;
-import ch.ethz.globis.pht.PhTreeF.PhIteratorF;
-import ch.ethz.globis.pht.PhTreeF.PhRangeQueryF;
-import ch.ethz.globis.pht.util.BitTools;
-import ch.ethz.globis.pht.util.Bits;
+import ch.ethz.globis.phtree.PhDistanceF;
+import ch.ethz.globis.phtree.PhTreeF;
+import ch.ethz.globis.phtree.PhTreeF.PhIteratorF;
+import ch.ethz.globis.phtree.PhTreeF.PhRangeQueryF;
+import ch.ethz.globis.phtree.util.BitTools;
+import ch.ethz.globis.phtree.util.Bits;
 
 public class TestRangeQueryF {
 

@@ -19,11 +19,11 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ch.ethz.globis.pht.PhTreeF;
-import ch.ethz.globis.pht.PhTreeF.PhEntryF;
-import ch.ethz.globis.pht.PhTreeF.PhIteratorF;
 import ch.ethz.globis.pht.test.util.TestSuper;
 import ch.ethz.globis.pht.test.util.TestUtil;
+import ch.ethz.globis.phtree.PhTreeF;
+import ch.ethz.globis.phtree.PhTreeF.PhEntryF;
+import ch.ethz.globis.phtree.PhTreeF.PhIteratorF;
 
 public class TestValuesD extends TestSuper {
 

@@ -6,7 +6,7 @@
  */
 package ch.ethz.globis.pht64kd;
 
-import ch.ethz.globis.pht.v11.nt.NodeTreeV11;
+import ch.ethz.globis.phtree.v11.nt.NodeTreeV11;
 
 public class MaxKTree<T> implements MaxKTreeI {
 	

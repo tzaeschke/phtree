@@ -6,7 +6,7 @@
  */
 package ch.ethz.globis.pht.bits;
 
-import ch.ethz.globis.pht.util.Bits;
+import ch.ethz.globis.phtree.util.Bits;
 
 public class TestJavaBitOps {
 
