@@ -83,8 +83,6 @@
 	</dependencies>
  
 	<build>
-		<sourceDirectory>src</sourceDirectory>
-		<testSourceDirectory>tst</testSourceDirectory>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -161,19 +159,6 @@
   				</executions>
 			</plugin>
 		</plugins>
-
-		<testResources>
-			<testResource>
-				<directory>${project.basedir}/tst</directory>
-				<excludes>
-			        <exclude>**/*.java</exclude>
-				</excludes>
-			</testResource>
-			<testResource>
-				<!-- Add the default dir when overwriting testResource: -->
- 				<directory>${project.basedir}/src/test/resources</directory>
- 			</testResource>
-    	</testResources>
 	</build>
 </project>
 
