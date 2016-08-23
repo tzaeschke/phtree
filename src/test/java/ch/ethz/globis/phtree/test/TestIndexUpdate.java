@@ -239,7 +239,6 @@ public class TestIndexUpdate extends TestSuper {
         assertEquals(value, phTree.get(key));
         assertNull(phTree.get(key2));
         phTree.update(key, key2);
-        System.out.println(phTree.toStringTree());//TODO
         assertEquals(value, phTree.get(key2));
         assertNull(phTree.get(key));
     }
