@@ -14,6 +14,32 @@ The current version of the PH-tree is discussed in more detail here: ([PDF](http
 Contact:
 {zaeschke,zimmerli,norrie)@inf.ethz.ch
 
+Maven:
+
+```
+<dependency>
+    <groupId>ch.ethz.globis.phtree</groupId>
+    <artifactId>phtree</artifactId>
+    <version>0.3.0-SNAPSHOT</version>
+</dependency>
+```
+
+# News
+
+### 2016-08-23
+
+Released version 0.3.0 of the PH-tree (internal version: v11). Features (partly available before, but not in the original version):
+
+- Major code refactoring
+- Restructuring of node data, subnodes and data are now in the same collection. This is faster and simplifies the code but requires slightly more memory
+- AHC vs LHC policy has changed to prefer faster (but larger) AHC nodes at the cost of memory. Set  `Node.AHC_LHC_BIAS = 1.0` for lowest memory requirements.
+- Dedicated reinsertion / update methods
+- Nearest neighbor queries (reimplemented since v8)
+- Support for rectangle data
+- Reduced garbage collection load: query iterators are reusable, returned entries are reusable, objects are pooled internally
+- Performance improvements and bug fixes
+- Available as maven artifact  
+
 
 # Main Properties
 
