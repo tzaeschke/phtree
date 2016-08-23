@@ -24,9 +24,9 @@ public class PhFilterDistance implements PhFilter {
 
 	/**
 	 * Set the parameters for this distance filter.
-	 * @param v
-	 * @param dist
-	 * @param maxDist
+	 * @param v the value
+	 * @param dist the distance function
+	 * @param maxDist maximum distance
 	 */
 	public void set(long[] v, PhDistance dist, double maxDist) {
 		this.v = v;

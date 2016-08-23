@@ -15,7 +15,7 @@ import ch.ethz.globis.phtree.PhTree.PhQuery;
  * 
  * @author Tilmann Zaeschke
  *
- * @param <T>
+ * @param <T> The type parameter
  */
 public class PhRangeQuery<T> implements PhIterator<T> {
 

@@ -45,22 +45,22 @@ public interface PhTree<T> {
 	/**
 	 * Insert an entry associated with a k dimensional key.
 	 * This will replace any entry that uses the same key.
-	 * @param key
-	 * @param value
+	 * @param key the key to insert
+	 * @param value the value to insert
 	 * @return the previously associated value or {@code null} if the key was found
 	 */
 	public abstract T put(long[] key, T value);
 
 	/**
 	 * Checks whether a give key exists in the tree.
-	 * @param key
+	 * @param key the key to check
 	 * @return true if the key exists, otherwise false
 	 */
 	public abstract boolean contains(long ... key);
 
 	/**
 	 * Get an entry associated with a k dimensional key.
-	 * @param key
+	 * @param key the key to look up
 	 * @return the associated value or {@code null} if the key was found
 	 */
 	public abstract T get(long ... key);
@@ -68,7 +68,7 @@ public interface PhTree<T> {
 
 	/**
 	 * Remove the entry associated with a k dimensional key.
-	 * @param key
+	 * @param key the key to remove
 	 * @return the associated value or {@code null} if the key was found
 	 */
 	public abstract T remove(long... key);
@@ -114,7 +114,7 @@ public interface PhTree<T> {
 	 * Locate nearest neighbours for a given point in space.
 	 * @param nMin number of entries to be returned. More entries may or may not be returned if 
 	 * several points have the same distance.
-	 * @param key
+	 * @param key the center point
 	 * @return The query iterator.
 	 */
 	public abstract PhKnnQuery<T> nearestNeighbour(int nMin, long... key);
@@ -125,7 +125,7 @@ public interface PhTree<T> {
 	 * several points have the same distance.
 	 * @param dist the distance function, can be {@code null}. The default is {@link PhDistanceL}.
 	 * @param dims the dimension filter, can be {@code null}
-	 * @param key
+	 * @param key the center point
 	 * @return The query iterator.
 	 */
 	public abstract PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist, PhFilter dims, 
@@ -151,8 +151,8 @@ public interface PhTree<T> {
 	/**
 	 * Update the key of an entry. Update may fail if the old key does not exist, or if the new
 	 * key already exists.
-	 * @param oldKey
-	 * @param newKey
+	 * @param oldKey the old key
+	 * @param newKey the new key
 	 * @return the value (can be {@code null}) associated with the updated key if the key could be 
 	 * updated, otherwise {@code null}.
 	 */
@@ -161,8 +161,8 @@ public interface PhTree<T> {
 	/**
 	 * Same as {@link #query(long[], long[])}, except that it returns a list
 	 * instead of an iterator. This may be faster for small result sets. 
-	 * @param min
-	 * @param max
+	 * @param min the minimum values
+	 * @param max the maximum values
 	 * @return List of query results
 	 */
 	public List<PhEntry<T>> queryAll(long[] min, long[] max);
@@ -170,12 +170,13 @@ public interface PhTree<T> {
 	/**
 	 * Same as {@link #query(long[], long[])}, except that it returns a list
 	 * instead of an iterator. This may be faster for small result sets. 
-	 * @param min
-	 * @param max
-	 * @param maxResults
-	 * @param filter
-	 * @param mapper
+	 * @param min the minimum values
+	 * @param max the maximum values
+	 * @param maxResults maximum results to be returned
+	 * @param filter the filter function
+	 * @param mapper mapper function
 	 * @return List of query results
+	 * @param <R> the type of the iterator value
 	 */
 	public <R> List<R> queryAll(long[] min, long[] max, int maxResults, 
 			PhFilter filter, PhMapper<T, R> mapper);
@@ -185,6 +186,7 @@ public interface PhTree<T> {
 	 * 
 	 * @param dim number of dimensions
 	 * @return PhTree
+	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(int dim) {
 		return new PhTree11<>(dim);
@@ -195,6 +197,7 @@ public interface PhTree<T> {
 	 * 
 	 * @param cfg configuration instance
 	 * @return PhTree
+	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(PhTreeConfig cfg) {
 		return new PhTree11<>(cfg);
@@ -203,7 +206,7 @@ public interface PhTree<T> {
 	/**
 	 * Interface for iterators that can reuse entries to avoid garbage collection. 
 	 * 
-	 * @param <T>
+	 * @param <T> the type of the iterator value
 	 */
 	public static interface PhIterator<T> extends PhIteratorBase<long[], T, PhEntry<T>> {
 
@@ -223,7 +226,7 @@ public interface PhTree<T> {
 	 * Interface for extents (query over all elements). The reset methods allows
 	 * reusing the iterator.
 	 * 
-	 * @param <T>
+	 * @param <T> the type of the iterator value
 	 */
 	public static interface PhExtent<T> extends PhIterator<T> {
 
@@ -237,7 +240,7 @@ public interface PhTree<T> {
 	/**
 	 * Interface for queries. The reset methods allows reusing the query.
 	 * 
-	 * @param <T>
+	 * @param <T> the type of the iterator value
 	 */
 	public static interface PhQuery<T> extends PhIterator<T> {
 
@@ -252,7 +255,7 @@ public interface PhTree<T> {
 	/**
 	 * Interface for k nearest neighbor queries. The reset methods allows reusing the query.
 	 * 
-	 * @param <T>
+	 * @param <T> the type of the iterator value
 	 */
 	public static interface PhKnnQuery<T> extends PhIterator<T> {
 

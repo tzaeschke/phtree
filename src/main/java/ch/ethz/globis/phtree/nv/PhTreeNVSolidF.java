@@ -56,6 +56,7 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	 * Note that the backing tree's dimensionality must be a multiple of 2.
 	 * 
 	 * @param tree the backing tree
+	 * @param preprocessor a preprocessor
 	 */
 	public PhTreeNVSolidF(PhTreeNV tree, PreProcessorRangeF preprocessor) {
 		this.DIM = tree.getDIM()/2;
@@ -72,8 +73,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	
 	/**
 	 * Inserts a new ranged object into the tree.
-	 * @param lower
-	 * @param upper
+	 * @param lower lower left corner
+	 * @param upper upper right corner
 	 * @return true if the entry already exists
 	 * 
 	 * @see PhTreeNV#insert(long...)
@@ -86,8 +87,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	
 	/**
 	 * Removes a ranged object from the tree.
-	 * @param lower
-	 * @param upper
+	 * @param lower lower left corner
+	 * @param upper upper right corner
 	 * @return true if the entry was found 
 	 * 
 	 * @see PhTreeNV#delete(long...)
@@ -100,8 +101,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	
 	/**
 	 * Check whether an entry with the specified coordinates exists in the tree.
-	 * @param lower
-	 * @param upper
+	 * @param lower lower left corner
+	 * @param upper upper right corner
 	 * @return true if the entry was found 
 	 * 
 	 * @see PhTreeNV#contains(long...)
@@ -113,6 +114,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	}
 	
 	/**
+	 * @param e entry
+	 * @return true if the entry already exists
 	 * @see #insert(double[], double[])
 	 */
 	public boolean insert(PHREntry e) {
@@ -120,6 +123,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	}
 	
 	/**
+	 * @param e entry
+	 * @return true if the entry was found
 	 * @see #delete(double[], double[])
 	 */
 	public boolean delete(PHREntry e) {
@@ -127,6 +132,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	}
 	
 	/**
+	 * @param e entry
+	 * @return true if the entry exists
 	 * @see #contains(double[], double[])
 	 */
 	public boolean contains(PHREntry e) {
@@ -134,6 +141,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	}
 	
 	/**
+	 * @param e entry
+	 * @return an iterator
 	 * @see #queryInclude(double[], double[])
 	 */
 	public PHREntryIterator queryInclude(PHREntry e) {
@@ -141,6 +150,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	}
 	
 	/**
+	 * @param e entry
+	 * @return an iterator
 	 * @see #queryIntersect(double[], double[])
 	 */
 	public PHREntryIterator queryIntersect(PHREntry e) {
@@ -209,8 +220,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 		
 		/**
 		 * Range object constructor.
-		 * @param lower
-		 * @param upper
+		 * @param lower lower corner
+		 * @param upper upper corner
 		 */
 		public PHREntry(double[] lower, double[] upper) {
 			this.lower = lower;
@@ -298,10 +309,10 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	}
 
 	/**
-	 * @param lo1
-	 * @param up1
-	 * @param lo2
-	 * @param up2
+	 * @param lo1 old lower left
+	 * @param up1 old upper right
+	 * @param lo2 new lower left
+	 * @param up2 new upper right
 	 * @return true, if the value could be replaced.
 	 * @see PhTree#update(long[], long[])
 	 */
@@ -316,8 +327,8 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 	/**
 	 * Same as {@link #queryIntersect(double[], double[])}, except that it returns a list
 	 * instead of an iterator. This may be faster for small result sets. 
-	 * @param lower
-	 * @param upper
+	 * @param lower lower left
+	 * @param upper upper right
 	 * @return List of query results
 	 */
 	public List<PHREntry> queryIntersectAll(double[] lower, double[] upper) {

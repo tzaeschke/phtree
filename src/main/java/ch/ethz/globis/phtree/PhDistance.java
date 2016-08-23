@@ -16,8 +16,8 @@ public interface PhDistance {
 	/**
 	 * Returns the distance between v1 and v2.
 	 * 
-	 * @param v1
-	 * @param v2
+	 * @param v1 one value
+	 * @param v2 other value
 	 * @return The distance.
 	 */
 	double dist(long[] v1, long[] v2);
@@ -25,10 +25,10 @@ public interface PhDistance {
 	/**
 	 * Calculate the minimum bounding box for all points that are less than 
 	 * {@code distance} away from {@code center}.
-	 * @param distance
-	 * @param center
-	 * @param outMin
-	 * @param outMax
+	 * @param distance distance
+	 * @param center the center
+	 * @param outMin returns the new min values
+	 * @param outMax returns the new max values
 	 */
 	void toMBB(double distance, long[] center, long[] outMin, long[] outMax);
 }

@@ -30,7 +30,7 @@ public class PhTreeConfig {
 	
 	/**
 	 * Mark a dimension as unique
-	 * @param dim
+	 * @param dim number of dimensions
 	 */
 	public void setUnique(int dim) {
 		unique[dim] = true;

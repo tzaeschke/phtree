@@ -22,7 +22,7 @@ public interface PhFilter extends Serializable {
 
 	/**
 	 * 
-	 * @param key
+	 * @param key the key to check
 	 * @return True if the key passes the filter.
 	 */
 	boolean isValid(long[] key);
@@ -30,7 +30,7 @@ public interface PhFilter extends Serializable {
 	/**
 	 * 
 	 * @param bitsToIgnore trailing bits to ignore
-	 * @param prefix
+	 * @param prefix the prefix to check
 	 * @return False if key with the given prefix cannot pass the filter, otherwise true.
 	 */
 	boolean isValid(int bitsToIgnore, long[] prefix);
