@@ -47,6 +47,7 @@ public class PhTreeF<T> {
 	 * 
 	 * @param dim number of dimensions
 	 * @return PhTreeF
+	 * @param <T> value type of the tree
 	 */
 	public static <T> PhTreeF<T> create(int dim) {
 		return new PhTreeF<>(dim, new PreProcessorPointF.IEEE());
@@ -59,6 +60,7 @@ public class PhTreeF<T> {
 	 * @param dim number of dimensions
 	 * @param pre The preprocessor to be used
 	 * @return PhTreeF
+	 * @param <T> value type of the tree
 	 */
 	public static <T> PhTreeF<T> create(int dim, PreProcessorPointF pre) {
 		return new PhTreeF<>(dim, pre);
@@ -69,6 +71,7 @@ public class PhTreeF<T> {
 	 * 
 	 * @param tree another tree
 	 * @return PhTreeF
+	 * @param <T> value type of the tree
 	 */
 	public static <T> PhTreeF<T> wrap(PhTree<T> tree) {
 		return new PhTreeF<>(tree);
@@ -80,7 +83,7 @@ public class PhTreeF<T> {
 
 	/**
 	 * Insert an entry associated with a k dimensional key.
-	 * @param key
+	 * @param key the key to store the value to store
 	 * @param value
 	 * @return the previously associated value or {@code null} if the key was found
 	 */
@@ -105,7 +108,7 @@ public class PhTreeF<T> {
 
 	/**
 	 * Remove the entry associated with a k dimensional key.
-	 * @param key
+	 * @param key the key to remove
 	 * @return the associated value or {@code null} if the key was found
 	 */
 	public T remove(double... key) {
@@ -169,7 +172,7 @@ public class PhTreeF<T> {
 	 * Locate nearest neighbours for a given point in space.
 	 * @param nMin number of entries to be returned. More entries may or may not be returned if 
 	 * several points have the same distance.
-	 * @param key
+	 * @param key the center point
 	 * @return List of neighbours.
 	 */
 	public PhKnnQueryF<T> nearestNeighbour(int nMin, double... key) {
@@ -185,7 +188,7 @@ public class PhTreeF<T> {
 	 * several points have the same distance.
 	 * @param dist Distance function. Note that the distance function should be compatible
 	 * with the preprocessor of the tree.
-	 * @param key
+	 * @param key the center point
 	 * @return KNN query iterator.
 	 */
 	public PhKnnQueryF<T> nearestNeighbour(int nMin, PhDistance dist, double... key) {
@@ -322,9 +325,8 @@ public class PhTreeF<T> {
 
 	/**
 	 * Entry class for Double entries.
-	 * @author ztilmann
 	 *
-	 * @param <T>
+	 * @param <T> value type of the entries
 	 */
 	public static class PhEntryF<T> {
 		private final double[] key;
@@ -350,8 +352,8 @@ public class PhTreeF<T> {
 	/**
 	 * Update the key of an entry. Update may fail if the old key does not exist, or if the new
 	 * key already exists.
-	 * @param oldKey
-	 * @param newKey
+	 * @param oldKey old key
+	 * @param newKey new key
 	 * @return the value (can be {@code null}) associated with the updated key if the key could be 
 	 * updated, otherwise {@code null}.
 	 */
@@ -366,8 +368,8 @@ public class PhTreeF<T> {
 	/**
 	 * Same as {@link #query(double[], double[])}, except that it returns a list
 	 * instead of an iterator. This may be faster for small result sets. 
-	 * @param min
-	 * @param max
+	 * @param min min values
+	 * @param max max values
 	 * @return List of query results
 	 */
 	public List<PhEntryF<T>> queryAll(double[] min, double[] max) {

@@ -6,6 +6,8 @@
  */
 package ch.ethz.globis.phtree.v11;
 
+import ch.ethz.globis.phtree.PhTreeHelper;
+
 /**
  * Reference pooling and management for Node instances.
  * 
@@ -13,8 +15,8 @@ package ch.ethz.globis.phtree.v11;
  */
 public class NodePool {
 	
-	private static final int MAX_POOL_SIZE = 100;
-	private static final Node[] POOL = new Node[MAX_POOL_SIZE];
+	private static final Node[] POOL = 
+			new Node[PhTreeHelper.MAX_OBJECT_POOL_SIZE];
 	private static int poolSize;
 	/** Nodes currently used outside the pool. */
 	private static int activeNodes = 0;

@@ -21,12 +21,20 @@ public abstract class PhTreeHelper {
     private PhTreeHelper() {
     	//
     }
+
+    /**
+     * Size of object pools, currently only used for node objects.
+     */
+	public static int MAX_OBJECT_POOL_SIZE = 100;
     
-	/** Determines how much memory should be allocated on array resizing. The batch
-	 * size designates multiples of 16byte on a JVM with < 32GB. Higher values
+    /** 
+	 * Determines how much memory should be allocated on array resizing. The batch
+	 * size designates multiples of 16byte on a JVM with less than 32GB. Higher values
 	 * result in higher fixed memory requirements but reduce the number of arrays
 	 * to be created, copied and garbage collected when modifying the tree.
-	 * Recommended values are 1, 2, 3, 4.  Default is 1.*/
+	 * Recommended values are 1, 2, 3, 4.  Default is 1 for 64bit values and 2 for references.
+	 * @param size batch size
+	 */
 	public static void setAllocBatchSize(int size) {
 		//This works as follows: For a long[] we always allocate even numbers, i.e. we allocate
 		//2*size slots.
@@ -49,8 +57,8 @@ public abstract class PhTreeHelper {
 	}
 	
 	/**
-	 * Enable pooling of arrays. This should reduce garbage collection during inert()/put(),
-	 * update() and delete() operations.
+	 * Enable pooling of arrays and node objects. This should reduce garbage collection 
+	 * during insert()/put(), update() and delete() operations.
 	 * We call POOL_SIZE=PS and ARRAY_SIZE=AS.
 	 * The maximum memory allocation of the pool is 
 	 * approx. (AS*AS)/2*PS*8byte = 1000*1000*100/2*8 = 400MB for the long[] pool and half the 
@@ -73,7 +81,7 @@ public abstract class PhTreeHelper {
 	/**
 	 * Enable pooling of arrays. This should reduce garbage collection during inert()/put(),
 	 * update() and delete() operations.
-	 * @param flag
+	 * @param flag whether pooling should be enabled or not
 	 */
 	public static void enablePooling(boolean flag) {
 		ARRAY_POOLING = flag;
@@ -98,9 +106,9 @@ public abstract class PhTreeHelper {
 
 	/**
 	 * 
-	 * @param v1
-	 * @param v2
-	 * @param bitsToCheck
+	 * @param v1 one vector
+	 * @param v2 another vector
+	 * @param bitsToCheck number of bits to check (starting with least significant bit)
      * @return Position of the highest conflicting bit (counted from the right) or 0 if none.
 	 */
     public static final int getMaxConflictingBits(long[] v1, long[] v2, int bitsToCheck) {
@@ -114,8 +122,8 @@ public abstract class PhTreeHelper {
     /**
      * Calculates the number of conflicting bits, consisting of the most significant bit
      * and all bit 'right'of it (all less significant bits).
-     * @param v1
-     * @param v2
+     * @param v1 one vector
+     * @param v2 another vector
      * @param mask Mask that indicates which bits to check. Only bits where mask=1 are checked.
      * @return Number of conflicting bits or 0 if none.
      */
@@ -136,8 +144,9 @@ public abstract class PhTreeHelper {
      * Currently, the first attribute determines the left-most (high-value) bit of the address 
      * (left to right ordered)
      * 
-     * @param valSet
-     * @param currentDepth
+     * @param valSet one vector
+     * @param currentDepth current depth
+     * @param DEPTH total bit depth, usually 64
      * @return Encoded HC position
      */
     public static final long posInArray(long[] valSet, int currentDepth, int DEPTH) {
@@ -167,8 +176,8 @@ public abstract class PhTreeHelper {
      * Currently, the first attribute determines the left-most (high-value) bit of the address 
      * (left to right ordered)
      * 
-     * @param valSet
-     * @param postLen
+     * @param valSet vector
+     * @param postLen the postfix length
      * @return Encoded HC position
      */
     public static final long posInArray(long[] valSet, int postLen) {
@@ -201,7 +210,8 @@ public abstract class PhTreeHelper {
      * becomes
      * 000, 000, 011, 101
      * 
-     * @param valSet
+     * @param valSet vector
+     * @param DEPTH total number of bits, usually 64 
      * @return Transposed value
      */
     public static long[] transposeValue(long[] valSet, int DEPTH) {
@@ -226,57 +236,12 @@ public abstract class PhTreeHelper {
     }
     
 
-    /**
-     * Apply a HC-position to a value. This means setting one bit for each dimension.
-     * Trailing bits are set to 0.
-     * @param pos
-     * @param val
-     * @deprecated This may or may not reset trailing bits (mask0 for cPL < 63). 
-     * Use applyHcPos() instead. 
-     */
-    public static void applyHcPosAndResetRemainder(long pos, int currentDepth, long[] val, 
-    		final int DEPTH) {
-    	int currentPostLen = DEPTH-1-currentDepth;
-    	applyHcPosAndResetRemainder(pos, currentPostLen, val, currentDepth == 0);
-    }
-
-    /**
-     * Apply a HC-position to a value. This means setting one bit for each dimension.
-     * Trailing bits are set to 0.
-     * @param pos
-     * @param currentPostLen
-     * @param val
-     * @param isDepth0 Set this to true if currentDepth==0.
-     * @deprecated This may or may not reset trailing bits (mask0 for cPL < 63). 
-     * Use applyHcPos() instead. 
-     */
-    public static void applyHcPosAndResetRemainder(long pos, int currentPostLen, long[] val, 
-    		boolean isDepth0) {
-    	//for depth=0 we need to set leading zeroes, for example if a valTemplate had previously
-    	//been assigned leading '1's for a negative value.
-    	long mask0 = isDepth0 ? 0 : ~(1l << currentPostLen);
-    	//leading '1'-digits for negative values on depth=0
-    	//mask1 = !isDepth0 ?   (1l << currentPostLen)  :  ((-1L) << currentPostLen); 
-    	long mask1 = (isDepth0 ? -1L : 1L) << currentPostLen;
-    	long posMask = 1L<<val.length;
-		for (int d = 0; d < val.length; d++) {
-			posMask >>>= 1;
-			long x = pos & posMask;
-			if (x!=0) {
-				val[d] |= mask1;
-			} else {
-				val[d] &= mask0;
-			}
-		}
-    }
-
-
    /**
      * Apply a HC-position to a value. This means setting one bit for each dimension.
      * Leading and trailing bits in the value remain untouched.
-     * @param pos
-     * @param currentPostLen
-     * @param val
+     * @param pos hc-position
+     * @param currentPostLen current postfix length
+     * @param val value
      */
     public static void applyHcPos(long pos, int currentPostLen, long[] val) {
     	long mask = 1L << currentPostLen;

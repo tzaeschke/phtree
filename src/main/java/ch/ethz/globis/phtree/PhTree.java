@@ -246,8 +246,8 @@ public interface PhTree<T> {
 
 		/**
 		 * Reset the query with the new 'min' and 'max' boundaries.
-		 * @param min
-		 * @param max
+		 * @param min min values
+		 * @param max max values
 		 */
 		void reset(long[] min, long[] max);
 	}

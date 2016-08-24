@@ -10,7 +10,6 @@ import java.util.Arrays;
 
 import ch.ethz.globis.phtree.PhTree.PhIterator;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
-import ch.ethz.globis.phtree.nv.PhTreeNV;
 import ch.ethz.globis.phtree.pre.PreProcessorRange;
 import ch.ethz.globis.phtree.util.PhIteratorBase;
 
@@ -20,6 +19,7 @@ import ch.ethz.globis.phtree.util.PhIteratorBase;
  * and 'upper right' corner.  
  * 
  * @author Tilmann Zaeschke
+ * @param <T> value type
  */
 public class PhTreeSolid<T> implements Iterable<T> {
 
@@ -61,6 +61,8 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	 * Create a new tree with the specified number of dimensions.
 	 * 
 	 * @param dim number of dimensions
+	 * @return new tree
+	 * @param <T> value type
 	 */
 	public static <T> PhTreeSolid<T> create(int dim) {
 		return new PhTreeSolid<>(dim);
@@ -68,12 +70,12 @@ public class PhTreeSolid<T> implements Iterable<T> {
 
 	/**
 	 * Inserts a new ranged object into the tree.
-	 * @param lower
-	 * @param upper
-	 * @param value
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param value value
 	 * @return the previous value or {@code null} if no entry existed
 	 * 
-	 * @see PhTreeNV#insert(long...)
+	 * @see PhTree#put(long[], Object)
 	 */
 	public T put(long[] lower, long[] upper, T value) {
 		long[] lVal = new long[lower.length*2];
@@ -83,11 +85,11 @@ public class PhTreeSolid<T> implements Iterable<T> {
 
 	/**
 	 * Removes a ranged object from the tree.
-	 * @param lower
-	 * @param upper
+	 * @param lower lower left corner
+	 * @param upper upper right corner
 	 * @return the value or {@code null} if no entry existed
 	 * 
-	 * @see PhTreeNV#delete(long...)
+	 * @see PhTree#remove(long...)
 	 */
 	public T remove(long[] lower, long[] upper) {
 		long[] lVal = new long[lower.length*2];
@@ -97,11 +99,11 @@ public class PhTreeSolid<T> implements Iterable<T> {
 
 	/**
 	 * Check whether an entry with the specified coordinates exists in the tree.
-	 * @param lower
-	 * @param upper
+	 * @param lower lower left corner
+	 * @param upper upper right corner
 	 * @return true if the entry was found 
 	 * 
-	 * @see PhTreeNV#contains(long...)
+	 * @see PhTree#contains(long...)
 	 */
 	public boolean contains(long[] lower, long[] upper) {
 		long[] lVal = new long[lower.length*2];
@@ -110,6 +112,9 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	}
 
 	/**
+	 * @param e entry to insert
+	 * @return any previous value for that key
+	 * 
 	 * @see #put(long[], long[], Object)
 	 */
 	public T put(PhEntryS<T> e, T value) {
@@ -117,6 +122,8 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	}
 
 	/**
+	 * @param e entry to remove
+	 * @return the value for the key
 	 * @see #remove(long[], long[])
 	 */
 	public T remove(PhEntryS<T> e) {
@@ -124,6 +131,8 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	}
 
 	/**
+	 * @param e entry to check
+	 * @return 'true' if the key exists
 	 * @see #contains(long[], long[])
 	 */
 	public boolean contains(PhEntryS<T> e) {
@@ -131,6 +140,8 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	}
 
 	/**
+	 * @param e entry object that describes the query rectangle
+	 * @return a query iterator
 	 * @see #queryInclude(long[], long[])
 	 */
 	public PhQueryS<T> queryInclude(PhEntryS<T> e) {
@@ -138,6 +149,8 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	}
 
 	/**
+	 * @param e entry object that describes the query rectangle
+	 * @return a query iterator
 	 * @see #queryIntersect(long[], long[])
 	 */
 	public PhQueryS<T> queryIntersect(PhEntryS<T> e) {
@@ -274,8 +287,9 @@ public class PhTreeSolid<T> implements Iterable<T> {
 
 		/**
 		 * Range object constructor.
-		 * @param lower
-		 * @param upper
+		 * @param lower lower left corner
+		 * @param upper upper right corner
+		 * @param value the value
 		 */
 		public PhEntryS(long[] lower, long[] upper, T value) {
 			this.lower = lower;
@@ -335,10 +349,10 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	}
 
 	/**
-	 * @param lo1
-	 * @param up1
-	 * @param lo2
-	 * @param up2
+	 * @param lo1 old lower left corner
+	 * @param up1 old upper right corner
+	 * @param lo2 new lower left corner
+	 * @param up2 new upper right corner
 	 * @return true, if the value could be replaced.
 	 * @see PhTree#update(long[], long[])
 	 */

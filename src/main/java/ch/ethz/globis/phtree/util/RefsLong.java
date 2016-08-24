@@ -45,7 +45,7 @@ public class RefsLong {
     		if (size == 0) {
     			return EMPTY_REF_ARRAY;
     		}
-    		if (size > maxArraySize) {
+    		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
     			return new long[size];
     		}
     		synchronized (this) {
@@ -62,7 +62,7 @@ public class RefsLong {
     	
     	synchronized void offer(long[] a) {
     		int size = a.length;
-    		if (size == 0 || size > maxArraySize) {
+    		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
     			return;
     		}
     		synchronized (this) {

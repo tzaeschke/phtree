@@ -11,7 +11,6 @@ import java.util.List;
 
 import ch.ethz.globis.phtree.PhTree.PhIterator;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
-import ch.ethz.globis.phtree.nv.PhTreeNV;
 import ch.ethz.globis.phtree.pre.PreProcessorRangeF;
 import ch.ethz.globis.phtree.util.PhIteratorBase;
 import ch.ethz.globis.phtree.util.PhMapper;
@@ -55,6 +54,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * Note that the backing tree's dimensionality must be a multiple of 2.
 	 * 
 	 * @param tree the backing tree
+	 * @param pre a preprocessor instance
 	 */
 	public PhTreeSolidF(PhTree<T> tree, PreProcessorRangeF pre) {
 		this.dims = tree.getDim()/2;
@@ -73,6 +73,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * Create a new tree with the specified number of dimensions.
 	 * 
 	 * @param dim number of dimensions
+	 * @return new tree
+	 * @param <T> value type of the tree
 	 */
     public static <T> PhTreeSolidF<T> create(int dim) {
     	return new PhTreeSolidF<>(dim);
@@ -82,6 +84,9 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * Create a new tree with the specified number of dimensions.
 	 * 
 	 * @param dim number of dimensions
+	 * @param pre a preprocessor instance
+	 * @return new tree
+	 * @param <T> value type of the tree
 	 */
     public static <T> PhTreeSolidF<T> create(int dim, PreProcessorRangeF pre) {
     	return new PhTreeSolidF<>(PhTree.create(dim*2), pre);
@@ -89,12 +94,12 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	
 	/**
 	 * Inserts a new ranged object into the tree.
-	 * @param lower
-	 * @param upper
-	 * @param value
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param value the value
 	 * @return the previous value or {@code null} if no entry existed
 	 * 
-	 * @see PhTreeNV#insert(long...)
+	 * @see PhTree#put(long[], Object)
 	 */
 	public T put(double[] lower, double[] upper, T value) {
 		long[] lVal = new long[lower.length*2];
@@ -104,11 +109,11 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	
 	/**
 	 * Removes a ranged object from the tree.
-	 * @param lower
-	 * @param upper
+	 * @param lower lower left corner
+	 * @param upper upper right corner
 	 * @return the value or {@code null} if no entry existed
 	 * 
-	 * @see PhTreeNV#delete(long...)
+	 * @see PhTree#remove(long...)
 	 */
 	public T remove(double[] lower, double[] upper) {
 		long[] lVal = new long[lower.length*2];
@@ -118,11 +123,11 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	
 	/**
 	 * Check whether an entry with the specified coordinates exists in the tree.
-	 * @param lower
-	 * @param upper
+	 * @param lower lower left corner
+	 * @param upper upper right corner
 	 * @return true if the entry was found 
 	 * 
-	 * @see PhTreeNV#contains(long...)
+	 * @see PhTree#contains(long...)
 	 */
 	public boolean contains(double[] lower, double[] upper) {
 		long[] lVal = new long[lower.length*2];
@@ -131,6 +136,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 	
 	/**
+	 * @param e the entry
+	 * @return any previous value for the key
 	 * @see #put(double[], double[], Object)
 	 */
 	public T put(PhEntrySF<T> e, T value) {
@@ -138,6 +145,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 	
 	/**
+	 * @param e the entry
+	 * return the value for the key
 	 * @see #remove(double[], double[])
 	 */
 	public T remove(PhEntrySF<T> e) {
@@ -145,6 +154,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 	
 	/**
+	 * @param e the entry
+	 * @return whether the key exists
 	 * @see #contains(double[], double[])
 	 */
 	public boolean contains(PhEntrySF<T> e) {
@@ -152,6 +163,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 	
 	/**
+	 * @param e an entry that describes the query rectangle
+	 * @return a query iterator
 	 * @see #queryInclude(double[], double[])
 	 */
 	public PhQuerySF<T> queryInclude(PhEntrySF<T> e) {
@@ -159,6 +172,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 	
 	/**
+	 * @param e an entry that describes the query rectangle
+	 * @return a query iterator
 	 * @see #queryIntersect(double[], double[])
 	 */
 	public PhQuerySF<T> queryIntersect(PhEntrySF<T> e) {
@@ -403,9 +418,9 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 
 	/**
-	 * Same as {@link #queryIntersectAll(double[], double[], int, PhPredicate, PhMapper)}, 
-	 * except that it returns a list
-	 * instead of an iterator. This may be faster for small result sets. 
+	 * Same as {@link #queryIntersectAll(double[], double[], int, PhFilter, PhMapper)}, 
+	 * except that it returns a list instead of an iterator. 
+	 * This may be faster for small result sets. 
 	 * @param lower
 	 * @param upper
 	 * @param maxResults
