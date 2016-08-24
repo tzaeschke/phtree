@@ -103,7 +103,7 @@ public interface PreProcessorRangeF {
 		
 		/**
 		 * @param dims dimensions per point
-		 * @param pre
+		 * @param pre preprocessor multiplier
 		 */
 		public Multiply(int dims, double pre) {
 			this.dims = dims;
@@ -150,7 +150,7 @@ public interface PreProcessorRangeF {
 		
 		/**
 		 * @param dims dimensions per point
-		 * @param preShift
+		 * @param preShift preprocessor shift
 		 */
 		public ShiftIEEE(int dims, double preShift) {
 			this.dims = dims;
@@ -197,8 +197,8 @@ public interface PreProcessorRangeF {
 		
 		/**
 		 * @param dims dimensions per point
-		 * @param preMul
-		 * @param preShift
+		 * @param preMul preprocessor multiplier
+		 * @param preShift preprocessor shift
 		 */
 		public ShiftMulIPP(int dims, double preMul, double preShift) {
 			this.dims = dims;

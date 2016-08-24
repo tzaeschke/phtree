@@ -27,8 +27,8 @@ import ch.ethz.globis.phtree.v8.PhTree8.NodeEntry;
  * 
  * @author ztilmann
  *
- * @param <T>
- * @param <R>
+ * @param <T> value type
+ * @param <R> result type
  */
 public class NodeIteratorListReuse<T, R> {
 	

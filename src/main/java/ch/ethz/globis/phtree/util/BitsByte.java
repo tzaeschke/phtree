@@ -86,8 +86,9 @@ public class BitsByte {
 
 	/**
 	 * 
-	 * @param ba
-	 * @param dist amount to shift, positive to right, negative to left.
+	 * @param ba byte array
+	 * @param start start bit
+	 * @param nBits amount to shift
 	 */
     public static void insertBits(byte[] ba, int start, int nBits) {
 		if (nBits == 0) {
@@ -431,7 +432,9 @@ public class BitsByte {
 	//TODO this could be much faster by using a LONG (INT?) which is filled with source bytes
 	//and then accordingly shifted and assigned to target bytes.
 	/**
-	 * @Param posBit Counts from left to right!!!
+	 * @param ba byte array
+	 * @param posBit Counts from left to right!!!
+	 * @return the bit
 	 */
     public static boolean getBit(byte[] ba, int posBit) {
         int pA = posBit >>> UNIT_3;

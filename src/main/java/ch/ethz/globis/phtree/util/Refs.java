@@ -80,7 +80,7 @@ public class Refs {
     /**
      * Calculate array size for given number of bits.
      * This takes into account JVM memory management, which allocates multiples of 8 bytes.
-     * @param nObjects
+     * @param nObjects size of the array
      * @return array size.
      */
 	public static int calcArraySize(int nObjects) {
@@ -95,9 +95,10 @@ public class Refs {
 
     /**
      * Resize an array.
-     * @param oldA
-     * @param newSize
+     * @param oldA old array
+     * @param newSize size
      * @return New array larger array.
+     * @param <T> array type
      */
     public static <T> T[] arrayExpand(T[] oldA, int newSize) {
     	T[] newA = arrayCreate(newSize);
@@ -108,8 +109,9 @@ public class Refs {
     
     /**
      * Create an array.
-     * @param size
+     * @param size size
      * @return a new array
+     * @param <T> array type
      */
     @SuppressWarnings("unchecked")
 	public static <T> T[] arrayCreate(int size) {
@@ -118,9 +120,10 @@ public class Refs {
     
     /**
      * Ensure capacity of an array. Expands the array if required.
-     * @param oldA
-     * @param requiredSize
+     * @param oldA old array
+     * @param requiredSize size
      * @return Same array or expanded array.
+     * @param <T> array type
      */
     @Deprecated
     public static <T> T[] arrayEnsureSize(T[] oldA, int requiredSize) {
@@ -132,9 +135,10 @@ public class Refs {
     
     /**
      * Discards oldA and returns newA.
-     * @param oldA
-     * @param newA
+     * @param oldA old array
+     * @param newA new array
      * @return newA.
+     * @param <T> array type
      */
     public static <T> T[] arrayReplace(T[] oldA, T[] newA) {
     	if (oldA != null) {
@@ -145,8 +149,9 @@ public class Refs {
     
 	/**
 	 * Clones an array.
-	 * @param oldA
+	 * @param oldA old array
 	 * @return a copy or the input array
+     * @param <T> array type
 	 */
     public static <T> T[] arrayClone(T[] oldA) {
     	T[] newA = arrayCreate(oldA.length);
@@ -181,10 +186,11 @@ public class Refs {
 	 * Inserts an empty field at position 'pos'. If the required size is larger than the current
 	 * size, the array is copied to a new array. The new array is returned and the old array is
 	 * given to the pool.
-	 * @param values
-	 * @param pos
-	 * @param requiredSize
+	 * @param values array
+	 * @param pos position
+	 * @param requiredSize required size
 	 * @return the modified array
+     * @param <T> array type
 	 */
 	public static <T> T[] insertSpaceAtPos(T[] values, int pos, int requiredSize) {
     	T[] dst = values;
@@ -207,10 +213,11 @@ public class Refs {
 	 * Removes a field at position 'pos'. If the required size is smaller than the current
 	 * size, the array is copied to a new array. The new array is returned and the old array is
 	 * given to the pool.
-	 * @param values
-	 * @param pos
-	 * @param requiredSize
+	 * @param values array
+	 * @param pos position
+	 * @param requiredSize required size
 	 * @return the modified array
+     * @param <T> array type
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> T[] removeSpaceAtPos(T[] values, int pos, int requiredSize) {
@@ -246,9 +253,10 @@ public class Refs {
 
 	/**
 	 * Writes an object array to a stream.
-	 * @param a
-	 * @param out
-	 * @throws IOException
+	 * @param a array
+	 * @param out output stream
+     * @param <T> array type
+	 * @throws IOException if writing to stream fails
 	 */
 	public static <T> void write(T[] a, ObjectOutput out) throws IOException {
 		out.writeInt(a.length);
@@ -259,9 +267,10 @@ public class Refs {
 
 	/**
 	 * Reads an object array from a stream.
-	 * @param in
+	 * @param in input stream
 	 * @return the long array.
-	 * @throws IOException 
+     * @param <T> array type
+	 * @throws IOException if reading from stream fails
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> T[] read(ObjectInput in) throws IOException {

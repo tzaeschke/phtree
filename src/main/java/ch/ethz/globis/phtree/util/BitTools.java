@@ -23,7 +23,7 @@ package ch.ethz.globis.phtree.util;
 public class BitTools {
 
     /**
-     * @param value
+     * @param value value to convert
      * @return long representation.
      */
 	public static long toSortableLong(double value) {
@@ -52,7 +52,8 @@ public class BitTools {
 	}
 
     /**
-     * @param value
+     * @param value value to convert
+     * @param ret return value
      * @return long representation.
      */
 	public static long[] toSortableLong(double[] value, long[] ret) {
@@ -115,8 +116,8 @@ public class BitTools {
 	
 	/**
 	 * Reverses the value, considering that not all 64bits of the long value are used.
-	 * @param l
-	 * @param usedBits
+	 * @param l value to reverse
+	 * @param usedBits bits to reverse
 	 * @return Reversed value
 	 */
 	public static long reverse(long l, int usedBits) {
@@ -129,10 +130,10 @@ public class BitTools {
 	/**
 	 * Splits a value and write it to trgV at position trg1 and trg2.
 	 * This is the inverse operation to merge(...).
-	 * @param toSplit
-	 * @param trgV
-	 * @param trg1
-	 * @param trg2
+	 * @param toSplit value to split
+	 * @param trgV return value
+	 * @param trg1 return position part 1
+	 * @param trg2 return position part 2
 	 * @param nBits Number of bits of source value
 	 */
 	public static void split(final long toSplit, long[] trgV, final int trg1, final int trg2, 
@@ -217,11 +218,13 @@ public class BitTools {
 	/**
 	 * Splits a value and write it to trgV at position trg1 and trg2.
 	 * This is the inverse operation to merge(...).
-	 * @param toSplit
+	 * @param dims number of splinters to split into
+	 * @param toSplit value to split
 	 * @param nBitsPerValue Number of bits of source value
+	 * @return long[] with 'dims' entries
 	 */
-	public static long[] split(final int DIM, final int nBitsPerValue, final int[] toSplit) {
-		long[] trg = new long[DIM];
+	public static long[] split(final int dims, final int nBitsPerValue, final int[] toSplit) {
+		long[] trg = new long[dims];
 
 		long maskTrg = 1L << (nBitsPerValue-1);
 		for (int k = 0; k < nBitsPerValue; k++) {
@@ -275,11 +278,13 @@ public class BitTools {
 	/**
 	 * Splits a value and write it to trgV at position trg1 and trg2.
 	 * This is the inverse operation to merge(...).
-	 * @param toSplit
+	 * @param dims number of splinters to split into
+	 * @param toSplit value to split
 	 * @param nBitsPerValue Number of bits of source value
+	 * @return long[] with 'dims' entries
 	 */
-	public static long[] splitLong(final int DIM, final int nBitsPerValue, final long[] toSplit) {
-		long[] trg = new long[DIM];
+	public static long[] splitLong(final int dims, final int nBitsPerValue, final long[] toSplit) {
+		long[] trg = new long[dims];
 
 		long maskTrg = 1L << (nBitsPerValue-1);
 		for (int k = 0; k < nBitsPerValue; k++) {
@@ -296,7 +301,9 @@ public class BitTools {
 	}
 
 	/**
-	 * @Param posBit Counts from left to right!!!
+	 * @param ba byte array
+	 * @param posBit Counts from left to right!!!
+	 * @return current bit
 	 */
     public static boolean getBit(long[] ba, int posBit) {
         int pA = posBit >>> 6; // 1/64
@@ -306,7 +313,9 @@ public class BitTools {
 	}
 
 	/**
-	 * @Param posBit Counts from left to right (highest to lowest)!!!
+	 * @param ba byte array
+	 * @param posBit Counts from left to right (highest to lowest)!!!
+	 * @param b bit to set
 	 */
     public static void setBit(long[] ba, int posBit, boolean b) {
         int pA = posBit >>> 6;  // 1/64
@@ -321,21 +330,21 @@ public class BitTools {
 
     /**
      * Compares to z-values.
-     * This takes at most O(w) time. This may actually worse then dim-by-dim comparison for w > k. 
-     * Optimisation: with a startBit we get worst case (w-startBit) < k.
+     * This takes at most O(w) time. This may actually worse then dim-by-dim comparison for 
+     * {@code w > k}. 
+     * Optimisation: with a startBit we get worst case {@code (w-startBit) < k}.
      * The nice thing: average case should be much better than worst case.
-     * --> If we look at standard PH-trees, our average case should be related (equal?) to 
-     * the average depth of the tree, ie. (64-avgPostlen). That means we have on average 
-     * 20 comparisons or so...<p> 
+     *  - If we look at standard PH-trees, our average case should be related (equal?) to 
+     *    the average depth of the tree, ie. (64-avgPostlen). That means we have on average 
+     *    20 comparisons or so...<p> 
      * 
      * How does that relate to standard comparison? There we can also abort early...
-     * --> 0.5 if one dimension is non-dominated
-     * -->  
-     * More precisely, for the task at hand (comparing two z-values), testing can only aborted if
-     * v2 is better than v1 in a given dimension. When having a large number of points, 
-     * many of which are potentially dominated, this is somewhat unlikely.
-     * To confirm that v2 is dominated, we can not abort early but have to compare ALL dimensions.
-     * Since most points will have O(k), the average will also approach O(k).<p>  
+     *  - 0.5 if one dimension is non-dominated
+     *  - More precisely, for the task at hand (comparing two z-values), testing can only aborted 
+     *    if v2 is better than v1 in a given dimension. When having a large number of points, 
+     *    many of which are potentially dominated, this is somewhat unlikely.
+     *    To confirm that v2 is dominated, we can not abort early but have to compare ALL dimensions.
+     *    Since most points will have O(k), the average will also approach O(k).<p>  
      * 
      * Also, can we use quadrant properties to avoid comparison?
      * Quadrant IDs are leading bit-clusters. 
@@ -348,7 +357,7 @@ public class BitTools {
      *   On the other hand, the quadrant may be quite big...
      * - Finally, we could identify incomparable quadrants (see Lee&Hwang, 2014).
      *   Two quadrants are incomparable if both dominate the other in at least on dimension.
-     *   This is equal to (diff&v1&domMask != 0 && diff&v2&domMask != 0). Hmm, do we really
+     *   This is equal to {@code (diff&v1&domMask != 0 && diff&v2&domMask != 0) }. Hmm, do we really
      *   need the domMask here?
      *   This is also implicit in the algorithm below, but maybe we could check it in the
      *   surrounding data structure? How does the PH-tree do this? 

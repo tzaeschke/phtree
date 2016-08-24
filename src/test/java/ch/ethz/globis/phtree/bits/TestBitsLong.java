@@ -491,44 +491,6 @@ public class TestBitsLong {
 	}
 	
 	@Test
-	public void testCopyRightRandom() {
-		System.err.println("WARNING: Test disabled: TestBitsLong.testCopyRightRandom()");
-//		Random rnd = new Random();
-//		int BA_LEN = 6;
-//		long[] ba = new int[BA_LEN];
-//		for (int i1 = 0; i1 < 1000000; i1++) {
-//			//populate
-//			for (int i2 = 0; i2 < ba.length; i2++) {
-//				ba[i2] = rnd.nextInt();
-//			}
-//			
-//			//clone
-//			long[] ba1 = Arrays.copyOf(ba, ba.length);
-//			long[] ba2 = Arrays.copyOf(ba, ba.length);
-//			
-//			int start = rnd.nextInt(8) + 8;  //start somewhere in fourth short
-//			int nBits = rnd.nextInt(8 * 3); //remove up to three shorts 
-//			//compute
-//			//System.out.println("i=" + i1 + " start=" + start + " nBits=" + nBits);
-//			BitsLong.copyBitsRight(ba1, start, ba1, start+nBits, ba1.length*BITS-start-nBits);
-//			//compute backup
-//			insertBitsSlow(ba2, start, nBits);
-//			
-//			//check
-//			if (!Arrays.equals(ba2, ba1)) {
-//				System.out.println("i=" + i1 + " start=" + start + " nBits=" + nBits);
-//				System.out.println("ori. = " + BitsLong.toBinary(ba));
-//				System.out.println("act. = " + BitsLong.toBinary(ba1));
-//				System.out.println("exp. = " + BitsLong.toBinary(ba2));
-//				System.out.println("ori. = " + Arrays.toString(ba));
-//				System.out.println("act. = " + Arrays.toString(ba1));
-//				System.out.println("exp. = " + Arrays.toString(ba2));
-//				fail();
-//			}
-//		}
-	}
-	
-	@Test
 	public void testGetBit() {
 		long[] s = newBA(0xAAAAAAAAAAAAAAAAL, 0x5555555555555555L, 
 				0xFFFFFFFFFFFFFFFFL, 0x0L, 0xAAAA0000FFFF5555L);

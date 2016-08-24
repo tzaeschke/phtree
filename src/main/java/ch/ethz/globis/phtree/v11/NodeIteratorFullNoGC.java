@@ -20,7 +20,7 @@ import ch.ethz.globis.phtree.v11.nt.NtIteratorMinMax;
  * 
  * @author ztilmann
  *
- * @param <T>
+ * @param <T> value type
  */
 public class NodeIteratorFullNoGC<T> {
 	
@@ -44,7 +44,7 @@ public class NodeIteratorFullNoGC<T> {
 
 	/**
 	 * 
-	 * @param dims
+	 * @param dims dimensions
 	 * @param valTemplate A null indicates that no values are to be extracted.
 	 */
 	public NodeIteratorFullNoGC(int dims, long[] valTemplate) {

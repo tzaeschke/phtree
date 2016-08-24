@@ -117,8 +117,8 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	 * 
 	 * @see #put(long[], long[], Object)
 	 */
-	public T put(PhEntryS<T> e, T value) {
-		return put(e.lower(), e.upper(), value);
+	public T put(PhEntryS<T> e) {
+		return put(e.lower(), e.upper(), e.value());
 	}
 
 	/**
@@ -278,6 +278,7 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	
 	/**
 	 * Entries in a PH-tree with ranged objects. 
+	 * @param <T> value type of the entry
 	 */
 	public static class PhEntryS<T> {
 

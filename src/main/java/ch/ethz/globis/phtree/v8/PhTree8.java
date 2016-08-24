@@ -46,15 +46,12 @@ import ch.ethz.globis.phtree.util.StringBuilderLn;
  *
  * Storage:
  * - classic: One node per combination of bits. Unused nodes can be cut off.
- * - use prefix-truncation -> a node may contain a series of unique bit combinations
- *
- * - To think about: Use optimised tree storage: 00=branch-down 01=branch-up 02=skip 03=ghost (after delete)
- *   -> 0=skip 10=down 11=up?
+ * - use prefix-truncation: a node may contain a series of unique bit combinations
  *
  *
  * Hypercube: expanded byte array that contains 2^DIM references to sub-nodes (and posts, depending 
  * on implementation)
- * Linearization: Storing Hypercube as paired array of index<->non_null_reference 
+ * Linearization: Storing Hypercube as paired array of index / non_null_reference 
  *
  * @author ztilmann (Tilmann Zaeschke)
  *
@@ -311,7 +308,7 @@ public class PhTree8<T> implements PhTree<T> {
 
 	/**
 	 * A value-set is an object with n=DIM values.
-	 * @param key
+	 * @param key key to remove
 	 * @return true if the value was found
 	 */
 	@Override
@@ -547,7 +544,7 @@ public class PhTree8<T> implements PhTree<T> {
 	 * Locate nearest neighbours for a given point in space.
 	 * @param nMin number of values to be returned. More values may or may not be returned when 
 	 * several have	the same distance.
-	 * @param v
+	 * @param v center point
 	 * @return Result iterator.
 	 */
 	@Override

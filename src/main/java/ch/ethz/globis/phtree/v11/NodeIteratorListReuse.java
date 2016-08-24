@@ -25,8 +25,8 @@ import ch.ethz.globis.phtree.v11.nt.NtIteratorMask;
  * 
  * @author ztilmann
  *
- * @param <T>
- * @param <R>
+ * @param <T> value type
+ * @param <R> result type
  */
 public class NodeIteratorListReuse<T, R> {
 	

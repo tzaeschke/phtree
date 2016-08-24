@@ -21,6 +21,7 @@ import ch.ethz.globis.phtree.util.PhMapper;
  * and 'upper right' corner.  
  * 
  * @author Tilmann Zaeschke
+ * @param <T> value type of the tree
  */
 public class PhTreeSolidF<T> implements Iterable<T> {
 
@@ -140,13 +141,13 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * @return any previous value for the key
 	 * @see #put(double[], double[], Object)
 	 */
-	public T put(PhEntrySF<T> e, T value) {
-		return put(e.lower(), e.upper(), value);
+	public T put(PhEntrySF<T> e) {
+		return put(e.lower(), e.upper(), e.value());
 	}
 	
 	/**
 	 * @param e the entry
-	 * return the value for the key
+	 * @return the value for the key
 	 * @see #remove(double[], double[])
 	 */
 	public T remove(PhEntrySF<T> e) {
@@ -299,7 +300,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 	
 	/**
-	 * Entries in a PH-tree with ranged objects. 
+	 * Entries in a PH-tree with ranged objects.
+	 * @param <T> value tyype of the entry 
 	 */
 	public static class PhEntrySF<T> {
 
@@ -309,8 +311,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 
 		/**
 		 * Range object constructor.
-		 * @param lower
-		 * @param upper
+		 * @param lower lower left corner
+		 * @param upper upper right corner
 		 * @param value The value associated with the point
 		 */
 		public PhEntrySF(double[] lower, double[] upper, T value) {
@@ -385,10 +387,10 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 
 	/**
-	 * @param lo1
-	 * @param up1
-	 * @param lo2
-	 * @param up2
+	 * @param lo1 old min value
+	 * @param up1 old max value
+	 * @param lo2 new min value
+	 * @param up2 new max value
 	 * @return true, if the value could be replaced.
 	 * @see PhTree#update(long[], long[])
 	 */
@@ -403,8 +405,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	/**
 	 * Same as {@link #queryIntersect(double[], double[])}, except that it returns a list
 	 * instead of an iterator. This may be faster for small result sets. 
-	 * @param lower
-	 * @param upper
+	 * @param lower min value
+	 * @param upper max value
 	 * @return List of query results
 	 */
 	public List<PhEntrySF<T>> queryIntersectAll(double[] lower, double[] upper) {
@@ -421,11 +423,11 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * Same as {@link #queryIntersectAll(double[], double[], int, PhFilter, PhMapper)}, 
 	 * except that it returns a list instead of an iterator. 
 	 * This may be faster for small result sets. 
-	 * @param lower
-	 * @param upper
-	 * @param maxResults
-	 * @param filter
-	 * @param mapper
+	 * @param lower min value
+	 * @param upper max value
+	 * @param maxResults max result count
+	 * @param filter filter instance
+	 * @param mapper mapper instance for mapping double[] to long[]
 	 * @return List of query results
 	 */
 	public <R> List<R> queryIntersectAll(double[] lower, double[] upper, int maxResults, 
@@ -445,8 +447,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 
 	/**
-	 * @param lower
-	 * @param upper
+	 * @param lower min value
+	 * @param upper max value
 	 * @return the element that has 'upper' and 'lower' as key. 
 	 */
 	public T get(double[] lower, double[] upper) {

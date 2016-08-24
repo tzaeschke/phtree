@@ -53,7 +53,7 @@ import ch.ethz.globis.phtree.v8.PhTree8.NodeEntry;
  * The query rectangle is calculated using the PhDistance.toMBB() method.
  * The implementation of this method may not work with non-euclidean spaces! 
  * 
- * @param <T> 
+ * @param <T> value type 
  */
 public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 

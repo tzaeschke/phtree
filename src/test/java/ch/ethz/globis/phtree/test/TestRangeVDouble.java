@@ -46,17 +46,17 @@ public class TestRangeVDouble {
 		assertFalse(pht.contains(e2));
 		assertFalse(pht.contains(e3));
 		
-		pht.put(e1, 1);
+		pht.put(e1);
 		assertTrue(pht.contains(e1));
 		assertFalse(pht.contains(e2));
 		assertFalse(pht.contains(e3));
 
-		pht.put(e2, 2);
+		pht.put(e2);
 		assertTrue(pht.contains(e1));
 		assertTrue(pht.contains(e2));
 		assertFalse(pht.contains(e3));
 
-		pht.put(e3, 3);
+		pht.put(e3);
 		assertTrue(pht.contains(e1));
 		assertTrue(pht.contains(e2));
 		assertTrue(pht.contains(e3));
@@ -64,9 +64,9 @@ public class TestRangeVDouble {
 	
 	@Test
 	public void testDeleteContains() {
-		pht.put(e1, 1);
-		pht.put(e2, 2);
-		pht.put(e3, 3);
+		pht.put(e1);
+		pht.put(e2);
+		pht.put(e3);
 
 		pht.remove(e3);
 		assertTrue(pht.contains(e1));
@@ -86,9 +86,9 @@ public class TestRangeVDouble {
 	
 	@Test
 	public void testQueryInclude() {
-		pht.put(e1, 1);
-		pht.put(e2, 2);
-		pht.put(e3, 3);
+		pht.put(e1);
+		pht.put(e2);
+		pht.put(e3);
 		
 		Iterator<Integer> iter = pht.queryInclude(e1);
 		assertEquals(e1.value(), iter.next());
@@ -126,9 +126,9 @@ public class TestRangeVDouble {
 	
 	@Test
 	public void testQueryIntersect() {
-		pht.put(e1, 1);
-		pht.put(e2, 2);
-		pht.put(e3, 3);
+		pht.put(e1);
+		pht.put(e2);
+		pht.put(e3);
 		
 		PhIteratorSF<Integer> iter = pht.queryIntersect(e1);
 		assertEquals(e1.value(), iter.next());

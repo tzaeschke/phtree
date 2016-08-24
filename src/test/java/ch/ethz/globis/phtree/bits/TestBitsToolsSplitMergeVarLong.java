@@ -189,8 +189,8 @@ public class TestBitsToolsSplitMergeVarLong {
 	
 	/**
 	 * 
-	 * @param nBitsPerValue
-	 * @param src
+	 * @param nBitsPerValue bits per long value
+	 * @param src long values
 	 * @return interleaved value
 	 */
 	public long[] mergeLong(int nBitsPerValue, long[] src) {
@@ -243,8 +243,8 @@ public class TestBitsToolsSplitMergeVarLong {
 	
 	/**
 	 * 
-	 * @param nBitsPerValue
-	 * @param src
+	 * @param nBitsPerValue bits per long value
+	 * @param src long values
 	 * @return interleaved value
 	 */
 	public long[] mergeLong64(int nBitsPerValue, long[] src) {

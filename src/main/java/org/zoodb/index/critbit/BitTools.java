@@ -28,7 +28,7 @@ package org.zoodb.index.critbit;
 public class BitTools {
 
     /**
-     * @param value
+     * @param value value to convert
      * @return long representation.
      */
 	public static long toSortableLong(double value) {
@@ -59,10 +59,10 @@ public class BitTools {
 	/**
 	 * Splits a value and write it to trgV at position trg1 and trg2.
 	 * This is the inverse operation to merge(...).
-	 * @param toSplit
-	 * @param trgV
-	 * @param trg1
-	 * @param trg2
+	 * @param toSplit value to split
+	 * @param trgV return value
+	 * @param trg1 return position part 1
+	 * @param trg2 return position part 2
 	 * @param nBits Number of bits of source value
 	 */
 	public static void split(final long toSplit, long[] trgV, final int trg1, final int trg2, 
@@ -157,11 +157,13 @@ public class BitTools {
 	/**
 	 * Splits a value and write it to trgV at position trg1 and trg2.
 	 * This is the inverse operation to merge(...).
-	 * @param toSplit
+	 * @param dims number of splinters to split into
+	 * @param toSplit value to split
 	 * @param nBitsPerValue Number of bits of source value
+	 * @return long[] with 'dims' entries
 	 */
-	public static long[] splitLong(final int DIM, final int nBitsPerValue, final long[] toSplit) {
-		long[] trg = new long[DIM];
+	public static long[] splitLong(final int dims, final int nBitsPerValue, final long[] toSplit) {
+		long[] trg = new long[dims];
 
 		long maskTrg = 1L << (nBitsPerValue-1);
 		for (int k = 0; k < nBitsPerValue; k++) {
@@ -178,7 +180,9 @@ public class BitTools {
 	}
 
 	/**
+	 * @param ba byte array
 	 * @param posBit Counts from left to right!!!
+	 * @return current bit
 	 */
     public static boolean getBit(long[] ba, int posBit) {
         int pA = posBit >>> 6; // 1/64
@@ -188,7 +192,9 @@ public class BitTools {
 	}
 
 	/**
+	 * @param l bit set
 	 * @param posBit Counts from left to right!!!
+	 * @return current bit
 	 */
     public static boolean getBit(long l, int posBit) {
         //last 6 bit [0..63]
@@ -196,8 +202,11 @@ public class BitTools {
 	}
 
 	/**
+	 * @param src source array
 	 * Reads a bit from {@code src}, writes it to {@code dst} and returns it.
 	 * @param posBit Counts from left to right
+	 * @param dst target array
+	 * @return current bit
 	 */
     public static boolean getAndCopyBit(long[] src, int posBit, long[] dst) {
         int pA = posBit >>> 6; // 1/64
@@ -214,7 +223,9 @@ public class BitTools {
 	}
 
 	/**
+	 * @param ba byte array
 	 * @param posBit Counts from left to right (highest to lowest)!!!
+	 * @param b bit to set
 	 */
     public static void setBit(long[] ba, int posBit, boolean b) {
         int pA = posBit >>> 6;  // 1/64

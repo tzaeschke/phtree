@@ -16,6 +16,8 @@ import java.io.Serializable;
  * from the client machine to the server machine.
  *
  * @author ztilmann
+ *
+ * @param <R> Result type
  */
 @FunctionalInterface
 public interface PhMapperKey<R> extends Serializable{

@@ -47,7 +47,7 @@ class NodeIteratorFull<T> {
 	/**
 	 * 
 	 * @param node The root node
-	 * @param DIM
+	 * @param DIM dimensions
 	 * @param valTemplate An empty buffer (long[DIM]) for temporary values.
 	 *        A null indicates that no values should be extracted.
 	 */

@@ -24,7 +24,7 @@ import ch.ethz.globis.phtree.v11.PhTree11.NodeEntry;
  * 
  * @author ztilmann
  *
- * @param <T>
+ * @param <T> value type
  */
 public final class PhIteratorNoGC<T> implements PhQuery<T> {
 

@@ -22,7 +22,7 @@ import ch.ethz.globis.phtree.v8.PhTree8.NodeEntry;
  * 
  * @author ztilmann
  *
- * @param <T>
+ * @param <T> value type
  */
 public class NodeIteratorNoGC<T> {
 	
@@ -65,7 +65,7 @@ public class NodeIteratorNoGC<T> {
 
 	/**
 	 * 
-	 * @param DIM
+	 * @param DIM dimensions
 	 * @param valTemplate A null indicates that no values are to be extracted.
 	 */
 	public NodeIteratorNoGC(int DIM, long[] valTemplate) {

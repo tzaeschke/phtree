@@ -104,8 +104,9 @@ public class BitsInt {
 
 	/**
 	 * 
-	 * @param ba
-	 * @param dist amount to shift, positive to right, negative to left.
+	 * @param ba byte arrays
+	 * @param start start position
+	 * @param nBits amount to shift, positive to right, negative to left.
 	 */
     public static void insertBits1(int[] ba, int start, int nBits) {
 		if (nBits == 0) {
@@ -131,9 +132,9 @@ public class BitsInt {
     /**
      * Insert bits at the given position.
      * The resulting array is NOT resized, bit that do do not fit in the current array are lost.  
-     * @param ba
-     * @param start
-     * @param nBits
+	 * @param ba byte arrays
+	 * @param start start position
+     * @param nBits number of bits
      */
     public static void insertBits(int[] ba, final int start, final int nBits) {
 		if (nBits == 0 || (start+nBits)>=ba.length*UNIT_BITS) {
@@ -181,9 +182,9 @@ public class BitsInt {
      * Insert bits at the given position. 
      * 
      * The resulting array is NOT resized, bit that do do not fit in the current array are lost.  
-     * @param ba
-     * @param start
-     * @param nBits
+	 * @param ba byte arrays
+	 * @param start start position
+     * @param nBits number of bits
      */
     public static void insertBits0(int[] ba, int start, int nBits) {
 		if (nBits == 0) {
@@ -534,7 +535,9 @@ public class BitsInt {
 	//TODO this could be much faster by using a LONG (INT?) which is filled with source bytes
 	//and then accordingly shifted and assigned to target bytes.
 	/**
-	 * @Param posBit Counts from left to right!!!
+	 * @param ba byte array
+	 * @param posBit Counts from left to right!!!
+	 * @return current bit
 	 */
     public static boolean getBit(int[] ba, int posBit) {
         int pA = posBit >>> UNIT_3;
@@ -544,7 +547,9 @@ public class BitsInt {
 	}
 
 	/**
-	 * @Param posBit Counts from left to right (highest to lowest)!!!
+	 * @param ba byte array
+	 * @param posBit Counts from left to right (highest to lowest)!!!
+	 * @param b bit to set
 	 */
     public static void setBit(int[] ba, int posBit, boolean b) {
         int pA = posBit >>> UNIT_3;
@@ -593,7 +598,7 @@ public class BitsInt {
     /**
      * Calculate array size for given number of bits.
      * This takes into account JVM memory management, which allocates multiples of 8 bytes.
-     * @param nBits
+     * @param nBits number of bits
      * @return array size.
      */
     public static int calcArraySize(int nBits) {
@@ -608,8 +613,8 @@ public class BitsInt {
 
     /**
      * Resize an array.
-     * @param oldA
-     * @param newSizeBits
+     * @param oldA old array
+     * @param newSizeBits number of bits
      * @return New array larger array.
      */
     public static int[] arrayExpand(int[] oldA, int newSizeBits) {
@@ -627,8 +632,8 @@ public class BitsInt {
     
     /**
      * Ensure capacity of an array. Expands the array if required.
-     * @param oldA
-     * @param requiredBits
+     * @param oldA old array
+     * @param requiredBits number of bits
      * @return Same array or expanded array.
      */
     public static int[] arrayEnsureSize(int[] oldA, int requiredBits) {

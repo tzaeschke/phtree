@@ -93,8 +93,9 @@ public class BitsShort {
 
 	/**
 	 * 
-	 * @param ba
-	 * @param dist amount to shift, positive to right, negative to left.
+	 * @param ba byte array
+	 * @param start start bit
+	 * @param nBits amount to shift, positive to right, negative to left.
 	 */
     public static void insertBits1(short[] ba, int start, int nBits) {
 		if (nBits == 0) {
@@ -121,9 +122,9 @@ public class BitsShort {
      * Insert bits at the given position. 
      * 
      * The resulting array is NOT resized, bit that do do not fit in the current array are lost.  
-     * @param ba
-     * @param start
-     * @param nBits
+	 * @param ba byte array
+	 * @param start start bit
+     * @param nBits number of bits
      */
     public static void insertBits(short[] ba, int start, int nBits) {
 		if (nBits == 0) {
@@ -500,7 +501,9 @@ public class BitsShort {
 	//TODO this could be much faster by using a LONG (INT?) which is filled with source bytes
 	//and then accordingly shifted and assigned to target bytes.
 	/**
-	 * @Param posBit Counts from left to right!!!
+	 * @param ba byte array
+	 * @param posBit Counts from left to right!!!
+	 * @return current bit
 	 */
     public static boolean getBit(short[] ba, int posBit) {
         int pA = posBit >>> UNIT_3;
@@ -553,7 +556,7 @@ public class BitsShort {
     /**
      * Calculate array size for given number of bits.
      * This takes into account JVM memory management, which allocates multiples of 8 bytes.
-     * @param nBits
+     * @param nBits number of bits
      * @return array size.
      */
     public static int calcArraySize(int nBits) {
@@ -577,8 +580,8 @@ public class BitsShort {
 
     /**
      * Resize an array.
-     * @param oldA
-     * @param newSizeBits
+     * @param oldA old array
+     * @param newSizeBits number of bits
      * @return New array larger array.
      */
     public static short[] arrayExpand(short[] oldA, int newSizeBits) {
@@ -596,8 +599,8 @@ public class BitsShort {
     
     /**
      * Ensure capacity of an array. Expands the array if required.
-     * @param oldA
-     * @param requiredBits
+     * @param oldA old array
+     * @param requiredBits number of bits
      * @return Same array or expanded array.
      */
     public static short[] arrayEnsureSize(short[] oldA, int requiredBits) {

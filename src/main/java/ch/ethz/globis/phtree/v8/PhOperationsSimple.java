@@ -25,7 +25,7 @@ import ch.ethz.globis.phtree.v8.PhTree8.NodeEntry;
  *
  *  This split is useful for extending insert, remove and update operations for multi-threading.
  *
- * @param <T>
+ * @param <T> value type
  */
 public class PhOperationsSimple<T> implements PhOperations<T> {
 
@@ -145,11 +145,11 @@ public class PhOperationsSimple<T> implements PhOperations<T> {
     /**
      * Splitting occurs if a node with an infix has to be split, because a new value to be inserted
      * requires a partially different infix.
-     * @param key
-     * @param value
-     * @param node
-     * @param parent
-     * @param posInParent
+     * @param key key to insert
+     * @param value value to insert
+     * @param node current subnode
+     * @param parent current parent node
+     * @param posInParent hc-pos in parent
      * @return The value
      */
     protected T insertSplit(long[] key, T value, Node<T> node, Node<T> parent,

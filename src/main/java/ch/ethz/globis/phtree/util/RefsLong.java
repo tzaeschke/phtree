@@ -88,7 +88,7 @@ public class RefsLong {
 
     /**
      * Create an array.
-     * @param size
+     * @param size size
      * @return a new array
      */
 	public static long[] arrayCreate(int size) {
@@ -97,9 +97,9 @@ public class RefsLong {
     
 	/**
 	 * Replaces an array with another array. The replaced array is returned to the pool.
-	 * @param oldA
-	 * @param newA
-	 * @return
+	 * @param oldA old array
+	 * @param newA new array
+	 * @return new array
 	 */
 	public static long[] arrayReplace(long[] oldA, long[] newA) {
 		if (oldA != null) {
@@ -110,7 +110,7 @@ public class RefsLong {
     
 	/**
 	 * Clones an array.
-	 * @param oldA
+	 * @param oldA old array
 	 * @return a copy or the input array
 	 */
     public static long[] arrayClone(long[] oldA) {
@@ -121,9 +121,9 @@ public class RefsLong {
     
     /**
      * Write the src array into the dst array at position dstPos. 
-     * @param src
-     * @param dst
-     * @param dstPos
+     * @param src source array
+     * @param dst destination array
+     * @param dstPos destination position
      */
     public static void writeArray(long[] src, long[] dst, int dstPos) {
     	arraycopy(src, 0, dst, dstPos, src.length);
@@ -131,11 +131,11 @@ public class RefsLong {
 
     /**
      * Same a {@link #arraycopy(long[], int, long[], int, int)}. 
-     * @param src
-     * @param srcPos
-     * @param dst
-     * @param dstPos
-     * @param length
+     * @param src source array
+     * @param srcPos source position
+     * @param dst destination array
+     * @param dstPos destination position
+     * @param length length
      */
 	public static void writeArray(long[] src, int srcPos, long[] dst, int dstPos, int length) {
 		arraycopy(src, srcPos, dst, dstPos, length);
@@ -143,9 +143,9 @@ public class RefsLong {
 
 	/**
 	 * Reads data from srcPos in src[] into dst[]. 
-	 * @param src
-	 * @param srcPos
-	 * @param dst
+	 * @param src source array
+	 * @param srcPos source position
+	 * @param dst destination array
 	 */
 	public static void readArray(long[] src, int srcPos, long[] dst) {
 		arraycopy(src, srcPos, dst, 0, dst.length);
@@ -154,10 +154,9 @@ public class RefsLong {
 	/**
 	 * Creates a new array with from copying oldA and inserting insertA at position pos.
 	 * The old array is returned to the pool. 
-	 * @param oldA
-	 * @param insertA
-	 * @param dstPos
-	 * @param length
+	 * @param oldA old array
+	 * @param insertA array to insert
+	 * @param dstPos destination position
 	 * @return new array
 	 */
 	public static long[] insertArray(long[] oldA, long[] insertA, int dstPos) {
@@ -172,9 +171,9 @@ public class RefsLong {
 	/**
 	 * Creates a new array with from copying oldA and removing 'length' entries at position pos.
 	 * The old array is returned to the pool. 
-	 * @param oldA
-	 * @param dstPos
-	 * @param length
+	 * @param oldA old array
+	 * @param dstPos destination 
+	 * @param length length
 	 * @return new array
 	 */
 	public static long[] arrayRemove(long[] oldA, int dstPos, int length) {
@@ -187,11 +186,11 @@ public class RefsLong {
 
 	/**
 	 * Same as System.arraycopy(), but uses a faster copy-by-loop approach for small arrays.
-	 * @param src
-	 * @param srcPos
-	 * @param dst
-	 * @param dstPos
-	 * @param len
+	 * @param src source array
+	 * @param srcPos source position
+	 * @param dst destination array
+	 * @param dstPos destination position
+	 * @param len length
 	 */
 	public static void arraycopy(long[] src, int srcPos, long[] dst, int dstPos, int len) {
 		if (len < 10) {
@@ -205,9 +204,9 @@ public class RefsLong {
 
 	/**
 	 * Writes a long array to a stream.
-	 * @param a
-	 * @param out
-	 * @throws IOException
+	 * @param a array
+	 * @param out output stream
+	 * @throws IOException if writing fails
 	 */
 	public static void write(long[] a, ObjectOutput out) throws IOException {
 		out.writeInt(a.length);
@@ -218,9 +217,9 @@ public class RefsLong {
 
 	/**
 	 * Reads a long array from a stream.
-	 * @param in
+	 * @param in input stream
 	 * @return the long array.
-	 * @throws IOException 
+	 * @throws IOException if reading fails
 	 */
 	public static long[] read(ObjectInput in) throws IOException {
 		int size = in.readInt();

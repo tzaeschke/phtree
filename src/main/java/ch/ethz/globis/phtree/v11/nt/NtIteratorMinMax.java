@@ -24,7 +24,7 @@ import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
  * 
  * @author ztilmann
  *
- * @param <T>
+ * @param <T> value type
  */
 public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 

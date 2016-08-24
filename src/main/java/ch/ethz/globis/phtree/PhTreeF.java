@@ -84,7 +84,7 @@ public class PhTreeF<T> {
 	/**
 	 * Insert an entry associated with a k dimensional key.
 	 * @param key the key to store the value to store
-	 * @param value
+	 * @param value the value
 	 * @return the previously associated value or {@code null} if the key was found
 	 */
 	public T put(double[] key, T value) {

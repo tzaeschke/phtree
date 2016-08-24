@@ -23,7 +23,7 @@ import ch.ethz.globis.phtree.PhTree.PhExtent;
  * 
  * @author ztilmann
  *
- * @param <T>
+ * @param <T> value type
  */
 public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 

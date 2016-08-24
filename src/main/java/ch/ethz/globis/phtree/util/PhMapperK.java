@@ -2,6 +2,9 @@ package ch.ethz.globis.phtree.util;
 
 /**
  * Type of mapper that does not use the value of the PHEntry, only the key.
+ * 
+ * @param <T> Value type
+ * @param <R> Result type
  */
 public interface PhMapperK<T, R> extends PhMapper<T, R> {
 

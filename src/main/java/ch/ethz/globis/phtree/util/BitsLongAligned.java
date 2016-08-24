@@ -8,8 +8,6 @@ package ch.ethz.globis.phtree.util;
 
 import static ch.ethz.globis.phtree.PhTreeHelper.DEBUG;
 
-import java.util.Arrays;
-
 /**
  * Bit-stream manipulation functions.
  * Works on long[] arrays where all values are aligned to multiples of 64bit. 
@@ -38,7 +36,6 @@ public class BitsLongAligned {
      * 
      * @param ba The array to read bits from.
      * @param offsetBit The bit to start reading at.
-     * @param entryLen The length of the entry in bit.
      * @return The read bits as long
      */    
     public static long readArray64(long[] ba, int offsetBit) {
@@ -79,9 +76,9 @@ public class BitsLongAligned {
 
     /**
      * 
-     * @param ba
-     * @param offsetBit
-     * @param val
+	 * @param ba byte arrays
+	 * @param offsetBit start position
+     * @param val value
      */
     public static void writeArray64(long[] ba, int offsetBit, final long val) {
     	ba[offsetBit] = val;
@@ -95,10 +92,10 @@ public class BitsLongAligned {
     
     /**
      * 
-     * @param ba
-     * @param offsetBit
+ 	 * @param ba byte arrays
+	 * @param offsetBit start position
      * @param entryLen bits to write, starting with least significant bit (rightmost bit).
-     * @param val
+     * @param val value
      */
     public static void writeArrayByBit(long[] ba, int offsetBit, int entryLen, final long val) {
     	if (entryLen == 0) {
@@ -130,9 +127,9 @@ public class BitsLongAligned {
     /**
      * Insert bits at the given position.
      * The resulting array is NOT resized, bit that do do not fit in the current array are lost.  
-     * @param ba
-     * @param start
-     * @param nBits
+     * @param ba byte array
+     * @param start start bit
+     * @param nBits number of bits
      */
     public static void insertBits(long[] ba, final int start, final int nBits) {
 		if (nBits == 0 || (start+nBits)>=ba.length*UNIT_BITS) {
@@ -197,7 +194,9 @@ public class BitsLongAligned {
     }
     	
 	/**
-	 * @Param posBit Counts from left to right!!!
+	 * @param ba byte array
+	 * @param posBit Counts from left to right!!!
+	 * @return current bit
 	 */
     public static boolean getBit(long[] ba, int posBit) {
         int pA = posBit >>> UNIT_3;
@@ -207,7 +206,9 @@ public class BitsLongAligned {
 	}
 
 	/**
-	 * @Param posBit Counts from left to right (highest to lowest)!!!
+	 * @param ba byte array
+	 * @param posBit Counts from left to right (highest to lowest)!!!
+	 * @param b bit to set
 	 */
     public static void setBit(long[] ba, int posBit, boolean b) {
         int pA = posBit >>> UNIT_3;
@@ -287,7 +288,7 @@ public class BitsLongAligned {
     /**
      * Calculate array size for given number of bits.
      * This takes into account JVM memory management, which allocates multiples of 8 bytes.
-     * @param nBits
+     * @param nBits number of bits
      * @return array size.
      */
     public static int calcArraySize(int nBits) {
@@ -299,8 +300,8 @@ public class BitsLongAligned {
 
     /**
      * Resize an array.
-     * @param oldA
-     * @param newSizeBits
+     * @param oldA old array
+     * @param newSizeBits new size
      * @return New array larger array.
      */
     public static long[] arrayExpand(long[] oldA, int newSizeBits) {
@@ -319,8 +320,8 @@ public class BitsLongAligned {
     
     /**
      * Ensure capacity of an array. Expands the array if required.
-     * @param oldA
-     * @param requiredBits
+     * @param oldA old array
+     * @param requiredBits required size
      * @return Same array or expanded array.
      */
     public static long[] arrayEnsureSize(long[] oldA, int requiredBits) {

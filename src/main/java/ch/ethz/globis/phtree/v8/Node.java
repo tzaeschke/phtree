@@ -1506,11 +1506,10 @@ class Node<T> {
 
 	/**
 	 * Adjust the infix in cases were the parent node is removed.
-	   * @param prefix 
-	   * @param infixLenOfParent 
-	   * @param postLenOfParent 
-	   * @param hcPos 
-	 * @param infix
+	 * @param prefix prefix 
+	 * @param infixLenOfParent infix length of parent 
+	 * @param postLenOfParent postfix length of parent
+	 * @param hcPos HC-pos
 	 */
 	public void adjustInfix(long[] prefix, int infixLenOfParent, int postLenOfParent, long hcPos) {
         applyHcPos(hcPos, postLenOfParent, prefix);

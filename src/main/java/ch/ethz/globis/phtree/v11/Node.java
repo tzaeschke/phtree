@@ -395,11 +395,11 @@ public class Node {
 
     /**
      * 
-     * @param key1
-     * @param val1
-     * @param key2
-     * @param val2
-     * @param mcb
+     * @param key1 key 1
+     * @param val1 value 1
+     * @param key2 key 2
+     * @param val2 value 2
+     * @param mcb most conflicting bit
      * @return A new node or 'null' if there are no conflicting bits
      */
     public Node createNode(long[] key1, Object val1, long[] key2, Object val2,
@@ -424,8 +424,8 @@ public class Node {
     }
 
     /**
-     * @param v1
-     * @param v2
+     * @param v1 key 1
+     * @param v2 key 2
      * @param mask bits to consider (1) and to ignore (0)
      * @return the position of the most significant conflicting bit (starting with 1) or
      * 0 in case of no conflicts.

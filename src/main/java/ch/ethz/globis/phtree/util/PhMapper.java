@@ -18,6 +18,9 @@ import ch.ethz.globis.phtree.PhEntry;
  * it is send from the client machine to the server machine.
  *
  * @author ztilmann
+ * 
+ * @param <T> Value type
+ * @param <R> Result type
  */
 @FunctionalInterface
 public interface PhMapper<T, R> extends Serializable {
@@ -32,7 +35,7 @@ public interface PhMapper<T, R> extends Serializable {
 
 	/**
 	 * Maps a PhEntry to something else. 
-	 * @param e
+	 * @param e entry
 	 * @return The converted entry
 	 */
 	R map(PhEntry<T> e);

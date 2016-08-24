@@ -55,8 +55,9 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	}
 
 	/**
-	 * @param keyBitWidth
+	 * @param keyBitWidth bit width of keys, for example 64
 	 * @return A new NodeTree
+     * @param <T> value type
 	 */
 	public static <T> NodeTreeV11<T> create(int keyBitWidth) {
 		return new NodeTreeV11<>(keyBitWidth);
@@ -205,11 +206,12 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	
 	/**
 	 * Remove an entry from the tree.
-	 * @param root
-	 * @param hcPos
-	 * @param outerDims
-	 * @param entryCount
+	 * @param root root node 
+	 * @param hcPos HC-pos
+	 * @param outerDims dimensions of main tree
+	 * @param entryCount entry counter object
 	 * @return The value of the removed key or null
+     * @param <T> value type
 	 */
 	public static <T> Object removeEntry(
 			NtNode<T> root, long hcPos, int outerDims, IntVar entryCount) {
@@ -222,14 +224,15 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	
 	/**
 	 * Removes an entry from the tree.
-	 * @param root
-	 * @param hcPos
-	 * @param outerDims
-	 * @param keyToMatch
-	 * @param newKey
-	 * @param insertRequired
-	 * @param phNode
+	 * @param root parent node
+	 * @param hcPos HC-pos
+	 * @param outerDims dimensions in main tree
+	 * @param keyToMatch key
+	 * @param newKey new key (for updates)
+	 * @param insertRequired insert required?
+	 * @param phNode parent node
 	 * @return The value of the removed key or null
+     * @param <T> value type
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> Object removeEntry(NtNode<T> root, long hcPos, int outerDims, 
@@ -432,6 +435,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	 * @param hcPos The 'key' in this node tree
 	 * @param value The value of the key-value that is stored under the hcPos
 	 * @return The previous value at the position, if any.
+     * @param <T> value type
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> T replaceValue(NtNode<T> root, long hcPos, Object value) {
@@ -613,8 +617,10 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 
 	/**
 	 * Collect tree statistics.
-	 * @param node
-	 * @param stats
+	 * @param node node to look at
+	 * @param stats statistics object
+	 * @param dims dimensions
+	 * @param entryBuffer entry list
 	 */
 	public static void getStats(NtNode<?> node, PhTreeStats stats, int dims, 
 			List<Object> entryBuffer) {

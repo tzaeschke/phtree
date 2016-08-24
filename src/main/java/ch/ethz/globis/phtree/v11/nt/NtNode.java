@@ -15,7 +15,7 @@ import ch.ethz.globis.phtree.util.RefsLong;
  * 
  * @author ztilmann
  *
- * @param <T>
+ * @param <T> value type
  */
 public class NtNode<T> {
 	
@@ -24,7 +24,7 @@ public class NtNode<T> {
 	 * This may not be correct for all sub-nodes, but it does no harm and simplifies
 	 * algorithms that iterator over the tree (avoid switching dimensions, etc).
 	 * 
-	 * WARNING using MAX_DIM > 15 will fail because entryCnt is of type 'short'! 
+	 * WARNING using MAX_DIM bigger than 15 will fail because entryCnt is of type 'short'! 
 	 */
 	public static final int MAX_DIM = 6;
 	private static final long MAX_DIM_MASK = ~((-1L) << MAX_DIM);
@@ -42,8 +42,8 @@ public class NtNode<T> {
 	private boolean isAHC = false;
 	private byte postLen = 0;
 
-	static final int IK_WIDTH(int dims) { return dims; }; //post index key width 
-	static final int KD_WIDTH(int kdDims) { return kdDims * 64; }; //post index key width 
+	static final int IK_WIDTH(int dims) { return dims; } //post index key width 
+	static final int KD_WIDTH(int kdDims) { return kdDims * 64; } //post index key width 
 
 	protected NtNode(NtNode<T> original) {
         this.values = Refs.arrayClone(original.values);

@@ -58,7 +58,7 @@ public final class PhTreeStats {
 	
 	/**
 	 * 
-	 * @param r
+	 * @param r String builder
 	 * @return average postLen, including the HC/LHC bit.
 	 */
 	public double getAvgPostlen(StringBuilderLn r) {

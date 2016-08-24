@@ -22,7 +22,7 @@ public abstract class TestUtil {
 	
 	/**
 	 * Explicitly set the TestUtil implementation.
-	 * @param util
+	 * @param util the utility instance
 	 */
 	public static void setTestUtil(TestUtilAPI util) {
 		INSTANCE = util;
@@ -57,7 +57,7 @@ public abstract class TestUtil {
 	
 	/**
 	 * Creates a special ZooKeeper.
-	 * @param args 
+	 * @param args ZooKeeper args
 	 */
 	public static void beforeTest(Object[] args) {
 		getInstance().beforeTest(args);
@@ -65,7 +65,7 @@ public abstract class TestUtil {
 	
 	/**
 	 * Do we need this?
-	 * @deprecated
+	 * @deprecated do not use
 	 */
 	public static void afterTest() {
 		getInstance().afterTest();
@@ -74,7 +74,7 @@ public abstract class TestUtil {
 	
 	/**
 	 * Do we need this?
-	 * @deprecated
+	 * @deprecated do not use
 	 */
 	public static void beforeClass() {
 		getInstance().beforeClass();
@@ -82,7 +82,7 @@ public abstract class TestUtil {
 
 	/**
 	 * Do we need this?
-	 * @deprecated
+	 * @deprecated do not use
 	 */
 	public static void afterClass() {
 		getInstance().afterClass();
@@ -91,7 +91,7 @@ public abstract class TestUtil {
 	
 	/**
 	 * Do we need this?
-	 * @deprecated
+	 * @deprecated do not use
 	 */
 	public static void beforeSuite() {
 		getInstance().beforeSuite();
