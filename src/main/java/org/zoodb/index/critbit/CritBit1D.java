@@ -29,27 +29,27 @@ import org.zoodb.index.critbit.CritBit.QueryIterator;
  */
 public interface CritBit1D<V> {
 
-	/** @see CritBit#put(long[], Object) */
+	/* @see CritBit#put(long[], Object) */
 	V put(long[] key, V value);
 
-	/** @see CritBit#contains(long[]) */
+	/* @see CritBit#contains(long[]) */
 	boolean contains(long[] key);
 
-	/** @see CritBit#query(long[], long[]) */
+	/* @see CritBit#query(long[], long[]) */
 	QueryIterator<V> query(long[] min, long[] max);
 
-	/** @see CritBit#size() */
+	/* @see CritBit#size() */
 	int size();
 
-	/** @see CritBit#remove(long[]) */
+	/* @see CritBit#remove(long[]) */
 	V remove(long[] key);
 
-	/** @see CritBit#printTree() */
+	/* @see CritBit#printTree() */
 	void printTree();
 
-	/** @see CritBit#get(long[]) */
+	/* @see CritBit#get(long[]) */
 	V get(long[] key);
 
-	/** @see CritBit#iterator() */
+	/* @see CritBit#iterator() */
 	FullIterator<V> iterator();
 }

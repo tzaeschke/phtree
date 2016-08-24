@@ -52,7 +52,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * 
  * @author bvancea
  *
- * @param <V>
+ * @param <V> value type
  */
 public class CritBit64COW<V> extends CritBit64<V> implements Iterable<V> {
 
@@ -66,6 +66,7 @@ public class CritBit64COW<V> extends CritBit64<V> implements Iterable<V> {
     /**
      * Create a 1D crit-bit tree with 64 bit key length.
      * @return a 1D crit-bit tree
+	 * @param <V> value type
      */
     public static <V> CritBit64COW<V> create() {
         return new CritBit64COW<V>();
@@ -79,8 +80,8 @@ public class CritBit64COW<V> extends CritBit64<V> implements Iterable<V> {
 
     /**
      * Add a key value pair to the tree or replace the value if the key already exists.
-     * @param key
-     * @param val
+     * @param key key
+     * @param val value
      * @return The previous value or {@code null} if there was no previous value
      */
     @Override
@@ -345,7 +346,7 @@ public class CritBit64COW<V> extends CritBit64<V> implements Iterable<V> {
 
     /**
      * Check whether a given key exists in the tree.
-     * @param key
+     * @param key key
      * @return {@code true} if the key exists otherwise {@code false}
      */
     @Override
@@ -383,7 +384,7 @@ public class CritBit64COW<V> extends CritBit64<V> implements Iterable<V> {
 
     /**
      * Get the value for a given key.
-     * @param key
+     * @param key key
      * @return the values associated with {@code key} or {@code null} if the key does not exist.
      */
     @Override
@@ -420,7 +421,7 @@ public class CritBit64COW<V> extends CritBit64<V> implements Iterable<V> {
 
     /**
      * Remove a key and its value
-     * @param key
+     * @param key key
      * @return The value of the key of {@code null} if the value was not found.
      */
     @Override

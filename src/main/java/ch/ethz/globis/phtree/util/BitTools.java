@@ -355,7 +355,7 @@ public class BitTools {
      *   This may also be possible directly in the PH-tree, if we use one. Unfortunately, the 
      *   value of this check decreases with k, because there is only 1 of 2^k such quadrants.
      *   On the other hand, the quadrant may be quite big...
-     * - Finally, we could identify incomparable quadrants (see Lee&Hwang, 2014).
+     * - Finally, we could identify incomparable quadrants (see Lee and Hwang, 2014).
      *   Two quadrants are incomparable if both dominate the other in at least on dimension.
      *   This is equal to {@code (diff&v1&domMask != 0 && diff&v2&domMask != 0) }. Hmm, do we really
      *   need the domMask here?

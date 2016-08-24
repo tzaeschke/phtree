@@ -124,6 +124,7 @@ public class CritBit64<V> implements Iterable<V> {
 	/**
 	 * Create a 1D crit-bit tree with 64 bit key length. 
 	 * @return a 1D crit-bit tree
+	 * @param <V> value type
 	 */
 	public static <V> CritBit64<V> create() {
 		return new CritBit64<V>();
@@ -131,8 +132,8 @@ public class CritBit64<V> implements Iterable<V> {
 	
 	/**
 	 * Add a key value pair to the tree or replace the value if the key already exists.
-	 * @param key
-	 * @param val
+	 * @param key key
+	 * @param val value
 	 * @return The previous value or {@code null} if there was no previous value
 	 */
 	public V put(long key, V val) {
@@ -319,7 +320,7 @@ public class CritBit64<V> implements Iterable<V> {
 	
 	/**
 	 * 
-	 * @param v
+	 * @param v key
 	 * @param endPos last bit of prefix, counting starts with 0 for 1st bit 
 	 * @return The prefix.
 	 */
@@ -334,8 +335,8 @@ public class CritBit64<V> implements Iterable<V> {
 
 	/**
 	 * 
-	 * @param v
-	 * @param startPos
+	 * @param v key
+	 * @param startPos start position
 	 * @return True if the prefix matches the value or if no prefix is defined
 	 */
 	private boolean doesPrefixMatch(int posDiff, long v, long prefix) {
@@ -347,8 +348,8 @@ public class CritBit64<V> implements Iterable<V> {
 	
 	/**
 	 * Compares two values.
-	 * @param v1
-	 * @param v2
+	 * @param v1 key 1
+	 * @param v2 key 2
 	 * @return Position of the differing bit, or -1 if both values are equal
 	 */
 	private static int compare(long v1, long v2) {
@@ -365,7 +366,7 @@ public class CritBit64<V> implements Iterable<V> {
 
 	/**
 	 * Check whether a given key exists in the tree.
-	 * @param key
+	 * @param key key
 	 * @return {@code true} if the key exists otherwise {@code false}
 	 */
 	public boolean contains(long key) {
@@ -400,7 +401,7 @@ public class CritBit64<V> implements Iterable<V> {
 	
 	/**
 	 * Get the value for a given key. 
-	 * @param key
+	 * @param key key
 	 * @return the values associated with {@code key} or {@code null} if the key does not exist.
 	 */
 	public V get(long key) {
@@ -435,7 +436,7 @@ public class CritBit64<V> implements Iterable<V> {
 	
 	/**
 	 * Remove a key and its value
-	 * @param key
+	 * @param key key
 	 * @return The value of the key of {@code null} if the value was not found. 
 	 */
 	public V remove(long key) {
@@ -640,9 +641,9 @@ public class CritBit64<V> implements Iterable<V> {
 	}
 	
 	/**
-	 * Queries the tree for entries with min<=key<=max. 
-	 * @param min
-	 * @param max
+	 * Queries the tree for entries with {@code min<=key<=max}. 
+	 * @param min minimum key
+	 * @param max maximum key
 	 * @return An iterator over the matching entries.
 	 */
 	public QueryIterator<V> query(long min, long max) {
@@ -818,11 +819,11 @@ public class CritBit64<V> implements Iterable<V> {
 	}
 	
 	/**
-	 * Queries the tree for entries with min<=key<=max. Unlike the normal query, this
-	 * query also excludes all elements with (key|min)!=key and (key&max!=max).
+	 * Queries the tree for entries with {@code min<=key<=max}. Unlike the normal query, this
+	 * query also excludes all elements with {@code (key|min)!=key} and {@code (key&max!=max)}.
 	 * See PH-Tree for a discussion.
-	 * @param min
-	 * @param max
+	 * @param min minimum key
+	 * @param max maximum key
 	 * @return An iterator over the matching entries.
 	 */
 	public QueryIteratorMask<V> queryWithMask(long min, long max) {

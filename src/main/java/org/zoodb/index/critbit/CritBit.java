@@ -128,6 +128,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	 * Create a 1D crit-bit tree with arbitrary key length. 
 	 * @param width The number of bits per value
 	 * @return a 1D crit-bit tree
+	 * @param <V> value type
 	 */
 	public static <V> CritBit1D<V> create1D(int width) {
 		if (width < 1) {
@@ -143,6 +144,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	 * @param width The number of bits per value
 	 * @param dim The number of dimensions
 	 * @return k-dimensional tree
+	 * @param <V> value type
 	 */
 	public static <V> CritBitKD<V> createKD(int width, int dim) {
 		if (width < 1 || width > 64) {
@@ -156,8 +158,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	
 	/**
 	 * Add a key value pair to the tree or replace the value if the key already exists.
-	 * @param key
-	 * @param val
+	 * @param key key
+	 * @param val value
 	 * @return The previous value or {@code null} if there was no previous value
 	 */
 	@Override
@@ -396,9 +398,9 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	
 	/**
 	 * 
-	 * @param n
-	 * @param infixStart The bit-position of the first infix bits relative to the whole value
-	 * @param currentPrefix
+	 * @param n node
+	 * @param currentPrefix prefix
+	 * @param <T> value type
 	 */
 	protected static <T> void readInfix(Node<T> n, long[] currentPrefix) {
 		if (n.infix == null) {
@@ -410,7 +412,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	/**
 	 * 
-	 * @param v
+	 * @param v key
 	 * @param startPos first bit of infix, counting starts with 0 for 1st bit 
 	 * @param endPos last bit of infix
 	 * @return The infix PLUS leading bits before the infix that belong in the same 'long'.
@@ -437,8 +439,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	/**
 	 * 
-	 * @param v
-	 * @param startPos
+	 * @param v key 
+	 * @param startPos start position
 	 * @return True if the infix matches the value or if no infix is defined
 	 */
 	private boolean doesInfixMatch(Node<V> n, long[] v, long[] currentVal) {
@@ -460,8 +462,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	/**
 	 * Compares two values.
-	 * @param v1
-	 * @param v2
+	 * @param v1 key 1
+	 * @param v2 key 2
 	 * @return Position of the differing bit, or -1 if both values are equal
 	 */
 	private static int compare(long[] v1, long[] v2) {
@@ -475,8 +477,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	/**
 	 * Compares two values.
-	 * @param v1
-	 * @param v2
+	 * @param v1 key 1
+	 * @param v2 key 2
 	 * @return {@code true} iff both values are equal
 	 */
 	private static boolean isEqual(long[] v1, long[] v2) {
@@ -499,7 +501,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	/**
 	 * Check whether a given key exists in the tree.
-	 * @param key
+	 * @param key key
 	 * @return {@code true} if the key exists otherwise {@code false}
 	 */
 	@Override
@@ -546,7 +548,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	
 	/**
 	 * Get the value for a given key. 
-	 * @param key
+	 * @param key key
 	 * @return the values associated with {@code key} or {@code null} if the key does not exist.
 	 */
 	@Override
@@ -605,7 +607,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	/**
 	 * Remove a key and its value
-	 * @param key
+	 * @param key key
 	 * @return The value of the key of {@code null} if the value was not found. 
 	 */
 	@Override
@@ -1480,11 +1482,10 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 		/**
 		 * 
-		 * @param cb
-		 * @param DIM
-		 * @param ignoreUpper Whether to ignore points in the upper right corner
+		 * @param cb parent tree
+		 * @param dims dimensions
 		 */
-		public CheckEmptyWithMask(CritBit<?> cb, int DIM) {
+		public CheckEmptyWithMask(CritBit<?> cb, int dims) {
 			this.cb = cb;
 			this.stack = new Node[cb.DEPTH];
 			this.readHigherNext = new byte[cb.DEPTH];  // default = false
@@ -1492,7 +1493,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 			this.valIntTemplate = new long[intArrayLen];
 			this.domMaskLo = new long[intArrayLen];
 			this.domMaskHi = new long[intArrayLen];
-			this.MAX_MASK = ~((-1L) << DIM);
+			this.MAX_MASK = ~((-1L) << dims);
 		}
 
 		public boolean isEmpty(long[] min, long[] max, boolean ignoreUpper) {
@@ -1820,8 +1821,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	
 	/**
 	 * Add a key value pair to the tree or replace the value if the key already exists.
-	 * @param key
-	 * @param val
+	 * @param key key
+	 * @param val value
 	 * @return The previous value or {@code null} if there was no previous value
 	 */
 	@Override
@@ -1833,7 +1834,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	
 	/**
 	 * Check whether a given key exists in the tree.
-	 * @param key
+	 * @param key key
 	 * @return {@code true} if the key exists otherwise {@code false}
 	 */
 	@Override
@@ -1845,7 +1846,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	/**
 	 * Get the value for a given key. 
-	 * @param key
+	 * @param key key
 	 * @return the values associated with {@code key} or {@code null} if the key does not exist.
 	 */
 	@Override
@@ -1857,7 +1858,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	/**
 	 * Remove a key and its value
-	 * @param key
+	 * @param key key
 	 * @return The value of the key of {@code null} if the value was not found. 
 	 */
 	@Override
@@ -1875,8 +1876,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	
 	/**
 	 * Performs a k-dimensional query.
-	 * @param min
-	 * @param max
+	 * @param min minimum key
+	 * @param max maximum key
 	 * @return Result iterator
 	 */
 	@Override
