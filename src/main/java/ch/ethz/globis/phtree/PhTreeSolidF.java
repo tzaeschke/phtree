@@ -429,6 +429,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * @param filter filter instance
 	 * @param mapper mapper instance for mapping double[] to long[]
 	 * @return List of query results
+	 * @param <R> result type
 	 */
 	public <R> List<R> queryIntersectAll(double[] lower, double[] upper, int maxResults, 
 			PhFilter filter, PhMapper<T,R> mapper) {

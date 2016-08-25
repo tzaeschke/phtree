@@ -26,6 +26,8 @@ import org.zoodb.index.critbit.CritBit.QueryIterator;
 /**
  * 
  * @author Tilmann Zaeschke
+ * 
+ * @param <V> value type
  */
 public interface CritBit1D<V> {
 
