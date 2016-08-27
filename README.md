@@ -20,7 +20,7 @@ Maven:
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>0.3.0-SNAPSHOT</version>
+    <version>0.3.1</version>
 </dependency>
 ```
 
