@@ -32,12 +32,12 @@ public class PhTreeF<T> {
 	private final PhTree<T> pht;
 	private final PreProcessorPointF pre;
 
-	private PhTreeF(int dim, PreProcessorPointF pre) {
+	protected PhTreeF(int dim, PreProcessorPointF pre) {
 		this.pht = PhTree.create(dim);
 		this.pre = pre;
 	}
 
-	private PhTreeF(PhTree<T> tree) {
+	protected PhTreeF(PhTree<T> tree) {
 		this.pht = tree;
 		this.pre = new PreProcessorPointF.IEEE();
 	}
@@ -204,7 +204,7 @@ public class PhTreeF<T> {
 		private final int dims;
 		private final PhEntryF<T> buffer;
 
-		private PhIteratorF(PhIterator<T> iter, int dims, PreProcessorPointF pre) {
+		protected PhIteratorF(PhIterator<T> iter, int dims, PreProcessorPointF pre) {
 			this.iter = iter;
 			this.pre = pre;
 			this.dims = dims;
@@ -257,12 +257,12 @@ public class PhTreeF<T> {
 
 	public static class PhExtentF<T> extends PhIteratorF<T> {
 		private final PhExtent<T> iter;
-		private PhExtentF(PhExtent<T> iter, int dims, PreProcessorPointF pre) {
+		protected PhExtentF(PhExtent<T> iter, int dims, PreProcessorPointF pre) {
 			super(iter, dims, pre);
 			this.iter = iter;
 		}		
 		
-		PhExtentF<T> reset() {
+		public PhExtentF<T> reset() {
 			iter.reset();
 			return this;
 		}
@@ -273,7 +273,7 @@ public class PhTreeF<T> {
 		private final long[] lMax;
 		private final PhQuery<T> q;
 
-		private PhQueryF(PhQuery<T> iter, int dims, PreProcessorPointF pre) {
+		protected PhQueryF(PhQuery<T> iter, int dims, PreProcessorPointF pre) {
 			super(iter, dims, pre);
 			q = iter;
 			lMin = new long[dims];
@@ -291,7 +291,7 @@ public class PhTreeF<T> {
 		private final long[] lCenter;
 		private final PhKnnQuery<T> q;
 
-		private PhKnnQueryF(PhKnnQuery<T> iter, int dims, PreProcessorPointF pre) {
+		protected PhKnnQueryF(PhKnnQuery<T> iter, int dims, PreProcessorPointF pre) {
 			super(iter, dims, pre);
 			q = iter;
 			lCenter = new long[dims];
@@ -309,7 +309,7 @@ public class PhTreeF<T> {
 		private final PhRangeQuery<T> q;
 		private final int dims;
 
-		private PhRangeQueryF(PhRangeQuery<T> iter, PhTree<T> tree, PreProcessorPointF pre) {
+		protected PhRangeQueryF(PhRangeQuery<T> iter, PhTree<T> tree, PreProcessorPointF pre) {
 			super(iter, tree.getDim(), pre);
 			this.dims = tree.getDim();
 			this.q = iter;
@@ -409,5 +409,12 @@ public class PhTreeF<T> {
 		return pre;
 	}
 
+	/**
+	 * 
+	 * @return The whole tree as String.
+	 */
+	public String toStringTree() {
+		return pht.toStringTree();
+	}
 }
 
