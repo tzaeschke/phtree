@@ -377,6 +377,16 @@ public class PhTreeF<T> {
 				e -> new PhEntryF<T>(PhMapperK.toDouble(e.getKey()), e.getValue()));
 	}
 
+	/**
+	 * Same as {@link PhTreeF#queryAll(double[], double[])}, except that it also accepts
+	 * a limit for the result size, a filter and a mapper.. 
+	 * @param min
+	 * @param max
+	 * @param maxResults
+	 * @param filter
+	 * @param mapper
+	 * @return List of query results
+	 */
 	public <R> List<R> queryAll(double[] min, double[] max, int maxResults, 
 			PhFilter filter, PhMapper<T, R> mapper) {
 		long[] lUpp = new long[min.length];
@@ -410,11 +420,16 @@ public class PhTreeF<T> {
 	}
 
 	/**
-	 * 
-	 * @return The whole tree as String.
+	 * @return A string tree view of all entries in the tree.
+	 * @see PhTree#toStringTree()
 	 */
 	public String toStringTree() {
 		return pht.toStringTree();
+	}
+
+	@Override
+	public String toString() {
+		return pht.toString(); 
 	}
 }
 
