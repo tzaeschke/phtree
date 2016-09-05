@@ -62,7 +62,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		if (dims*2 != tree.getDim()) {
 			throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");
 		}
-		pht = tree;
+		this.pht = tree;
 		this.pre = pre;
 		qMIN = new double[dims];
 		Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
@@ -471,5 +471,10 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 */
 	public PhTree<T> getInternalTree() {
 		return pht;
+	}
+	
+	@Override
+	public String toString() {
+		return pht.toString(); 
 	}
 }
