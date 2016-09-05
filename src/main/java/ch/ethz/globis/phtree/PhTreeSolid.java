@@ -12,6 +12,7 @@ import ch.ethz.globis.phtree.PhTree.PhIterator;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
 import ch.ethz.globis.phtree.pre.PreProcessorRange;
 import ch.ethz.globis.phtree.util.PhIteratorBase;
+import ch.ethz.globis.phtree.util.PhTreeStats;
 
 /**
  * PH-tree for storing ranged objects with floating point coordinates.
@@ -109,6 +110,20 @@ public class PhTreeSolid<T> implements Iterable<T> {
 		long[] lVal = new long[lower.length*2];
 		pre.pre(lower, upper, lVal);
 		return pht.contains(lVal);
+	}
+
+	/**
+	 * Return a value for the specified key coordinates.
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @return the value or null if it was not found 
+	 * 
+	 * @see PhTree#get(long...)
+	 */
+	public T get(long[] lower, long[] upper) {
+		long[] lVal = new long[lower.length*2];
+		pre.pre(lower, upper, lVal);
+		return pht.get(lVal);
 	}
 
 	/**
@@ -377,5 +392,27 @@ public class PhTreeSolid<T> implements Iterable<T> {
      */
 	public void clear() {
 		pht.clear();
+	}
+
+	/**
+	 * Get dimensionality of the tree.
+	 * @return dimensionality
+	 */
+	public int getDim() {
+		return dims;
+	}
+
+	/**
+	 * @return PH-Tree statistics
+	 */
+	public PhTreeStats getStats() {
+		return pht.getStats();
+	}
+
+	/**
+	 * @return A string tree view of all entries in the tree.
+	 */
+	public String toStringTree() {
+		return pht.toStringTree();
 	}
 }
