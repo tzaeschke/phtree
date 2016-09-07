@@ -379,12 +379,12 @@ public class PhTreeF<T> {
 
 	/**
 	 * Same as {@link PhTreeF#queryAll(double[], double[])}, except that it also accepts
-	 * a limit for the result size, a filter and a mapper.. 
-	 * @param min
-	 * @param max
-	 * @param maxResults
-	 * @param filter
-	 * @param mapper
+	 * a limit for the result size, a filter and a mapper. 
+	 * @param min min key
+	 * @param max max key
+	 * @param maxResults maximum result count 
+	 * @param filter filter object (optional)
+	 * @param mapper mapper object (optional)
 	 * @return List of query results
 	 */
 	public <R> List<R> queryAll(double[] min, double[] max, int maxResults, 
