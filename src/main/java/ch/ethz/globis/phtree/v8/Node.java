@@ -699,7 +699,7 @@ class Node<T> {
 	 * @return Index.
 	 */
 	CritBit64<NodeEntry<T>> createNiIndex() {
-		return CritBit64COW.create();
+		return CritBit64.create();
 	}
 	
 	void niBuild(int bufSubCnt, int bufPostCnt, int DIM) {
