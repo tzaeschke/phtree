@@ -21,6 +21,7 @@ public class PhTreeConfig {
 	private int dimActual;
 	private boolean[] unique; 
 	private int concurrencyType = CONCURRENCY_NONE;
+	private PersistenceProvider persProvider = PersistenceProvider.NONE;
 	
 	public PhTreeConfig(int dim) {
 		this.dimUser = dim;
@@ -75,5 +76,13 @@ public class PhTreeConfig {
 
 	public int getConcurrencyType() {
 		return concurrencyType;
+	}
+
+	public void setPersistenceProvider(PersistenceProvider persProvider) {
+		this.persProvider = persProvider;
+	}
+	
+	public PersistenceProvider getPersistenceProvider() {
+		return persProvider;
 	}
 }

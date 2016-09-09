@@ -65,8 +65,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		}
 		this.pht = tree;
 		this.pre = pre;
-		//this.dist = new PhDistanceSFEdgeDist(pre, dims);
-		this.dist = new PhDistanceSFCenterDist(pre, dims);
+		this.dist = new PhDistanceSFEdgeDist(pre, dims);
+		//this.dist = new PhDistanceSFCenterDist(pre, dims);
 		qMIN = new double[dims];
 		Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
 		qMAX = new double[dims];
