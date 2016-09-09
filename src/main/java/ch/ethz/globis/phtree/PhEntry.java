@@ -33,6 +33,7 @@ public class PhEntry<T> {
 
 	/**
 	 * This may return the NULL marker object.
+	 * @return value
 	 */
 	protected T getValueInternal() {
 		return value;

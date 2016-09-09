@@ -302,7 +302,7 @@ public class PhTreeSolid<T> implements Iterable<T> {
 
 		/**
 		 * Range object copy constructor.
-		 * @param e
+		 * @param e the entry to copy
 		 */
 		public PhEntryS(PhEntryS<T> e) {
 			this.lower = Arrays.copyOf(e.lower, e.lower.length);

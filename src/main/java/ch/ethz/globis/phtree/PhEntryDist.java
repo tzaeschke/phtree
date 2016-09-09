@@ -11,7 +11,7 @@ import java.util.Comparator;
 /**
  * An entry with additional distance, used for returning results from nearest neighbour queries.
  * 
- * @param <T>
+ * @param <T> The value type
  */
 public class PhEntryDist<T> extends PhEntry<T> {
 	public static final Comparator<PhEntryDist<?>> COMP = 

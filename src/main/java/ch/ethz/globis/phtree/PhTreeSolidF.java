@@ -231,7 +231,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 
 	/**
 	 * Resetable query result iterator.
-	 * @param <T>
+	 * @param <T> value type
 	 */
 	public static class PhIteratorSF<T> implements PhIteratorBase<double[], T, PhEntrySF<T>> {
 		protected final PhIteratorBase<long[], T, ? extends PhEntry<T>> iter;
@@ -336,10 +336,10 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 
 	/**
 		 * Resets the current kNN query with new parameters.
-		 * @param nMin
+		 * @param nMin minimum results to be returned
 		 * @param newDist Distance function. Supplying 'null' uses the default distance function
 		 * for the current preprocessor.
-		 * @param center
+		 * @param center the center point
 		 * @return this query instance
 		 */
 		public PhKnnQuerySF<T> reset(int nMin, PhDistance newDist, double[] center) {

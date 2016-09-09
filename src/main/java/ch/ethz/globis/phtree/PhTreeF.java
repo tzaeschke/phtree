@@ -434,6 +434,7 @@ public class PhTreeF<T> {
 	 * @param filter filter object (optional)
 	 * @param mapper mapper object (optional)
 	 * @return List of query results
+	 * @param <R> value type
 	 */
 	public <R> List<R> queryAll(double[] min, double[] max, int maxResults, 
 			PhFilter filter, PhMapper<T, R> mapper) {
