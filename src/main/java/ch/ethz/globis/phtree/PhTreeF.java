@@ -9,7 +9,6 @@ package ch.ethz.globis.phtree;
 import java.util.List;
 
 import ch.ethz.globis.phtree.PhTree.PhExtent;
-import ch.ethz.globis.phtree.PhTree.PhIterator;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
 import ch.ethz.globis.phtree.pre.PreProcessorPointF;
@@ -198,13 +197,15 @@ public class PhTreeF<T> {
 		return new PhKnnQueryF<>(iter, pht.getDim(), pre);
 	}
 
-	public static class PhIteratorF<T> implements PhIteratorBase<double[], T, PhEntryF<T>> {
-		private final PhIterator<T> iter;
+	public static class PhIteratorF<T> 
+	implements PhIteratorBase<double[], T, PhEntryF<T>> {
+		private final PhIteratorBase<long[], T, ? extends PhEntry<T>> iter;
 		protected final PreProcessorPointF pre;
 		private final int dims;
 		private final PhEntryF<T> buffer;
 
-		protected PhIteratorF(PhIterator<T> iter, int dims, PreProcessorPointF pre) {
+		protected PhIteratorF(PhIteratorBase<long[], T, ? extends PhEntry<T>> iter, 
+				int dims, PreProcessorPointF pre) {
 			this.iter = iter;
 			this.pre = pre;
 			this.dims = dims;
@@ -226,7 +227,7 @@ public class PhTreeF<T> {
 			double[] d = new double[dims];
 			PhEntry<T> e = iter.nextEntryReuse();
 			pre.post(e.getKey(), d);
-			return new PhEntryF<>(d, e.getValue());
+			return new PhEntryF<T>(d, e.getValue());
 		}
 
 		@Override
@@ -237,7 +238,6 @@ public class PhTreeF<T> {
 			return buffer;
 		}
 
-		@Override
 		public double[] nextKey() {
 			double[] d = new double[dims];
 			pre.post(iter.nextEntryReuse().getKey(), d);
@@ -290,11 +290,31 @@ public class PhTreeF<T> {
 	public static class PhKnnQueryF<T> extends PhIteratorF<T> {
 		private final long[] lCenter;
 		private final PhKnnQuery<T> q;
+		private final PhEntryDistF<T> buffer;
+		private final int dims;
 
 		protected PhKnnQueryF(PhKnnQuery<T> iter, int dims, PreProcessorPointF pre) {
 			super(iter, dims, pre);
+			this.dims = dims;
 			q = iter;
 			lCenter = new long[dims];
+			buffer = new PhEntryDistF<>(new double[dims], null, Double.NaN); 
+		}
+
+		@Override
+		public PhEntryDistF<T> nextEntry() {
+			double[] d = new double[dims];
+			PhEntryDist<T> e = q.nextEntryReuse();
+			pre.post(e.getKey(), d);
+			return new PhEntryDistF<>(d, e.getValue(), e.dist());
+		}
+
+		@Override
+		public PhEntryDistF<T> nextEntryReuse() {
+			PhEntryDist<T> e = q.nextEntryReuse();
+			pre.post(e.getKey(), buffer.getKey());
+			buffer.setValue( e.getValue() );
+			return buffer;
 		}
 
 		public PhKnnQueryF<T> reset(int nMin, PhDistance dist, double... center) {
@@ -329,8 +349,13 @@ public class PhTreeF<T> {
 	 * @param <T> value type of the entries
 	 */
 	public static class PhEntryF<T> {
-		private final double[] key;
-		private T value;
+		protected double[] key;
+		protected T value;
+		
+		/**
+		 * @param key the key
+		 * @param value the value
+		 */
 		public PhEntryF(double[] key, T value) {
 			this.key = key;
 			this.value = value;
@@ -349,6 +374,29 @@ public class PhTreeF<T> {
 		}
 	}
 
+	/**
+	 * Entry class for Double entries with distance information for nearest neighbour queries.
+	 *
+	 * @param <T> value type of the entries
+	 */
+	public static class PhEntryDistF<T> extends PhEntryF<T> {
+		private double dist;
+
+		public PhEntryDistF(double[] key, T value, double dist) {
+			super(key, value);
+			this.dist = dist;
+		}
+
+		public void set(T value, double dist) {
+			this.value = value;
+			this.dist = dist;
+		}
+		
+		public double dist() {
+			return dist;
+		}
+	}
+	
 	/**
 	 * Update the key of an entry. Update may fail if the old key does not exist, or if the new
 	 * key already exists.

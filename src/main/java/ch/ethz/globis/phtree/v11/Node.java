@@ -10,10 +10,10 @@ import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
+import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
-import ch.ethz.globis.phtree.v11.PhTree11.NodeEntry;
 import ch.ethz.globis.phtree.v11.nt.NodeTreeV11;
 import ch.ethz.globis.phtree.v11.nt.NtIteratorMask;
 import ch.ethz.globis.phtree.v11.nt.NtIteratorMinMax;
@@ -128,8 +128,8 @@ public class Node {
 		return new Node(original);
 	}
 
-	<T> NodeEntry<T> createNodeEntry(long[] key, T value) {
-		return new NodeEntry<>(key, value);
+	<T> PhEntry<T> createNodeEntry(long[] key, T value) {
+		return new PhEntry<>(key, value);
 	}
 	
 	void discardNode() {
@@ -1260,8 +1260,8 @@ public class Node {
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	@SuppressWarnings("unchecked")
-	<T>  boolean checkAndGetEntryNt(long hcPos, Object value, NodeEntry<T> result, long[] valTemplate,
-			long[] rangeMin, long[] rangeMax) {
+	<T>  boolean checkAndGetEntryNt(long hcPos, Object value, PhEntry<T> result, 
+			long[] valTemplate, long[] rangeMin, long[] rangeMax) {
 		PhTreeHelper.applyHcPos(hcPos, postLen, valTemplate);
 		if (value instanceof Node) {
 			Node sub = (Node) value;
@@ -1269,18 +1269,16 @@ public class Node {
 					rangeMin, rangeMax)) {
 				return false;
 			}
-			result.setNodeKeepKey(sub);
+			result.setNodeInternal(sub);
 		} else {
 			long[] inKey = result.getKey();
-			long mask = (~0L)<<postLen;
 			for (int i = 0; i < inKey.length; i++) {
-				long k = inKey[i] | (valTemplate[i] & mask);
+				long k = inKey[i];
 				if (k < rangeMin[i] || k > rangeMax[i]) {
 					return false;
 				}
-				inKey[i] = k;
 			}
-			result.setPost((T) value);
+			result.setValueInternal((T) value);
 		}
 		return true;
 	}

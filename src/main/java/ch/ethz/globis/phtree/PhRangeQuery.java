@@ -19,20 +19,21 @@ import ch.ethz.globis.phtree.PhTree.PhQuery;
  */
 public class PhRangeQuery<T> implements PhIterator<T> {
 
-  private final long[] min, max;
+  private final long[] min;
+  private final long[] max;
   private final PhQuery<T> q;
-  private final int DIM;
+  private final int dims;
   private final PhDistance dist;
   private final PhFilterDistance filter;
 
   public PhRangeQuery(PhQuery<T> iter, PhTree<T> tree, 
       PhDistance dist, PhFilterDistance filter) {
-    this.DIM = tree.getDim();
+    this.dims = tree.getDim();
     this.q = iter;
     this.dist = dist;
     this.filter = filter;
-    this.min = new long[DIM];
-    this.max = new long[DIM];
+    this.min = new long[dims];
+    this.max = new long[dims];
   }
 
   public PhRangeQuery<T> reset(double range, long... center) {

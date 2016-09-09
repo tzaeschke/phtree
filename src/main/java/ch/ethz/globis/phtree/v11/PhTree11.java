@@ -93,30 +93,6 @@ public class PhTree11<T> implements PhTree<T> {
 
 	private final AtomicInteger nEntries = new AtomicInteger();
 
-	static class NodeEntry<T> extends PhEntry<T> {
-		Node node;
-
-		NodeEntry(long[] key, T value) {
-			super(key, value);
-			this.node = null;
-		}
-
-		void setNodeKeepKey(Node node) {
-			set(this.getKey(), null);
-			this.node = node;
-		}
-		
-		void setPost(T val) {
-			setValue(val);
-			this.node = null;
-		}
-		
-		Object getValueOrNULL() {
-			return getValueInternal();
-		}
-	}
-
-
 	private Node root = null;
 
 	Node getRoot() {
@@ -488,7 +464,7 @@ public class PhTree11<T> implements PhTree<T> {
 //		}
 		
 		PhResultList<T, R> list = new PhResultList.MappingResultList<>(null, mapper,
-				() -> new NodeEntry<T>(new long[dims], null));
+				() -> new PhEntry<T>(new long[dims], null));
 		
 		NodeIteratorListReuse<T, R> it = new NodeIteratorListReuse<>(dims, list);
 		return it.resetAndRun(getRoot(), min, max, maxResults);

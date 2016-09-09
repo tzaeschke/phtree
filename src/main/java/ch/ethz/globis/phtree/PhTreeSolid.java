@@ -240,19 +240,6 @@ public class PhTreeSolid<T> implements Iterable<T> {
 			return buffer;
 		}
 		@Override
-		public long[] nextKey() {
-			long[] lower = new long[dims];
-			long[] upper = new long[dims];
-			PhEntry<T> pvEntry = iter.nextEntryReuse();
-			pre.post(pvEntry.getKey(), lower, upper);
-			long[] ret = new long[2*dims];
-			for (int i = 0; i < dims; i++) {
-				ret[i] = lower[i];
-				ret[i+dims] = lower[i];
-			}
-			return ret;
-		}
-		@Override
 		public void remove() {
 			iter.remove();
 		}
@@ -311,6 +298,16 @@ public class PhTreeSolid<T> implements Iterable<T> {
 			this.lower = lower;
 			this.upper = upper;
 			this.value = value;
+		}
+
+		/**
+		 * Range object copy constructor.
+		 * @param e
+		 */
+		public PhEntryS(PhEntryS<T> e) {
+			this.lower = Arrays.copyOf(e.lower, e.lower.length);
+			this.upper = Arrays.copyOf(e.upper, e.upper.length);
+			this.value = e.value;
 		}
 
 		/**

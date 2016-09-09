@@ -9,7 +9,7 @@ package ch.ethz.globis.phtree;
 import java.util.Arrays;
 import java.util.List;
 
-import ch.ethz.globis.phtree.PhTree.PhIterator;
+import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
 import ch.ethz.globis.phtree.pre.PreProcessorRangeF;
 import ch.ethz.globis.phtree.util.PhIteratorBase;
@@ -28,6 +28,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	private final int dims;
 	private final PhTree<T> pht;
 	private final PreProcessorRangeF pre;
+	private final PhDistanceSF dist;
 	private final double[] qMIN;
 	private final double[] qMAX;
 	
@@ -64,6 +65,8 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		}
 		this.pht = tree;
 		this.pre = pre;
+		//this.dist = new PhDistanceSFEdgeDist(pre, dims);
+		this.dist = new PhDistanceSFCenterDist(pre, dims);
 		qMIN = new double[dims];
 		Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
 		qMAX = new double[dims];
@@ -209,12 +212,34 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		return new PhQuerySF<>(pht.query(lLow, lUpp), dims, pre, true);
 	}
 	
+	/**
+	 * Locate nearest neighbours for a given point in space.
+	 * @param nMin number of entries to be returned. More entries may or may not be returned if 
+	 * several points have the same distance.
+	 * @param distanceFunction A distance function for rectangle data. This parameter is optional,
+	 * passing a {@code null} will use the default distance function.
+	 * @param center the center point
+	 * @return The query iterator.
+	 */
+	public PhKnnQuerySF<T> nearestNeighbour(int nMin, PhDistanceSF distanceFunction,
+			double ... center) {
+		long[] lCenter = new long[2*dims];
+		pre.pre(center, center, lCenter);
+		PhDistanceSF df = distanceFunction == null ? dist : distanceFunction;
+		return new PhKnnQuerySF<>(pht.nearestNeighbour(nMin, df, null, lCenter), dims, pre);
+	}
+
+	/**
+	 * Resetable query result iterator.
+	 * @param <T>
+	 */
 	public static class PhIteratorSF<T> implements PhIteratorBase<double[], T, PhEntrySF<T>> {
-		protected final PhIterator<T> iter;
+		protected final PhIteratorBase<long[], T, ? extends PhEntry<T>> iter;
 		private final int dims;
 		protected final PreProcessorRangeF pre;
 		private final PhEntrySF<T> buffer;
-		private PhIteratorSF(PhIterator<T> iter, int dims, PreProcessorRangeF pre) {
+		private PhIteratorSF(PhIteratorBase<long[], T, ? extends PhEntry<T>> iter, 
+				int dims, PreProcessorRangeF pre) {
 			this.iter = iter;
 			this.dims = dims;
 			this.pre = pre;
@@ -231,19 +256,6 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		@Override
 		public T nextValue() {
             return iter.nextValue();
-		}
-		@Override
-		public double[] nextKey() {
-			double[] lower = new double[dims];
-			double[] upper = new double[dims];
-            PhEntry<T> pvEntry = iter.nextEntryReuse();
-            pre.post(pvEntry.getKey(), lower, upper);
-            double[] ret = new double[2*dims];
-            for (int i = 0; i < dims; i++) {
-            	ret[i] = lower[i];
-            	ret[i+dims] = lower[i];
-            }
-			return ret;
 		}
 		@Override
 		public PhEntrySF<T> nextEntry() {
@@ -286,7 +298,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 			lUpp = new long[dims*2];
 		}
 
-		public void reset(double[] lower, double[] upper) {
+		public PhQuerySF<T> reset(double[] lower, double[] upper) {
 			if (intersect) {
 				pre.pre(qMIN, lower, lLow);
 				pre.pre(upper, qMAX, lUpp);
@@ -296,6 +308,76 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 				pre.pre(upper, upper, lUpp);
 			}
 			q.reset(lLow, lUpp);
+			return this;
+		}
+	}
+	
+	public static class PhKnnQuerySF<T> extends PhIteratorSF<T> {
+		private final long[] lCenterBuffer;
+		private final PhKnnQuery<T> q;
+		private final double[] qMIN;
+		private final double[] qMAX;
+		private final int dims;
+		protected final PreProcessorRangeF pre;
+		private final PhEntryDistSF<T> buffer;
+		
+		private PhKnnQuerySF(PhKnnQuery<T> iter, int dims, PreProcessorRangeF pre) {
+			super(iter, dims, pre);
+			this.q = iter;
+			this.qMIN = new double[dims];
+			Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
+			this.qMAX = new double[dims];
+			Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
+			this.lCenterBuffer = new long[dims*2];
+			this.dims = dims;
+			this.pre = pre;
+			this.buffer = new PhEntryDistSF<>(new double[dims], new double[dims], null, Double.NaN);
+		}
+
+	/**
+		 * Resets the current kNN query with new parameters.
+		 * @param nMin
+		 * @param newDist Distance function. Supplying 'null' uses the default distance function
+		 * for the current preprocessor.
+		 * @param center
+		 * @return this query instance
+		 */
+		public PhKnnQuerySF<T> reset(int nMin, PhDistance newDist, double[] center) {
+			pre.pre(center, center, lCenterBuffer);
+			q.reset(nMin, newDist, lCenterBuffer);
+			return this;
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return iter.hasNext();
+		}
+		@Override
+		public T next() {
+			return nextValue();
+		}
+		@Override
+		public T nextValue() {
+			return iter.nextValue();
+		}
+		@Override
+		public PhEntryDistSF<T> nextEntry() {
+			double[] lower = new double[dims];
+			double[] upper = new double[dims];
+            PhEntryDist<T> pvEntry = q.nextEntryReuse();
+            pre.post(pvEntry.getKey(), lower, upper);
+			return new PhEntryDistSF<>(lower, upper, pvEntry.getValue(), pvEntry.dist());
+		}
+		@Override
+		public PhEntryDistSF<T> nextEntryReuse() {
+			PhEntryDist<T> pvEntry = q.nextEntryReuse();
+            pre.post(pvEntry.getKey(), buffer.lower(), buffer.upper());
+            buffer.setValueDist( pvEntry.getValue(), pvEntry.dist() );
+			return buffer;
+		}
+		@Override
+		public void remove() {
+			iter.remove();
 		}
 	}
 	
@@ -381,6 +463,29 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		}
 	}
 
+	public static class PhEntryDistSF<T> extends PhEntrySF<T> {
+		private double dist;
+
+		PhEntryDistSF(double[] lower, double[] upper, T value, double dist) {
+			super(lower, upper, value);
+			this.dist = dist;
+		}
+
+		void setValueDist(T value, double dist) {
+			setValue(value);
+			this.dist = dist;
+		}
+
+		public double dist() {
+			return dist;
+		}
+		
+	@Override
+		public String toString() {
+			return super.toString() + " dist=" + dist;
+		}
+	}
+	
 	@Override
 	public PhIteratorSF<T> iterator() {
 		return new PhIteratorSF<>(pht.queryExtent(), dims, pre);
@@ -466,15 +571,29 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 
 	/**
-	 * 
 	 * @return The PhTree that backs this tree.
 	 */
 	public PhTree<T> getInternalTree() {
 		return pht;
 	}
 	
+	/**
+	 * @return the preprocessor of this tree. 
+	 */
+	public PreProcessorRangeF getPreProcessor() {
+		return pre;
+	}
+	
 	@Override
 	public String toString() {
 		return pht.toString(); 
+	}
+
+	/**
+	 * 
+	 * @return the dimensionality of the tree.
+	 */
+	public int getDims() {
+		return dims;
 	}
 }

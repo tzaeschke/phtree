@@ -7,8 +7,8 @@
 package ch.ethz.globis.phtree.v11;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
+import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.v11.PhTree11.NodeEntry;
 import ch.ethz.globis.phtree.v11.nt.NtIteratorMask;
 
 
@@ -131,7 +131,7 @@ public class NodeIteratorNoGC<T> {
 	 * Advances the cursor. 
 	 * @return TRUE iff a matching element was found.
 	 */
-	boolean increment(NodeEntry<T> result) {
+	boolean increment(PhEntry<T> result) {
 		return getNext(result);
 	}
 
@@ -140,7 +140,7 @@ public class NodeIteratorNoGC<T> {
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	@SuppressWarnings("unchecked")
-	private boolean readValue(int pin, long pos, NodeEntry<T> result) {
+	private boolean readValue(int pin, long pos, PhEntry<T> result) {
 		Object o = node.checkAndGetEntryPIN(pin, pos, valTemplate, result.getKey(), 
 				rangeMin, rangeMax);
 		if (o == null) {
@@ -154,18 +154,18 @@ public class NodeIteratorNoGC<T> {
 					!checker.isValid(sub.getPostLen()+1, valTemplate)) {
 				return false;
 			}
-			result.setNodeKeepKey(sub);
+			result.setNodeInternal(sub);
 			return true;
 		}
 
 		if (checker != null && !checker.isValid(result.getKey())) {
 			return false;
 		}
-		result.setPost((T) o);
+		result.setValueInternal((T) o);
 		return true;
 	}
 
-	private boolean readValue(long pos, Object value, NodeEntry<T> result) {
+	private boolean readValue(long pos, Object value, PhEntry<T> result) {
 		if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
 			return false;
 		}
@@ -184,7 +184,7 @@ public class NodeIteratorNoGC<T> {
 		return checker == null || checker.isValid(result.getKey());
 	}
 
-	private boolean getNextHCI(NodeEntry<T> result) {
+	private boolean getNextHCI(PhEntry<T> result) {
 		//Ideally we would switch between b-serch-HCI and incr-search depending on the expected
 		//distance to the next value.
 		long currentPos = next;
@@ -207,7 +207,7 @@ public class NodeIteratorNoGC<T> {
 		} while (true);
 	}
 
-	private boolean getNext(NodeEntry<T> result) {
+	private boolean getNext(PhEntry<T> result) {
 		if (isNI) {
 			return niFindNext(result);
 		}
@@ -221,7 +221,7 @@ public class NodeIteratorNoGC<T> {
 		}
 	}
 	
-	private boolean getNextAHC(NodeEntry<T> result) {
+	private boolean getNextAHC(PhEntry<T> result) {
 		//while loop until 1 is found.
 		long currentPos = next == START ? maskLower-1 : next; 
 		while (true) {
@@ -237,7 +237,7 @@ public class NodeIteratorNoGC<T> {
 		}
 	}
 	
-	private boolean getNextLHC(NodeEntry<T> result) {
+	private boolean getNextLHC(PhEntry<T> result) {
 		while (true) {
 			if (++nFound > nMaxEntry) {
 				return false;
@@ -258,11 +258,11 @@ public class NodeIteratorNoGC<T> {
 	}
 	
 
-	private boolean niFindNext(NodeEntry<T> result) {
+	private boolean niFindNext(PhEntry<T> result) {
 		return useNiHcIncrementer ? niFindNextHCI(result) : niFindNextIter(result);
 	}
 	
-	private boolean niFindNextIter(NodeEntry<T> result) {
+	private boolean niFindNextIter(PhEntry<T> result) {
 		while (niIterator.hasNext()) {
 			NtEntry<Object> e = niIterator.nextEntryReuse();
 			System.arraycopy(e.getKdKey(), 0, result.getKey(), 0, dims);
@@ -274,7 +274,7 @@ public class NodeIteratorNoGC<T> {
 		return false;
 	}
 	
-	private boolean niFindNextHCI(NodeEntry<T> result) {
+	private boolean niFindNextHCI(PhEntry<T> result) {
 		//HCI
 		//repeat until we found a value inside the given range
 		long currentPos = next; 

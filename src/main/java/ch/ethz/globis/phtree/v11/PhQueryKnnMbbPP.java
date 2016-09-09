@@ -8,15 +8,14 @@ package ch.ethz.globis.phtree.v11;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.NoSuchElementException;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
-import ch.ethz.globis.phtree.v11.PhTree11.NodeEntry;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -57,7 +56,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	private int nMin;
 	private PhTree11<T> pht;
 	private PhDistance distance;
-	private final ArrayList<DistEntry<T>> entries = new ArrayList<>();
+	private final ArrayList<PhEntryDist<T>> entries = new ArrayList<>();
 	private int resultSize = 0;
 	private int currentPos = -1;
 	private final long[] mbbMin;
@@ -85,12 +84,12 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	}
 
 	@Override
-	public PhEntry<T> nextEntry() {
-		return new PhEntry<>(nextEntryReuse());
+	public PhEntryDist<T> nextEntry() {
+		return new PhEntryDist<>(nextEntryReuse());
 	} 
 
 	@Override
-	public PhEntry<T> nextEntryReuse() {
+	public PhEntryDist<T> nextEntryReuse() {
 		if (currentPos >= resultSize) {
 			throw new NoSuchElementException();
 		}
@@ -157,12 +156,12 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 		
 		NodeIteratorFullNoGC<T> ni = new NodeIteratorFullNoGC<>(dims, ret);
 		//This allows writing the result directly into 'ret'
-		NodeEntry<T> result = new NodeEntry<>(ret, null);
+		PhEntry<T> result = new PhEntry<>(ret, null);
 		ni.init(node, null);
 		while (ni.increment(result)) {
-			if (result.node != null) {
+			if (result.hasNodeInternal()) {
 				//traverse sub node
-				ni.init(result.node, null);
+				ni.init((Node) result.getNodeInternal(), null);
 			} else {
 				//Never return closest key if we look for nMin>1 keys!
 				if (nMin > 1 && Arrays.equals(key, result.getKey())) {
@@ -248,7 +247,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 		}
 
 		//get distance of farthest entry and continue query with this new distance
-		maxDist = entries.get(nMin-1).dist;
+		maxDist = entries.get(nMin-1).dist();
 		checker.set(val, distance, maxDist);
 		distance.toMBB(maxDist, val, mbbMin, mbbMax);
 		iter.adjustMinMax();
@@ -274,12 +273,12 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 
 	private double consolidate(int nMin, double eps, double max) {
 		sortEntries();
-		double maxDnew = entries.get(nMin-1).dist;
+		double maxDnew = entries.get(nMin-1).dist();
 		if (maxDnew < max+eps) { //TODO epsilon?
 			max = maxDnew;
 			for (int i2 = nMin; i2 < resultSize; i2++) {
 				//purge 
-				if (entries.get(i2).dist + eps > max) {
+				if (entries.get(i2).dist() + eps > max) {
 					resultSize = i2;
 					break;
 				}
@@ -289,40 +288,12 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	}
 
 
-	private static class DistEntry<T> extends PhEntry<T> {
-		static final Comparator<DistEntry<?>> COMP = 
-				(DistEntry<?> o1, DistEntry<?> o2) -> {
-				//We assume only normal positive numbers
-				//We have to do it this way because the delta may exceed the 'int' value space	
-				double d = o1.dist - o2.dist;
-				return d > 0 ? 1 : (d < 0 ? -1 : 0);
-			};
-
-		double dist;
-
-		DistEntry(long[] key, T value, double dist) {
-			super(key, value);
-			this.dist = dist;
-		}
-
-		DistEntry(PhEntry<T> e, double dist) {
-			super(e);
-			this.dist = dist;
-		}
-
-		void set(PhEntry<T> e, double dist) {
-			super.setValue(e.getValue());
-			System.arraycopy(e.getKey(), 0, getKey(), 0, getKey().length);
-			this.dist = dist;
-		}
-	}
-
 	private void addEntry(PhEntry<T> e, long[] center) {
 		double dist = distance.dist(center, e.getKey());
 		if (resultSize < entries.size()) {
 			entries.get(resultSize).set(e, dist);
 		} else {
-			DistEntry<T> de = new DistEntry<>(e, dist);
+			PhEntryDist<T> de = new PhEntryDist<>(e, dist);
 			entries.add(de);
 		}
 		resultSize++;
@@ -331,11 +302,11 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	private void clearEntries() {
 		resultSize = 0;
 		for (int i = 0; i < entries.size(); i++) {
-			entries.get(i).dist = Double.MAX_VALUE;
+			entries.get(i).clear();
 		}
 	}
 
 	private void sortEntries() {
-		entries.sort(DistEntry.COMP);
+		entries.sort(PhEntryDist.COMP);
 	}
 }

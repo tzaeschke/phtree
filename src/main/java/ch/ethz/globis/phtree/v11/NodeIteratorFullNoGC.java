@@ -7,9 +7,9 @@
 package ch.ethz.globis.phtree.v11;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
+import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.v11.PhTree11.NodeEntry;
 import ch.ethz.globis.phtree.v11.nt.NtIteratorMinMax;
 
 
@@ -91,7 +91,7 @@ public class NodeIteratorFullNoGC<T> {
 	 * Advances the cursor. 
 	 * @return TRUE iff a matching element was found.
 	 */
-	boolean increment(NodeEntry<T> result) {
+	boolean increment(PhEntry<T> result) {
 		getNext(result);
 		return next != FINISHED;
 	}
@@ -101,7 +101,7 @@ public class NodeIteratorFullNoGC<T> {
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	@SuppressWarnings("unchecked")
-	private boolean readValue(int posInNode, long hcPos, NodeEntry<T> result) {
+	private boolean readValue(int posInNode, long hcPos, PhEntry<T> result) {
 		long[] key = result.getKey();
 		Object v = node.getEntryPIN(posInNode, hcPos, valTemplate, key);
 		if (v == null) {
@@ -109,13 +109,13 @@ public class NodeIteratorFullNoGC<T> {
 		}
 		
 		if (v instanceof Node) {
-			result.setNodeKeepKey((Node) v);
+			result.setNodeInternal(v);
 		} else {
 			if (checker != null && !checker.isValid(key)) {
 				return false;
 			}
 			//ensure that 'node' is set to null
-			result.setPost((T) v );
+			result.setValueInternal((T) v );
 		}
 		next = hcPos;
 		
@@ -123,16 +123,15 @@ public class NodeIteratorFullNoGC<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	private boolean readValue(long pos, long[] kdKey, Object value, NodeEntry<T> result) {
+	private boolean readValue(long pos, long[] kdKey, Object value, PhEntry<T> result) {
 		PhTreeHelper.applyHcPos(pos, postLen, valTemplate);
 		if (value instanceof Node) {
 			Node sub = (Node) value;
-			result.setNodeKeepKey(sub);
 			node.getInfixOfSubNt(kdKey, valTemplate);
 			if (checker != null && !checker.isValid(sub.getPostLen()+1, valTemplate)) {
 				return false;
 			}
-			result.setNodeKeepKey(sub);
+			result.setNodeInternal(sub);
 		} else {
 			long[] resultKey = result.getKey();
 			final long mask = (~0L)<<postLen;
@@ -145,13 +144,13 @@ public class NodeIteratorFullNoGC<T> {
 			}
 
 			//ensure that 'node' is set to null
-			result.setPost((T) value);
+			result.setValueInternal((T) value);
 		}
 		return true;
 	}
 
 
-	private void getNext(NodeEntry<T> result) {
+	private void getNext(PhEntry<T> result) {
 		if (isNI) {
 			niFindNext(result);
 			return;
@@ -164,7 +163,7 @@ public class NodeIteratorFullNoGC<T> {
 		}
 	}
 	
-	private void getNextAHC(NodeEntry<T> result) {
+	private void getNextAHC(PhEntry<T> result) {
 		//while loop until 1 is found.
 		long currentPos = next; 
 		do {
@@ -176,7 +175,7 @@ public class NodeIteratorFullNoGC<T> {
 		} while (!readValue((int) currentPos, currentPos, result));
 	}
 	
-	private void getNextLHC(NodeEntry<T> result) {
+	private void getNextLHC(PhEntry<T> result) {
 		long currentPos;
 		do {
 			if (++nEntriesFound > nMaxEntries) {
@@ -189,7 +188,7 @@ public class NodeIteratorFullNoGC<T> {
 		} while (!readValue(nEntriesFound-1, currentPos, result));
 	}
 	
-	private void niFindNext(NodeEntry<T> result) {
+	private void niFindNext(PhEntry<T> result) {
 		while (ntIterator.hasNext()) {
 			NtEntry<Object> e = ntIterator.nextEntryReuse();
 			if (readValue(e.key(), e.getKdKey(), e.value(), result)) {

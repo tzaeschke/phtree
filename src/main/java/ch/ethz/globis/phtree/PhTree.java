@@ -210,6 +210,8 @@ public interface PhTree<T> {
 	 */
 	public static interface PhIterator<T> extends PhIteratorBase<long[], T, PhEntry<T>> {
 
+		long[] nextKey();
+		
 		/**
 		 * Special 'next' method that avoids creating new objects internally by reusing Entry objects.
 		 * Advantage: Should completely avoid any GC effort.
@@ -257,7 +259,12 @@ public interface PhTree<T> {
 	 * 
 	 * @param <T> the type of the iterator value
 	 */
-	public static interface PhKnnQuery<T> extends PhIterator<T> {
+	public static interface PhKnnQuery<T> extends PhIteratorBase<long[], T, PhEntryDist<T>> {
+
+		/**
+		 * @return the next key
+		 */
+		long[] nextKey();
 
 		/**
 		 * Reset the query with the new parameters.

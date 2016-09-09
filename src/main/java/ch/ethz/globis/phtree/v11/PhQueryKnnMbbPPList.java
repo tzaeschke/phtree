@@ -11,10 +11,10 @@ import java.util.NoSuchElementException;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
-import ch.ethz.globis.phtree.v11.PhTree11.NodeEntry;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -58,7 +58,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	private int currentPos = -1;
 	private final long[] mbbMin;
 	private final long[] mbbMax;
-	private final NodeIteratorListReuse<T, DistEntry<T>> iter;
+	private final NodeIteratorListReuse<T, PhEntryDist<T>> iter;
 	private final PhFilterDistance checker;
 	private final KnnResultList results; 
 
@@ -87,12 +87,12 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	}
 
 	@Override
-	public PhEntry<T> nextEntry() {
-		return new PhEntry<>(nextEntryReuse());
+	public PhEntryDist<T> nextEntry() {
+		return new PhEntryDist<>(nextEntryReuse());
 	} 
 
 	@Override
-	public PhEntry<T> nextEntryReuse() {
+	public PhEntryDist<T> nextEntryReuse() {
 		if (currentPos >= results.size()) {
 			throw new NoSuchElementException();
 		}
@@ -161,12 +161,12 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		
 		NodeIteratorFullNoGC<T> ni = new NodeIteratorFullNoGC<>(dims, ret);
 		//This allows writing the result directly into 'ret'
-		NodeEntry<T> result = new NodeEntry<>(ret, null);
+		PhEntry<T> result = new PhEntry<>(ret, null);
 		ni.init(node, null);
 		while (ni.increment(result)) {
-			if (result.node != null) {
+			if (result.hasNodeInternal()) {
 				//traverse sub node
-				ni.init(result.node, null);
+				ni.init((Node) result.getNodeInternal(), null);
 			} else {
 				//Never return closest key if we look for nMin>1 keys!
 				if (nMin > 1 && Arrays.equals(key, result.getKey())) {
@@ -199,8 +199,8 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	private void nearestNeighbourBinarySearch(long[] val, int nMin) {
 		//special case with minDist = 0
 		if (nMin == 1 && pht.contains(val)) {
-			DistEntry<T> e = results.getFreeEntry();
-			e.set(val, pht.get(val), 0);
+			PhEntryDist<T> e = results.getFreeEntry();
+			e.setCopyKey(val, pht.get(val), 0);
 			checker.set(val, distance, Double.MAX_VALUE);
 			results.phOffer(e);
 			return;
@@ -211,7 +211,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 			PhExtent<T> itEx = pht.queryExtent();
 			while (itEx.hasNext()) {
 				PhEntry<T> e = itEx.nextEntryReuse();
-				DistEntry<T> e2 = results.getFreeEntry();
+				PhEntryDist<T> e2 = results.getFreeEntry();
 				e2.set(e, distance.dist(val, e.getKey()));
 				checker.set(val, distance, Double.MAX_VALUE);
 				results.phOffer(e2);
@@ -243,36 +243,9 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	}
 
 
-	private static class DistEntry<T> extends NodeEntry<T> {
-		double dist;
-
-		DistEntry(long[] key, T value, double dist) {
-			super(key, value);
-			this.dist = dist;
-		}
-
-		DistEntry(PhEntry<T> e, double dist) {
-			super(e.getKey(), e.getValue());
-			this.dist = dist;
-		}
-
-		void set(PhEntry<T> e, double dist) {
-			super.setValue(e.getValue());
-			System.arraycopy(e.getKey(), 0, getKey(), 0, getKey().length);
-			this.dist = dist;
-		}
-		
-		void set(long[] key, T value, double dist) {
-			setValue(value);
-			System.arraycopy(key, 0, getKey(), 0, getKey().length);
-			this.dist = dist;
-		}
-	}
-
-
-	private class KnnResultList extends PhResultList<T, DistEntry<T>> {
-		private DistEntry<T>[] data;
-		private DistEntry<T> free;
+	private class KnnResultList extends PhResultList<T, PhEntryDist<T>> {
+		private PhEntryDist<T>[] data;
+		private PhEntryDist<T> free;
 		private double[] distData;
 		private int size = 0;
 		//Maximum value below which new values will be accepted.
@@ -282,12 +255,12 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		private long[] center;
 		
 		KnnResultList(int dims) {
-			this.free = new DistEntry<>(new long[dims], null, -1);
+			this.free = new PhEntryDist<>(new long[dims], null, -1);
 			this.dims = dims;
 		}
 		
-		private DistEntry<T> createEntry() {
-			return new DistEntry<>(new long[dims], null, 1);
+		private PhEntryDist<T> createEntry() {
+			return new PhEntryDist<>(new long[dims], null, 1);
 		}
 		
 		@SuppressWarnings("unchecked")
@@ -296,7 +269,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 			this.center = center;
 			maxDistance = Double.MAX_VALUE;
 			if (data == null) {
-				data = new DistEntry[newSize];
+				data = new PhEntryDist[newSize];
 				distData = new double[newSize];
 				for (int i = 0; i < data.length; i++) {
 					data[i] = createEntry();
@@ -312,8 +285,8 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 			}
 		}
 		
-		DistEntry<T> getFreeEntry() {
-			DistEntry<T> ret = free;
+		PhEntryDist<T> getFreeEntry() {
+			PhEntryDist<T> ret = free;
 			free = null;
 			return ret;
 		}
@@ -321,16 +294,16 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		@Override
 		void phReturnTemp(PhEntry<T> entry) {
 			if (free == null) {
-				free = (DistEntry<T>) entry;
+				free = (PhEntryDist<T>) entry;
 			}
 		}
 		
 		@Override
 		void phOffer(PhEntry<T> entry) {
-			//TODO we don;t really need DistEntry anymore, do we? Maybe for external access of d?
-			DistEntry<T> e = (DistEntry<T>) entry;
+			//TODO we don;t really need PhEntryDist anymore, do we? Maybe for external access of d?
+			PhEntryDist<T> e = (PhEntryDist<T>) entry;
 			double d = distance.dist(center, e.getKey());
-			e.dist = d;
+			e.setDist( d );
 			if (d < maxDistance || (d <= maxDistance && size < data.length)) {
 				boolean needsAdjustment = internalAdd(e);
 				
@@ -366,26 +339,26 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 			}
 		}
 		
-		private boolean internalAdd(DistEntry<T> e) {
+		private boolean internalAdd(PhEntryDist<T> e) {
 			if (size == 0) {
 				free = data[size];
 				data[size] = e;
-				distData[size] = e.dist;
+				distData[size] = e.dist();
 				size++;
 				if (size == data.length) {
 					return true;
 				}
 				return false;
 			}
-			if (e.dist > distData[size-1] && size == distData.length) {
+			if (e.dist() > distData[size-1] && size == distData.length) {
 				//this should never happen.
-				throw new UnsupportedOperationException(e.dist + " > " + distData[size-1]);
+				throw new UnsupportedOperationException(e.dist() + " > " + distData[size-1]);
 			}
 
 			if (size == data.length) {
 				//We use -1 to allow using the same copy loop when inserting in the beginning
 				for (int i = size-1; i >= -1; i--) {
-					if (i==-1 || distData[i] < e.dist) {
+					if (i==-1 || distData[i] < e.dist()) {
 						//purge and reuse last entry
 						free = data[size-1];
 						//insert after i
@@ -394,13 +367,13 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 							distData[j+1] = distData[j];
 						}
 						data[i+1] = e;
-						distData[i+1] = e.dist;
+						distData[i+1] = e.dist();
 						return true;
 					}
 				}
 			} else {
 				for (int i = size-1; i >= -1; i--) {
-					if (i==-1 || distData[i] < e.dist) {
+					if (i==-1 || distData[i] < e.dist()) {
 						//purge and reuse entry after last
 						free = data[size];
 						//insert after i
@@ -409,7 +382,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 							distData[j+1] = distData[j];
 						}
 						data[i+1] = e;
-						distData[i+1] = e.dist;
+						distData[i+1] = e.dist();
 						size++;
 						if (size == data.length) {
 							return true;
@@ -439,7 +412,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		}
 
 		@Override
-		public DistEntry<T> get(int index) {
+		public PhEntryDist<T> get(int index) {
 			if (index < 0 || index >= size) {
 				throw new NoSuchElementException();
 			}
@@ -447,7 +420,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		}
 
 		@Override
-		DistEntry<T> phGetTempEntry() {
+		PhEntryDist<T> phGetTempEntry() {
 			return free;
 		}
 

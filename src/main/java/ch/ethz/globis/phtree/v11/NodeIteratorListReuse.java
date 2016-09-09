@@ -11,7 +11,6 @@ import java.util.List;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.v11.PhTree11.NodeEntry;
 import ch.ethz.globis.phtree.v11.nt.NtIteratorMask;
 
 /**
@@ -132,7 +131,7 @@ public class NodeIteratorListReuse<T, R> {
 			results.phOffer(e);
 		}
 
-		private void checkAndRunSubnode(Node sub, NodeEntry<T> e) {
+		private void checkAndRunSubnode(Node sub, PhEntry<T> e) {
 			if (e != null) {
 				results.phReturnTemp(e);
 			}
@@ -143,7 +142,7 @@ public class NodeIteratorListReuse<T, R> {
 
 		@SuppressWarnings("unchecked")
 		private void readValue(int pin, long pos) {
-			NodeEntry<T> resultBuffer = (NodeEntry<T>) results.phGetTempEntry();
+			PhEntry<T> resultBuffer = results.phGetTempEntry();
 			long[] key = resultBuffer.getKey();
 			Object o = node.checkAndGetEntryPIN(pin, pos, valTemplate, key, rangeMin, rangeMax);
  			if (o == null) {
@@ -158,7 +157,7 @@ public class NodeIteratorListReuse<T, R> {
 			checkAndAddResult(resultBuffer);
 		}
 
-		private void readValue(long pos, Object value, NodeEntry<T> result) {
+		private void readValue(long pos, Object value, PhEntry<T> result) {
 			if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
 				return;
 			}
@@ -262,7 +261,7 @@ public class NodeIteratorListReuse<T, R> {
 						checkAndRunSubnode(nextSubNode, null);
 					}
 				} else {
-					NodeEntry<T> resultBuffer = (NodeEntry<T>) results.phGetTempEntry();
+					PhEntry<T> resultBuffer = results.phGetTempEntry();
 					System.arraycopy(e.getKdKey(), 0, resultBuffer.getKey(), 0, dims);
 					readValue(e.key(), v, resultBuffer);
 				}
@@ -275,7 +274,7 @@ public class NodeIteratorListReuse<T, R> {
 			//repeat until we found a value inside the given range
 			long currentPos = maskLower; 
 			while (results.size() < maxResults) {
-				NodeEntry<T> resultBuffer = (NodeEntry<T>) results.phGetTempEntry();
+				PhEntry<T> resultBuffer = results.phGetTempEntry();
 				Object v = node.ntGetEntry(currentPos, resultBuffer.getKey(), valTemplate);
 				//sub-node?
 				if (v instanceof Node) {
