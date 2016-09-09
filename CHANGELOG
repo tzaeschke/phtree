@@ -1,10 +1,17 @@
+2016-09-09
+==========
+- (TZ) Added kNN queries support for rectangle data
+
+2016-08-23
+==========
+- (TZ) Added v11, lots of API changes  
 
 2015-10-28
 ==========
-- (TZ) Addek kNN-queries
+- (TZ) Added kNN-queries
 - (TZ) Added (spherical) range queries
 - (TZ) Numerous fixes, improvements, clean-up
-- (TZ) Some API changesm getDIM() -> getDim(), ...
+- (TZ) Some API changes getDIM() -> getDim(), ...
 - (TZ) Added PhTreeRevisited.pdf
 
 

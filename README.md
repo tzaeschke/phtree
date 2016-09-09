@@ -28,6 +28,12 @@ Maven:
 
 ### 2016-08-23
 
+- Added support for kNN nearest neighbour queries  for rectangle data.
+- More API updates.
+
+
+### 2016-08-23
+
 Released version 0.3.0 of the PH-tree (internal version: v11). Features (partly available before, but not in the original version):
 
 - Major code refactoring
