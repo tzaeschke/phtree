@@ -3,7 +3,7 @@
 	<groupId>ch.ethz.globis.phtree</groupId>
 	<artifactId>phtree</artifactId>
 	<packaging>jar</packaging>
-	<version>0.3.2-SNAPSHOT</version>
+	<version>0.3.2</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
