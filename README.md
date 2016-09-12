@@ -20,17 +20,26 @@ Maven:
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>0.3.1</version>
+    <version>0.3.2</version>
 </dependency>
 ```
 
 # News
 
-### 2016-08-23
+### 2016-09-09
 
-- Added support for kNN nearest neighbour queries  for rectangle data.
-- More API updates.
+Released version 0.3.2 of the PH-tree
 
+- Added support for kNN nearest neighbor queries for rectangle data.
+- More API updates (javadoc and added missing methods).
+
+
+### 2016-08-01
+
+Released version 0.3.1 of the PH-tree
+
+- Unified object pool configuration
+- javadoc to compile with -Xlint:all
 
 ### 2016-08-23
 
