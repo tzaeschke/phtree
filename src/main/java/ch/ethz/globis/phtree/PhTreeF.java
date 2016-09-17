@@ -15,6 +15,7 @@ import ch.ethz.globis.phtree.pre.PreProcessorPointF;
 import ch.ethz.globis.phtree.util.PhIteratorBase;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhMapperK;
+import ch.ethz.globis.phtree.util.PhTreeStats;
 
 /**
  * k-dimensional index (quad-/oct-/n-tree).
@@ -198,13 +199,13 @@ public class PhTreeF<T> {
 	}
 
 	public static class PhIteratorF<T> 
-	implements PhIteratorBase<double[], T, PhEntryF<T>> {
-		private final PhIteratorBase<long[], T, ? extends PhEntry<T>> iter;
+	implements PhIteratorBase<T, PhEntryF<T>> {
+		private final PhIteratorBase<T, ? extends PhEntry<T>> iter;
 		protected final PreProcessorPointF pre;
 		private final int dims;
 		private final PhEntryF<T> buffer;
 
-		protected PhIteratorF(PhIteratorBase<long[], T, ? extends PhEntry<T>> iter, 
+		protected PhIteratorF(PhIteratorBase<T, ? extends PhEntry<T>> iter, 
 				int dims, PreProcessorPointF pre) {
 			this.iter = iter;
 			this.pre = pre;
@@ -479,6 +480,10 @@ public class PhTreeF<T> {
 	@Override
 	public String toString() {
 		return pht.toString(); 
+	}
+
+	public PhTreeStats getStats() {
+		return pht.getStats();
 	}
 }
 

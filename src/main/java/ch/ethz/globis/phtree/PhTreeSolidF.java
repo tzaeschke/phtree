@@ -37,7 +37,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * 
 	 * @param dim number of dimensions
 	 */
-	private PhTreeSolidF(int dim) {
+	protected PhTreeSolidF(int dim) {
 		this(PhTree.create(dim*2));
 	}
 	
@@ -233,12 +233,12 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * Resetable query result iterator.
 	 * @param <T> value type
 	 */
-	public static class PhIteratorSF<T> implements PhIteratorBase<double[], T, PhEntrySF<T>> {
-		protected final PhIteratorBase<long[], T, ? extends PhEntry<T>> iter;
+	public static class PhIteratorSF<T> implements PhIteratorBase<T, PhEntrySF<T>> {
+		protected final PhIteratorBase<T, ? extends PhEntry<T>> iter;
 		private final int dims;
 		protected final PreProcessorRangeF pre;
 		private final PhEntrySF<T> buffer;
-		private PhIteratorSF(PhIteratorBase<long[], T, ? extends PhEntry<T>> iter, 
+		protected PhIteratorSF(PhIteratorBase<T, ? extends PhEntry<T>> iter, 
 				int dims, PreProcessorRangeF pre) {
 			this.iter = iter;
 			this.dims = dims;
@@ -286,7 +286,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		private final double[] qMAX;
 		private final boolean intersect;
 		
-		private PhQuerySF(PhQuery<T> iter, int dims, PreProcessorRangeF pre, boolean intersect) {
+		protected PhQuerySF(PhQuery<T> iter, int dims, PreProcessorRangeF pre, boolean intersect) {
 			super(iter, dims, pre);
 			q = iter;
 			qMIN = new double[dims];
@@ -321,7 +321,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		protected final PreProcessorRangeF pre;
 		private final PhEntryDistSF<T> buffer;
 		
-		private PhKnnQuerySF(PhKnnQuery<T> iter, int dims, PreProcessorRangeF pre) {
+		protected PhKnnQuerySF(PhKnnQuery<T> iter, int dims, PreProcessorRangeF pre) {
 			super(iter, dims, pre);
 			this.q = iter;
 			this.qMIN = new double[dims];
@@ -383,7 +383,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	
 	/**
 	 * Entries in a PH-tree with ranged objects.
-	 * @param <T> value tyype of the entry 
+	 * @param <T> value type of the entry 
 	 */
 	public static class PhEntrySF<T> {
 
@@ -400,20 +400,6 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		public PhEntrySF(double[] lower, double[] upper, T value) {
 			this.lower = lower;
 			this.upper = upper;
-            this.value = value;
-		}
-
-		/**
-		 * Range object constructor.
-		 * @param point lower and upper point in one array
-		 * @param value The value associated with the point
-		 */
-		public PhEntrySF(double[] point, T value) {
-			int dim = point.length>>1;
-			this.lower = new double[dim];
-			this.upper = new double[dim];
-			System.arraycopy(point, 0, lower, 0, dim);
-			System.arraycopy(point, dim, upper, 0, dim);
             this.value = value;
 		}
 
@@ -466,7 +452,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	public static class PhEntryDistSF<T> extends PhEntrySF<T> {
 		private double dist;
 
-		PhEntryDistSF(double[] lower, double[] upper, T value, double dist) {
+		public PhEntryDistSF(double[] lower, double[] upper, T value, double dist) {
 			super(lower, upper, value);
 			this.dist = dist;
 		}

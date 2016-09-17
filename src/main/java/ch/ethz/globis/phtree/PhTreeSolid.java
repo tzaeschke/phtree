@@ -200,7 +200,7 @@ public class PhTreeSolid<T> implements Iterable<T> {
 		return new PhQueryS<>(pht.query(lLow, lUpp), dims, pre, true);
 	}
 
-	public static class PhIteratorS<T> implements PhIteratorBase<long[], T, PhEntryS<T>> {
+	public static class PhIteratorS<T> implements PhIteratorBase<T, PhEntryS<T>> {
 		private final PhIterator<T> iter;
 		private final int dims;
 		protected final PreProcessorRange pre;

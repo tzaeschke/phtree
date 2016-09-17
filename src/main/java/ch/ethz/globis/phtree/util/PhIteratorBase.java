@@ -8,7 +8,7 @@ package ch.ethz.globis.phtree.util;
 
 import java.util.Iterator;
 
-public interface PhIteratorBase<K, V, E> extends Iterator<V> {
+public interface PhIteratorBase<V, E> extends Iterator<V> {
 
 	public V nextValue();
 

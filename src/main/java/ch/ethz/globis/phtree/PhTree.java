@@ -208,7 +208,7 @@ public interface PhTree<T> {
 	 * 
 	 * @param <T> the type of the iterator value
 	 */
-	public static interface PhIterator<T> extends PhIteratorBase<long[], T, PhEntry<T>> {
+	public static interface PhIterator<T> extends PhIteratorBase<T, PhEntry<T>> {
 
 		long[] nextKey();
 		
@@ -259,7 +259,7 @@ public interface PhTree<T> {
 	 * 
 	 * @param <T> the type of the iterator value
 	 */
-	public static interface PhKnnQuery<T> extends PhIteratorBase<long[], T, PhEntryDist<T>> {
+	public static interface PhKnnQuery<T> extends PhIteratorBase<T, PhEntryDist<T>> {
 
 		/**
 		 * @return the next key
