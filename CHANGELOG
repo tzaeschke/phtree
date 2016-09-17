@@ -1,3 +1,7 @@
+2016-09-17
+==========
+- (TZ) Updated API classes to improve extensibility
+
 2016-09-09
 ==========
 - (TZ) Added kNN queries support for rectangle data
