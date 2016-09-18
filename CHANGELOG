@@ -1,6 +1,7 @@
 2016-09-17
 ==========
 - (TZ) Updated API classes to improve extensibility
+- (TZ) Fixed bug in kNN for rectangles with 0 distance
 
 2016-09-09
 ==========
