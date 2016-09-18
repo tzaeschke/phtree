@@ -61,6 +61,9 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	private final NodeIteratorListReuse<T, PhEntryDist<T>> iter;
 	private final PhFilterDistance checker;
 	private final KnnResultList results; 
+	private final NodeIteratorFullNoGC<T> ni;
+	private final long[] niBuffer; 
+
 
 	/**
 	 * Create a new kNN/NNS search instance.
@@ -74,6 +77,8 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		this.checker = new PhFilterDistance();
 		this.results = new KnnResultList(dims);
 		this.iter = new NodeIteratorListReuse<>(dims, results);
+		this.niBuffer = new long[dims];
+		ni = new NodeIteratorFullNoGC<>(dims, niBuffer);
 	}
 
 	@Override
@@ -125,43 +130,49 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		return this;
 	}
 
-	private void findKnnCandidate(long[] center, long[] ret) {
-		findKnnCandidate(center, pht.getRoot(), ret);
+	private double estimateDistance(long[] center) {
+		return estimateDistance(center, pht.getRoot());
 	}
 
-	private long[] findKnnCandidate(long[] key, Node node, long[] ret) {
+	private double estimateDistance(long[] key, Node node) {
 		Object v = node.doIfMatching(key, true, null, null, null, pht);
 		if (v == null) {
 			//Okay, there is no perfect match:
 			//just perform a query on the current node and return the first value that we find.
-			return returnAnyValue(ret, key, node);
+			return getDistanceToClosest(key, node);
 		}
 		if (v instanceof Node) {
-			return findKnnCandidate(key, (Node) v, ret);
+			return estimateDistance(key, (Node) v);
 		}
 
-		//so we have a perfect match!
+		//Okay, we have a perfect match!
 		//But we should return it only if nMin=1, otherwise our search area is too small.
 		if (nMin == 1) {
 			//Never return closest key if we look for nMin>1 keys!
 			//now return the key, even if it may not be an exact match (we don't check)
-			System.arraycopy(key, 0, ret, 0, key.length);
-			return ret;
+			return 0.0;
 		}
 		//Okay just perform a query on the current node and return the first value that we find.
-		return returnAnyValue(ret, key, node);
+		return getDistanceToClosest(key, node);
 	}
 
-	private long[] returnAnyValue(long[] ret, long[] key, Node node) {
+	private double getDistanceToClosest(long[] key, Node node) {
+		//TODO
+		//This is a hack.
+		//calcDiagonal() is problematic when applied to IEEE encoded
+		//floating point values, especially when it the node is at the
+		//level of the exponent bits.
+//		if (node.getPostLen() <= 52) { 
+//			return calcDiagonal(key, node);
+//		}
 		//First, get correct prefix.
 		long mask = (-1L) << (node.getPostLen()+1);
 		for (int i = 0; i < dims; i++) {
-			ret[i] = key[i] & mask;
+			niBuffer[i] = key[i] & mask;
 		}
 		
-		NodeIteratorFullNoGC<T> ni = new NodeIteratorFullNoGC<>(dims, ret);
 		//This allows writing the result directly into 'ret'
-		PhEntry<T> result = new PhEntry<>(ret, null);
+		PhEntry<T> result = new PhEntry<>(niBuffer, null);
 		ni.init(node, null);
 		while (ni.increment(result)) {
 			if (result.hasNodeInternal()) {
@@ -175,10 +186,38 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 					//This check should be cheap and will not be executed more than once anyway.
 					continue;
 				}
-				return ret;
+				double dist = distance.dist(key, niBuffer);
+				//Problem: for rectangles with EDGE distance, the distance
+				//may calculate to '0.0', which will not yield a useful search MBB
+				//(unless there are more than 'k' rectangles with distance 0).
+				if (dist > 0) {
+					return dist;
+				} else {
+					return calcDiagonal(key, node);
+				}
 			}
 		}
 		throw new IllegalStateException();
+	}
+
+	private double calcDiagonal(long[] key, Node node) {
+		//First, get min/max.
+		long[] min = new long[dims];
+		long[] max = new long[dims];
+		long mask = (-1L) << (node.getPostLen()+1);
+		long mask1111 = ~mask;
+		for (int i = 0; i < dims; i++) {
+			min[i] = key[i] & mask;
+			max[i] = (key[i] & mask) | mask1111;
+		}
+		
+		//We calculate the diagonal of the node
+		double diagonal = distance.dist(min, max);
+		if (diagonal <= 0 || Double.isNaN(diagonal)) {
+			return 1;
+		}
+		//calc radius of inner circle
+		return diagonal*0.5;// /Math.sqrt(dims);
 	}
 
 	/**
@@ -220,12 +259,10 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		}
 
 		//estimate initial distance
-		long[] cand = new long[dims];
-		findKnnCandidate(val, cand);
-		double currentDist = distance.dist(val, cand);
+		double estimatedDist = estimateDistance(val);
 
-		while (!findNeighbours(currentDist, nMin, val)) {
-			currentDist *= 10;
+		while (!findNeighbours(estimatedDist, nMin, val)) {
+			estimatedDist *= 10;
 		}
 	}
 

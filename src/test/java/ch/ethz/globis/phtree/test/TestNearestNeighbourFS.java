@@ -35,17 +35,24 @@ public class TestNearestNeighbourFS {
 
 	private static final double BOX_LEN = 0.00001;
 	
-	private final boolean useEdgeDistFn;
+	private enum DIST_FN {
+		CENTER,
+		EDGE,
+		DEFAULT
+	}
 	
-	public TestNearestNeighbourFS(boolean useEdgeDistFn) {
-		this.useEdgeDistFn = useEdgeDistFn;
+	private final DIST_FN distFn;
+	
+	public TestNearestNeighbourFS(DIST_FN useEdgeDistFn) {
+		this.distFn = useEdgeDistFn;
 	}
 	
 	@Parameters
 	public static List<Object[]> distanceFunctions() {
 		return Arrays.asList(new Object[][] {
-			{ true },
-			{ false }
+			{ DIST_FN.DEFAULT },
+			{ DIST_FN.CENTER },
+			{ DIST_FN.EDGE }
 		});
 	}
 	
@@ -56,10 +63,11 @@ public class TestNearestNeighbourFS {
 	private PhDistanceSF newDistFn(PhTreeSolidF<?> tree) {
 		PreProcessorRangeF pre = tree.getPreProcessor();
 		int dims = tree.getDims();
-		if (useEdgeDistFn) {
-			return new PhDistanceSFEdgeDist(pre, dims);
-		} else {
-			return new PhDistanceSFCenterDist(pre, dims);
+		switch (distFn) {
+		case EDGE: return new PhDistanceSFEdgeDist(pre, dims);
+		case CENTER: return new PhDistanceSFCenterDist(pre, dims);
+		case DEFAULT: return null;
+		default: throw new IllegalArgumentException();
 		}
 	}
 	
@@ -251,6 +259,42 @@ public class TestNearestNeighbourFS {
 		check(v, exp, nn);
 	}
 	
+	/**
+	 * This tests a case where 'v' is is so close to the nearest point that
+	 * the distance becomes '0.0' due to numerical imprecision.
+	 * This is dangerous, because if the result size is smaller than k,
+	 * then the search distance is increased by multiplying the distance by
+	 * 10, which has no effect if distance is '0'. 
+	 * This can result in an infinite loop. 
+	 */
+	@Test
+	public void testAlmostZeroDist() {
+		final int DIM = 3;
+		final int N = 100;
+		final int MAXV = 1;
+		final Random R = new Random(0);
+
+		PhTreeSolidF<Object> ind = newTreeSF(DIM);
+		populate(ind, R, N, DIM, MAXV);
+		double[] p1min = new double[]{
+				0.21, 0.25, 0.09};
+		double[] p1max = new double[]{
+				0.22, 0.26, 0.10};
+		ind.put(p1min, p1max, -1);
+		
+		double[] v = new double[]{
+				0.215, 0.255, 0.095};
+		
+		PhEntrySF<Object> exp = nearestNeighbor1(ind, v);
+		List<PhEntrySF<Object>> nnList = toList(ind.nearestNeighbour(1, newDistFn(ind), v));
+		assertTrue(!nnList.isEmpty());
+		PhEntrySF<Object> nn = nnList.get(0);
+		check(v, exp, nn);
+
+		List<PhEntrySF<Object>> exp10 = nearestNeighborK(ind, 10, v);
+		List<PhEntrySF<Object>> nnList10 = toList(ind.nearestNeighbour(10, newDistFn(ind), v));
+		check(v, exp10, nnList10);
+	}
 	
 	private <T> ArrayList<PhEntrySF<T>> nearestNeighborK(PhTreeSolidF<T> tree, int k, double[] q) {
 		double dMax = Double.MAX_VALUE;
@@ -305,8 +349,8 @@ public class TestNearestNeighbourFS {
 		for (int e = 0; e < l2.size(); e++) {
 			double d = dist(v, l2.get(e));
 			if (distPrev > d) {
-				System.out.println("c1: " + l2.get(e-1).toString());
-				System.out.println("c2: " + l2.get(e).toString());
+				System.out.println("c1: " + distPrev + " " + l2.get(e-1).toString());
+				System.out.println("c2: " + d + " " + l2.get(e).toString());
 				fail();
 			}
 			distPrev = d;
@@ -346,10 +390,11 @@ public class TestNearestNeighbourFS {
 	}
 
 	private double dist(double[] v1, PhEntrySF<?> e2) {
-		if (useEdgeDistFn) {
-			return distEdge(v1, e2);
-		} else {
-			return distCenter(v1, e2);
+		switch (distFn) {
+		case EDGE: return distEdge(v1, e2);
+		case CENTER: return distCenter(v1, e2);
+		case DEFAULT: return distEdge(v1, e2);
+		default: throw new IllegalArgumentException();
 		}
 	}
 	
