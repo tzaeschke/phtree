@@ -130,10 +130,6 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		return this;
 	}
 
-	private double estimateDistance(long[] center) {
-		return estimateDistance(center, pht.getRoot());
-	}
-
 	private double estimateDistance(long[] key, Node node) {
 		Object v = node.doIfMatching(key, true, null, null, null, pht);
 		if (v == null) {
@@ -157,14 +153,14 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	}
 
 	private double getDistanceToClosest(long[] key, Node node) {
-		//TODO
 		//This is a hack.
 		//calcDiagonal() is problematic when applied to IEEE encoded
 		//floating point values, especially when it the node is at the
 		//level of the exponent bits.
-//		if (node.getPostLen() <= 52) { 
-//			return calcDiagonal(key, node);
-//		}
+		if (node.getPostLen() <= 52) { 
+			return calcDiagonal(key, node);
+		}
+
 		//First, get correct prefix.
 		long mask = (-1L) << (node.getPostLen()+1);
 		for (int i = 0; i < dims; i++) {
@@ -259,7 +255,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		}
 
 		//estimate initial distance
-		double estimatedDist = estimateDistance(val);
+		double estimatedDist = estimateDistance(val, pht.getRoot());
 
 		while (!findNeighbours(estimatedDist, nMin, val)) {
 			estimatedDist *= 10;
