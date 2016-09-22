@@ -77,6 +77,9 @@ public class PhTreeF<T> {
 		return new PhTreeF<>(tree);
 	}
 
+	/**
+	 * @return the number of entries in the tree
+	 */
 	public int size() {
 		return pht.size();
 	}
@@ -93,12 +96,20 @@ public class PhTreeF<T> {
 		return pht.put(lKey, value);
 	}
 
+	/**
+	 * @param key key
+	 * @return true if the key exists in the tree
+	 */
 	public boolean contains(double ... key) {
 		long[] lKey = new long[key.length];
 		pre.pre(key, lKey);
 		return pht.contains(lKey);
 	}
 
+	/**
+	 * @param key the key
+	 * @return the value associated with the key or 'null' if the key was not found
+	 */
 	public T get(double ... key) {
 		long[] lKey = new long[key.length];
 		pre.pre(key, lKey);
@@ -117,6 +128,9 @@ public class PhTreeF<T> {
 		return pht.remove(lKey);
 	}
 
+	/**
+	 * @return an iterator over all elements in the tree
+	 */
 	public PhExtentF<T> queryExtent() {
 		return new PhExtentF<>(pht.queryExtent(), pht.getDim(), pre);
 	}
@@ -198,8 +212,11 @@ public class PhTreeF<T> {
 		return new PhKnnQueryF<>(iter, pht.getDim(), pre);
 	}
 
-	public static class PhIteratorF<T> 
-	implements PhIteratorBase<T, PhEntryF<T>> {
+	/**
+	 * Iterator class for floating point keys. 
+	 * @param <T> value type
+	 */
+	public static class PhIteratorF<T> implements PhIteratorBase<T, PhEntryF<T>> {
 		private final PhIteratorBase<T, ? extends PhEntry<T>> iter;
 		protected final PreProcessorPointF pre;
 		private final int dims;
@@ -228,7 +245,7 @@ public class PhTreeF<T> {
 			double[] d = new double[dims];
 			PhEntry<T> e = iter.nextEntryReuse();
 			pre.post(e.getKey(), d);
-			return new PhEntryF<T>(d, e.getValue());
+			return new PhEntryF<>(d, e.getValue());
 		}
 
 		@Override
@@ -239,6 +256,9 @@ public class PhTreeF<T> {
 			return buffer;
 		}
 
+		/**
+		 * @return the key of the next entry
+		 */
 		public double[] nextKey() {
 			double[] d = new double[dims];
 			pre.post(iter.nextEntryReuse().getKey(), d);
@@ -256,6 +276,10 @@ public class PhTreeF<T> {
 		}
 	}
 
+	/**
+	 * Extent iterator class for floating point keys. 
+	 * @param <T> value type
+	 */
 	public static class PhExtentF<T> extends PhIteratorF<T> {
 		private final PhExtent<T> iter;
 		protected PhExtentF(PhExtent<T> iter, int dims, PreProcessorPointF pre) {
@@ -263,12 +287,20 @@ public class PhTreeF<T> {
 			this.iter = iter;
 		}		
 		
+		/**
+		 * Restarts the extent iterator.
+		 * @return this
+		 */
 		public PhExtentF<T> reset() {
 			iter.reset();
 			return this;
 		}
 	}
 	
+	/**
+	 * Query iterator class for floating point keys. 
+	 * @param <T> value type
+	 */
 	public static class PhQueryF<T> extends PhIteratorF<T> {
 		private final long[] lMin;
 		private final long[] lMax;
@@ -281,6 +313,11 @@ public class PhTreeF<T> {
 			lMax = new long[dims];
 		}
 
+		/**
+		 * Restarts the query with a new query rectangle.
+		 * @param lower minimum values of query rectangle
+		 * @param upper maximum values of query rectangle
+		 */
 		public void reset(double[] lower, double[] upper) {
 			pre.pre(lower, lMin);
 			pre.pre(upper, lMax);
@@ -288,6 +325,10 @@ public class PhTreeF<T> {
 		}
 	}
 
+	/**
+	 * Nearest neighbor query iterator class for floating point keys. 
+	 * @param <T> value type
+	 */
 	public static class PhKnnQueryF<T> extends PhIteratorF<T> {
 		private final long[] lCenter;
 		private final PhKnnQuery<T> q;
@@ -318,6 +359,14 @@ public class PhTreeF<T> {
 			return buffer;
 		}
 
+		/**
+		 * Restarts the query with a new center point.
+		 * @param nMin new minimum result count, often called 'k'
+		 * @param dist new distance function. Using 'null' will result in reusing the previous
+		 * distance function.
+		 * @param center new center point
+		 * @return this
+		 */
 		public PhKnnQueryF<T> reset(int nMin, PhDistance dist, double... center) {
 			pre.pre(center, lCenter);
 			q.reset(nMin, dist, lCenter);
@@ -325,6 +374,10 @@ public class PhTreeF<T> {
 		}
 	}
 
+	/**
+	 * Range query iterator class for floating point keys. 
+	 * @param <T> value type
+	 */
 	public static class PhRangeQueryF<T> extends PhIteratorF<T> {
 		private final long[] lCenter;
 		private final PhRangeQuery<T> q;
@@ -337,6 +390,12 @@ public class PhTreeF<T> {
 			this.lCenter = new long[dims];
 		}
 
+		/**
+		 * Restarts the query with a new center point and range.
+		 * @param range new range
+		 * @param center new center point
+		 * @return this
+		 */
 		public PhRangeQueryF<T> reset(double range, double... center) {
 			pre.pre(center, lCenter);
 			q.reset(range, lCenter);
@@ -383,16 +442,28 @@ public class PhTreeF<T> {
 	public static class PhEntryDistF<T> extends PhEntryF<T> {
 		private double dist;
 
+		/**
+		 * @param key the key
+		 * @param value the value
+		 * @param dist the distance to the center point
+		 */
 		public PhEntryDistF(double[] key, T value, double dist) {
 			super(key, value);
 			this.dist = dist;
 		}
 
+		/**
+		 * @param value new value
+		 * @param dist new distance
+		 */
 		public void set(T value, double dist) {
 			this.value = value;
 			this.dist = dist;
 		}
 		
+		/**
+		 * @return distance to center point of kNN query
+		 */
 		public double dist() {
 			return dist;
 		}

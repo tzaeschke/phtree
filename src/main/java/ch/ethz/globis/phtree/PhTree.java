@@ -210,6 +210,9 @@ public interface PhTree<T> {
 	 */
 	public static interface PhIterator<T> extends PhIteratorBase<T, PhEntry<T>> {
 
+		/**
+		 * @return the key of the next entry
+		 */
 		long[] nextKey();
 		
 		/**

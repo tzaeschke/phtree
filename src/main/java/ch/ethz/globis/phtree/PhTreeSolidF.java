@@ -277,7 +277,10 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 			iter.remove();
 		}
 	}
-	
+	/**
+	 * Query class for solids/rectangles. 
+	 * @param <T> value type
+	 */
 	public static class PhQuerySF<T> extends PhIteratorSF<T> {
 		private final long[] lLow;
 		private final long[] lUpp;
@@ -298,6 +301,12 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 			lUpp = new long[dims*2];
 		}
 
+		/**
+		 * Restarts the query with a new query rectangle.
+		 * @param lower minimum values of query rectangle
+		 * @param upper maximum values of query rectangle
+		 * @return this
+		 */
 		public PhQuerySF<T> reset(double[] lower, double[] upper) {
 			if (intersect) {
 				pre.pre(qMIN, lower, lLow);
@@ -312,6 +321,10 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		}
 	}
 	
+	/**
+	 * Nearest neighbor query class for solids/rectangles. 
+	 * @param <T> value type
+	 */
 	public static class PhKnnQuerySF<T> extends PhIteratorSF<T> {
 		private final long[] lCenterBuffer;
 		private final PhKnnQuery<T> q;
@@ -334,7 +347,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 			this.buffer = new PhEntryDistSF<>(new double[dims], new double[dims], null, Double.NaN);
 		}
 
-	/**
+		/**
 		 * Resets the current kNN query with new parameters.
 		 * @param nMin minimum results to be returned
 		 * @param newDist Distance function. Supplying 'null' uses the default distance function
@@ -452,6 +465,12 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	public static class PhEntryDistSF<T> extends PhEntrySF<T> {
 		private double dist;
 
+		/**
+		 * @param lower lower corner of rectangle key
+		 * @param upper upper corner of rectangle key
+		 * @param value value
+		 * @param dist distance value
+		 */
 		public PhEntryDistSF(double[] lower, double[] upper, T value, double dist) {
 			super(lower, upper, value);
 			this.dist = dist;
@@ -462,6 +481,9 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 			this.dist = dist;
 		}
 
+		/**
+		 * @return the distance to the center point of the kNN query
+		 */
 		public double dist() {
 			return dist;
 		}

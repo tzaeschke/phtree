@@ -200,6 +200,10 @@ public class PhTreeSolid<T> implements Iterable<T> {
 		return new PhQueryS<>(pht.query(lLow, lUpp), dims, pre, true);
 	}
 
+	/**
+	 * Iterator class for solids/rectangles. 
+	 * @param <T> value type
+	 */
 	public static class PhIteratorS<T> implements PhIteratorBase<T, PhEntryS<T>> {
 		private final PhIterator<T> iter;
 		private final int dims;
@@ -245,6 +249,10 @@ public class PhTreeSolid<T> implements Iterable<T> {
 		}
 	}
 
+	/**
+	 * Query class for solids/rectangles. 
+	 * @param <T> value type
+	 */
 	public static class PhQueryS<T> extends PhIteratorS<T> {
 		private final long[] lLow;
 		private final long[] lUpp;
@@ -265,6 +273,11 @@ public class PhTreeSolid<T> implements Iterable<T> {
 			lUpp = new long[dims*2];
 		}
 
+		/**
+		 * Restarts the query with a new query rectangle.
+		 * @param lower minimum values of query rectangle
+		 * @param upper maximum values of query rectangle
+		 */
 		public void reset(long[] lower, long[] upper) {
 			if (intersect) {
 				pre.pre(qMIN, lower, lLow);
