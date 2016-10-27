@@ -65,7 +65,7 @@ Released version 0.3.0 of the PH-tree (internal version: v11). Features (partly 
 - Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more.
 - Scalability with dimension: Updates and 'contains()' scale very well to the current maximum of 62 dimensions. Depending on the dataset, queries may scale up to 20 dimensions or more.
 - Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
-- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (maximum depth is 64, see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency.
+- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (maximum depth is 64, see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency, see also the section on concurrency below.
 
 
 ### Disadvantages
