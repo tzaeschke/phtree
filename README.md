@@ -202,7 +202,57 @@ __**API Support**__
 
 Data preprocessing can be automated using the `PreProcessor*` classes (partly known as `IntegerPP` or `ExponentPP` in the PDF documentation).
 
+# Concurrency Support
+
+The current has very limited support for concurrency.
+
+### Read Only Access ###
+
+Read only access (all types of queries) can safely be done by any number of threads. No synchronization is required.
+
+
+### Read and Write Access ###
+
+Any write access must be synchronized with any other concurrent write or read access (iterator.`next()` counts as read access). For example, a wrapper class could use a Java `ReadWriteLock` to ensure that write access always exclusive:  
+
+```
+
+	private final ReadWriteLock lock = new ReentrantReadWriteLock(true);
+	
+	public void put(...) {
+		Lock wlock = lock.writeLock();
+		try {
+			tree.put(key, value);
+		} finally {
+			wlock.unlock();
+		}
+	}
+	
+	public <T> ArrayList<T> query(...) {
+		ArrayList<T> result = new ArrayList<>();
+		Lock rlock = lock.readLock();
+		try {
+			Iterator<T> it = tree.query(...);
+			while (it.hasNext()) {
+				result.add(it.next());
+        	}
+		} finally {
+			rlock.unlock();
+		}
+		return result;
+	}	
+``` 
+ 
+It should be possible to allow even more fine grained access by also creating wrappers for the iterators, so that the read lock is only held during creation of the query and during each call to `next` or `nextXYZ`. Expected behavior: The query iterators may miss newly inserted entries or may return entries that have already been deleted. However, while this should work, it was never part of the current design and has not really been tested. If you find that it does not work (throws exception, missing entries that have not been modified, returns invalid data), let me know and I _may_ fix it if it doesn't impact general tree performance.  
+ 
+Generally, the PH-Tree should lends itself to concurrent implementations, because it has the guarantee that no modification will ever affect more than two nodes. In fact, only one node will every me modified with possibly a second one added or removed.
+
+There has been a Master Thesis that explores concurrent implementation (copy on write, node level locking, ...), see Section 6.2 in
+[Cluster-Computing and Parallelization for the Multi-Dimensional PH-Index](http://e-collection.library.ethz.ch/eserv/eth:47729/eth-47729-01.pdf).
+The source code is not maintained anymore and lacks a number of features of the latest PH-Tree (kNN queries, update, better performance, ...). However, I can make it available on request. 
   
+ 
+
 # License
 
 The code is licensed under the Apache License 2.0.
