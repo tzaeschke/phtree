@@ -1,3 +1,8 @@
+2017-01-08
+==========
+- (TZ) Fixed bug in CritBit (used by old PH-Tree), see 
+       https://github.com/tzaeschke/zoodb-indexes/issues/7
+
 2016-10-26
 ==========
 - (TZ) Update: PhTreeRevisited.pdf v1.2
