@@ -38,6 +38,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	//This needs to be different from PhTree NULL to avoid confusion when extracting values.
 	public static final Object NT_NULL = new Object();
 
+	private static int WARNINGS = 0;
 
 	
 	protected final IntVar nEntries = new IntVar(0);
@@ -663,10 +664,9 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 		int baS = node.calcArraySizeTotalBits(node.getEntryCount(), dims);
 		baS = Bits.calcArraySize(baS);
 		if (baS < node.ba.length) {
-			System.err.println("Array too large in NT: " + node.ba.length + " - " + baS + " = " + 
-					(node.ba.length - baS));
+			System.err.println("Array too large in NT(" + ++WARNINGS + "): " + 
+					node.ba.length + " - " + baS + " = " + (node.ba.length - baS));
 		}
-
 	}
 	
 }
