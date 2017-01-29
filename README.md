@@ -114,7 +114,21 @@ A higher version number usually (not always) indicates better performance in ter
 scalability (size and dimensionality) as well as storage requirements.
 
 
-# Tuning Memory Usage
+# Tuning Memory Usage vs Performance
+
+__**Configuration**__
+
+`Node.AHC_LHC_BIAS = 2.0`: This defines when the tree should switch from LHC to AHC representation for a given node. With the given default of 2.0, the tree uses AHC unless it requires more than 2.0 times the memory of LHC.
+In practice this has only limited effect on memory, but a higher value tends to slightly increase performance of most operations. Commonly used values are 1.0, 1.5 and 2.0. 
+ 
+`Node.NT_THRESHOLD = 150`: This defines when the tree should switch from LHC or AHC to NT (nested tree) representation for a given node. With the given default of 150, the tree uses NT for any node that has more than 150 entries (children + key/value entries). NT representation requires a lot more memory than LHC, but it also speeds up insert, remove and update operations on large nodes. 
+Using higher values reduces memory consumption but slows down any modification to the node. Commonly values are 150, 250 and 400. 
+
+`NtNode.MAX_DIM = 6`: This defines the dimensionality of NT (nested tree) representation. For example, a d=20 dimensional node will be split in a d=6 root node, two levels of d=6 nodes below that any at the bottom a d=2 node. This adds up to 3*6+2=20. This was introduced to speed up modification (insert, remove, ...) of large nodes. Unfortunately, NT representation is very memory intensive.
+This setting has not been well researched. Higher values should reduce memory consumption at the cost of modification speed. Commonly used values are 4, 6 and 8.
+
+
+__**Preprocessing and 32bit vs 64 bit**__
 
 There is little point in using 32bit instead of 64bit integer values, because prefix sharing takes care of unused leading bits.
 For floating point values, using a 32bit float instead of 64bit float should reduce memory usage
@@ -122,6 +136,9 @@ somewhat. However it is usually better to convert floating point values to integ
 Also, chose the multiplier such that it is not higher than the precision requires.
 For example, if you have a precision of 6 digits after the decimal point, then multiply all values
 by 1,000,000 before casting the to (long) and adding them to the tree.
+
+
+__**Garbage Collector**__
 
 See also the section about [iterators](#iterators) on how to avoid GC from performing queries.
 
