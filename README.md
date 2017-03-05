@@ -20,11 +20,18 @@ Maven:
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>0.3.2</version>
+    <version>0.3.3</version>
 </dependency>
 ```
 
 # News
+
+### 2017-03-05
+
+Released version 0.3.3 of the PH-tree
+
+- Some bugfixes.
+- Updated documentation.
 
 ### 2016-09-09
 
