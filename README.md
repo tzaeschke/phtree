@@ -24,6 +24,8 @@ Maven:
 </dependency>
 ```
 
+A C++ version of the PH-Tree (with slightly different design) is available [here](https://github.com/mcxme/phtree).
+
 # News
 
 ### 2017-03-05
