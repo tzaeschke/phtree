@@ -19,8 +19,7 @@
   		<connection>scm:git:git@github.com:tzaeschke/phtree.git</connection>
   		<developerConnection>scm:git:git@github.com:tzaeschke/phtree.git</developerConnection>
   		<url>https://github.com/tzaeschke/phtree</url>
-    <tag>phtree-0.3.4</tag>
-  </scm>	
+    </scm>	
 	<licenses>
 	  <license>
         <name>Apache License, Version 2.0</name>
