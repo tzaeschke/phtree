@@ -26,6 +26,9 @@ Maven:
 
 A C++ version of the PH-Tree (with slightly different design) is available [here](https://github.com/mcxme/phtree).
 
+**_Other spatial indexes can be found in the [TinSpin spatial index collection](https://github.com/tzaeschke/tinspin-indexes)._**
+
+
 # News
 
 ### 2017-03-05

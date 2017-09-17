@@ -1,3 +1,9 @@
+
+2017-09-17
+==========
+- (TZ) Fixed bug PhTreeF kNN: distance was not returned. 
+
+
 2017-01-08
 ==========
 - (TZ) Fixed bug in CritBit (used by old PH-Tree), see 

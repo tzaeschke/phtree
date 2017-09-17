@@ -355,7 +355,7 @@ public class PhTreeF<T> {
 		public PhEntryDistF<T> nextEntryReuse() {
 			PhEntryDist<T> e = q.nextEntryReuse();
 			pre.post(e.getKey(), buffer.getKey());
-			buffer.setValue( e.getValue() );
+			buffer.set( e.getValue(), e.dist() );
 			return buffer;
 		}
 
