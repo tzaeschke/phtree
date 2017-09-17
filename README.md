@@ -31,6 +31,12 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 
 # News
 
+### 2017-09-17
+
+Released version 0.3.4 of the PH-tree
+
+- Bugfix: kNN distance returned '0' for PhTreeF.
+
 ### 2017-03-05
 
 Released version 0.3.3 of the PH-tree
