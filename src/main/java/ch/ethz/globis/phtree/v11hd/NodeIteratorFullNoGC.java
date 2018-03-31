@@ -69,7 +69,6 @@ public class NodeIteratorFullNoGC<T> {
 		this.checker = checker;
 	
 		this.node = node;
-		this.isHC = node.isAHC();
 		this.isNI = node.isNT();
 		this.postLen = node.getPostLen();
 		nMaxEntries = node.getEntryCount();

@@ -73,7 +73,6 @@ public class NodeIteratorNoGC<T> {
 		this.checker = checker;
 	
 		this.node = node;
-		this.isHC = node.isAHC();
 		this.isNI = node.isNT();
 		nMaxEntry = node.getEntryCount();
 		if (!isHC) {

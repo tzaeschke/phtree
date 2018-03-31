@@ -138,9 +138,6 @@ public class PhTreeHD11<T> implements PhTree<T> {
 
 	private PhTreeStats getStats(int currentDepth, Node node, PhTreeStats stats) {
 		stats.nNodes++;
-		if (node.isAHC()) {
-			stats.nAHC++;
-		}
 		if (node.isNT()) {
 			stats.nNT++;
 		}

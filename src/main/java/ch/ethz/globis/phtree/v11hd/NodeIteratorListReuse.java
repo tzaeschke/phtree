@@ -117,13 +117,8 @@ public class NodeIteratorListReuse<T, R> {
 					niIterator.reset(node.ind(), maskLower, maskUpper);
 				}
 			} else if (PhTreeHD11.HCI_ENABLED){
-				if (node.isAHC()) {
-					//nPossibleMatch < 2^k?
-					useHcIncrementer = nPossibleMatch < maxHcAddr;
-				} else {
-					int logNPost = Long.SIZE - Long.numberOfLeadingZeros(nMaxEntry) + 1;
-					useHcIncrementer = (nMaxEntry > nPossibleMatch*(double)logNPost); 
-				}
+				int logNPost = Long.SIZE - Long.numberOfLeadingZeros(nMaxEntry) + 1;
+				useHcIncrementer = (nMaxEntry > nPossibleMatch*(double)logNPost); 
 			}
 		}
 		
@@ -191,27 +186,8 @@ public class NodeIteratorListReuse<T, R> {
 
 			if (useHcIncrementer) {
 				getAllHCI();
-			} else if (node.isAHC()) {
-				getAllAHC();
 			} else {
 				getAllLHC();
-			}
-		}
-
-		private void getAllAHC() {
-			//Position of the current entry
-			long currentPos = maskLower; 
-			while (results.size() < maxResults) {
-				//check HC-pos
-				if (checkHcPos(currentPos)) {
-					//check post-fix
-					readValue((int) currentPos, currentPos);
-				}
-
-				currentPos++;  //pos w/o bit-offset
-				if (currentPos > maskUpper) {
-					break;
-				}
 			}
 		}
 

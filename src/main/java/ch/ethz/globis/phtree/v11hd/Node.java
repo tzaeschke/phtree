@@ -29,9 +29,7 @@ import ch.ethz.globis.phtree.v11hd.nt.NtNodePool;
 public class Node {
 	
 	//size of references in bytes
-	private static final int REF_BITS = 4*8;
 	private static final int HC_BITS = 0;  //number of bits required for storing current (HC)-representation
-	private static final int INN_HC_WIDTH = 0; //Index-NotNull: width of not-null flag for post/infix-hc
 	/** Bias towards using AHC. AHC is used if (sizeLHC*AHC_LHC_BIAS) greater than (sizeAHC)  */
 	public static final double AHC_LHC_BIAS = 2.0; 
 	public static final int NT_THRESHOLD = 150; 
@@ -56,10 +54,6 @@ public class Node {
 	 * sCnt = subCount
 	 */
 	long[] ba = null;
-
-	// |   1st   |   2nd    |   3rd   |    4th   |
-	// | isSubHC | isPostHC | isSubNI | isPostNI |
-	private boolean isHC = false;
 
 	private byte postLen = 0;
 	private byte infixLen = 0; //prefix size
@@ -92,7 +86,6 @@ public class Node {
         }
         this.entryCnt = original.entryCnt;
         this.infixLen = original.infixLen;
-        this.isHC = original.isHC;
         this.postLen = original.postLen;
         this.infixLen = original.infixLen;
         if (original.ind != null) {
@@ -113,7 +106,6 @@ public class Node {
 		this.postLen = (byte) postLen;
 		this.entryCnt = 0;
 		this.ind = null;
-		this.isHC = false;
 		int size = calcArraySizeTotalBits(2, dims);
 		this.ba = Bits.arrayCreate(size);
 		this.values = Refs.arrayCreate(2);
@@ -144,10 +136,7 @@ public class Node {
 	int calcArraySizeTotalBits(int entryCount, final int dims) {
 		int nBits = getBitPosIndex();
 		//post-fixes
-		if (isAHC()) {
-			//hyper-cube
-			nBits += (INN_HC_WIDTH + dims * postLen) * (1 << dims);
-		} else if (isNT()) {
+		if (isNT()) {
 			nBits += 0;
 		} else {
 			//hc-pos index
@@ -169,7 +158,7 @@ public class Node {
 	 * @return whether the infix length is > 0
 	 */
 	boolean getInfixOfSub(int pin, long hcPos, long[] outVal) {
-		int offs = pinToOffsBitsData(pin, hcPos, outVal.length);
+		int offs = pinToOffsBitsData(pin, outVal.length);
 		if (!hasSubInfix(offs, outVal.length)) {
 			return false;
 		}
@@ -225,13 +214,8 @@ public class Node {
 		Object v;
 		int offs;
 		int dims = keyToMatch.length;
-		if (isAHC()) {
-			v = values[(int) hcPos];
-			offs = posToOffsBitsDataAHC(hcPos, getBitPosIndex(), dims);
-		} else {
-			v = values[pin];
-			offs = pinToOffsBitsDataLHC(pin, getBitPosIndex(), dims);
-		}
+		v = values[pin];
+		offs = pinToOffsBitsDataLHC(pin, getBitPosIndex(), dims);
 //		Object v = isHC() ? values[(int) hcPos] : values[pin];
 //		int offs = pinToOffsBitsData(pin, hcPos, keyToMatch.length);
 		if (v instanceof Node) {
@@ -286,23 +270,14 @@ public class Node {
 		Object v;
 		int offs;
 		int dims = keyToMatch.length;
-		if (isAHC()) {
-			v = values[(int) hcPos];
-			if (v == null) {
-				//not found
-				return null;
-			}
-			pin = (int) hcPos;
-			offs = posToOffsBitsDataAHC(hcPos, getBitPosIndex(), dims);
-		} else {
-			pin = getPosition(hcPos, keyToMatch.length);
-			if (pin < 0) {
-				//not found
-				return null;
-			}
-			v = values[pin];
-			offs = pinToOffsBitsDataLHC(pin, getBitPosIndex(), dims);
+		pin = getPosition(hcPos, keyToMatch.length);
+		if (pin < 0) {
+			//not found
+			return null;
 		}
+		v = values[pin];
+		offs = pinToOffsBitsDataLHC(pin, getBitPosIndex(), dims);
+
 		if (v instanceof Node) {
 			Node sub = (Node) v;
 			if (hasSubInfix(offs, dims)) {
@@ -474,7 +449,7 @@ public class Node {
 			int bitPosOfDiff = calcConflictingBits(key, newKey, -1L);
 			if (bitPosOfDiff <= getPostLen()) {
 				//replace
-				return replacePost(pinToDelete, hcPos, newKey);
+				return replacePost(pinToDelete, newKey);
 			} else {
 				insertRequired[0] = bitPosOfDiff;
 			}
@@ -497,22 +472,11 @@ public class Node {
 		int pin2 = -1;
 		long pos2 = -1;
 		Object val2 = null;
-		if (isAHC()) {
-			for (int i = 0; i < (1<<key.length); i++) {
-				if (values[i] != null && i != pinToDelete) {
-					pin2 = i;
-					pos2 = i;
-					val2 = values[i];
-					break;
-				}
-			}
-		} else {
-			//LHC: we have only pos=0 and pos=1
-			pin2 = (pinToDelete == 0) ? 1 : 0;
-			int offs = pinToOffsBitsLHC(pin2, getBitPosIndex(), dims);
-			pos2 = Bits.readArray(ba, offs, IK_WIDTH(dims));
-			val2 = values[pin2];
-		}
+		//LHC: we have only pos=0 and pos=1
+		pin2 = (pinToDelete == 0) ? 1 : 0;
+		int offs = pinToOffsBitsLHC(pin2, getBitPosIndex(), dims);
+		pos2 = Bits.readArray(ba, offs, IK_WIDTH(dims));
+		val2 = values[pin2];
 
 		long[] newPost = new long[dims];
 		RefsLong.arraycopy(key, 0, newPost, 0, key.length);
@@ -591,7 +555,7 @@ public class Node {
 		if (o instanceof Node) {
 			getInfixOfSub(posInNode, hcPos, postBuf);
 		} else {
-			int offsetBit = pinToOffsBitsData(posInNode, hcPos, postBuf.length);
+			int offsetBit = pinToOffsBitsData(posInNode, postBuf.length);
 			final long mask = (~0L)<<postLen;
 			for (int i = 0; i < postBuf.length; i++) {
 				postBuf[i] &= mask;
@@ -631,7 +595,7 @@ public class Node {
 		if (o instanceof Node) {
 			getInfixOfSub(posInNode, hcPos, subNodePrefix);
 		} else {
-			int offsetBit = pinToOffsBitsData(posInNode, hcPos, subNodePrefix.length);
+			int offsetBit = pinToOffsBitsData(posInNode, subNodePrefix.length);
 			final long mask = (~0L)<<postLen;
 			for (int i = 0; i < subNodePrefix.length; i++) {
 				outKey[i] = (subNodePrefix[i] & mask) | Bits.readArray(ba, offsetBit, postLen);
@@ -639,24 +603,6 @@ public class Node {
 			}
 		}
 		return o;
-	}
-
-	private boolean shouldSwitchToAHC(int entryCount, int dims) {
-		return useAHC(entryCount, dims);
-	}
-	
-	private boolean shouldSwitchToLHC(int entryCount, int dims) {
-		return !useAHC(entryCount+2, dims);
-	}
-	
-	private boolean useAHC(int entryCount, int dims) {
-		//calc post mode.
-		//+1 bit for null/not-null flag
-		long sizeAHC = (dims * postLen + INN_HC_WIDTH + REF_BITS) * (1L << dims); 
-		//+DIM because every index entry needs DIM bits
-		long sizeLHC = (dims * postLen + IK_WIDTH(dims) + REF_BITS) * (long)entryCount;
-		//Already 1.1 i.o. 1.0 has significant bad impact on perf.
-		return PhTreeHD11.AHC_ENABLED && (dims<=31) && (sizeLHC*AHC_LHC_BIAS >= sizeAHC);
 	}
 
 	/**
@@ -677,19 +623,15 @@ public class Node {
 		int dims = newKey.length;
 		int offsIndex = getBitPosIndex();
 		int offsKey;
-		if (isAHC()) {
-			values[(int) hcPos] = value;
-			offsKey = posToOffsBitsDataAHC(hcPos, offsIndex, dims);
-		} else {
-			values[pin] = value;
-			offsKey = pinToOffsBitsLHC(pin, offsIndex, dims);
-			Bits.writeArray(ba, offsKey, IK_WIDTH(dims), hcPos);
-			offsKey += IK_WIDTH(dims);
-		}
+		values[pin] = value;
+		offsKey = pinToOffsBitsLHC(pin, offsIndex, dims);
+		Bits.writeArray(ba, offsKey, IK_WIDTH(dims), hcPos);
+		offsKey += IK_WIDTH(dims);
+
 		if (value instanceof Node) {
 			int newSubInfixLen = postLen - ((Node)value).getPostLen() - 1;  
 			((Node)value).setInfixLen(newSubInfixLen);
-			writeSubInfix(pin, hcPos, newKey, newSubInfixLen);
+			writeSubInfix(pin, newKey, newSubInfixLen);
 		} else if (postLen > 0) {
 			for (int i = 0; i < newKey.length; i++) {
 				Bits.writeArray(ba, offsKey, postLen, newKey[i]);
@@ -698,8 +640,8 @@ public class Node {
 		}
 	}
 
-	private Object replacePost(int pin, long hcPos, long[] newKey) {
-		int offs = pinToOffsBitsData(pin, hcPos, newKey.length);
+	private Object replacePost(int pin, long[] newKey) {
+		int offs = pinToOffsBitsData(pin, newKey.length);
 		for (int i = 0; i < newKey.length; i++) {
 			Bits.writeArray(ba, offs, postLen, newKey[i]);
 			offs += postLen;
@@ -714,19 +656,19 @@ public class Node {
 		}
 		//TODO during insert we wounldn't need to rewrite the infix, only the infix-flag 
 		//     would need to be set...
-		writeSubInfix(posInNode, hcPos, infix, newSub.getInfixLen());
+		writeSubInfix(posInNode, infix, newSub.getInfixLen());
 		values[posInNode] = newSub;
 	}
 	
-	void writeSubInfix(int pin, long hcPos, long[] infix, int subInfixLen) {
+	void writeSubInfix(int pin, long[] infix, int subInfixLen) {
 		if (isNT()) {
 			throw new IllegalStateException();
 		}
 		if (subInfixLen > 0) {
-			replacePost(pin, hcPos, infix);
+			replacePost(pin, infix);
 		}
 		int dims = infix.length;
-		int subInfoOffs = pinToOffsBitsData(pin, hcPos, dims) + dims*postLen - 1;
+		int subInfoOffs = pinToOffsBitsData(pin, dims) + dims*postLen - 1;
 		writeSubInfixInfo(ba, subInfoOffs, subInfixLen);
 	}
 	
@@ -759,7 +701,7 @@ public class Node {
 			return;
 		}
 		values[pin] = value;
-		replacePost(pin, hcPos, key);
+		replacePost(pin, key);
 	}
 
 	Object ntReplaceEntry(long hcPos, long[] kdKey, Object value) {
@@ -823,62 +765,6 @@ public class Node {
 	}
 	
 
-	private void switchLhcToAhcAndGrow(int oldEntryCount, int dims) {
-		int posOfIndex = getBitPosIndex();
-		int posOfData = posToOffsBitsDataAHC(0, posOfIndex, dims);
-		setAHC( true );
-		long[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(oldEntryCount+1, dims));
-		Object [] v2 = Refs.arrayCreate(1<<dims);
-		//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-		Bits.copyBitsLeft(ba, 0, bia2, 0, posOfIndex);
-		int postLenTotal = dims*postLen; 
-		for (int i = 0; i < oldEntryCount; i++) {
-			int entryPosLHC = posOfIndex + i*(IK_WIDTH(dims)+postLenTotal);
-			int p2 = (int)Bits.readArray(ba, entryPosLHC, IK_WIDTH(dims));
-			Bits.copyBitsLeft(ba, entryPosLHC+IK_WIDTH(dims),
-					bia2, posOfData + postLenTotal*p2, 
-					postLenTotal);
-			v2[p2] = values[i];
-		}
-		ba = Bits.arrayReplace(ba, bia2);
-		values = Refs.arrayReplace(values, v2);
-	}
-	
-	
-	private Object switchAhcToLhcAndShrink(int oldEntryCount, int dims, long hcPosToRemove) {
-		Object oldEntry = null;
-		setAHC( false );
-		long[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(oldEntryCount-1, dims));
-		Object[] v2 = Refs.arrayCreate(oldEntryCount-1);
-		int oldOffsIndex = getBitPosIndex();
-		int oldOffsData = oldOffsIndex + (1<<dims)*INN_HC_WIDTH;
-		//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-		Bits.copyBitsLeft(ba, 0, bia2, 0, oldOffsIndex);
-		int postLenTotal = dims*postLen;
-		int n=0;
-		for (int i = 0; i < (1L<<dims); i++) {
-			if (i == hcPosToRemove) {
-				//skip the item that should be deleted.
-				oldEntry = values[i];
-				continue;
-			}
-			if (values[i] != null) {
-				v2[n] = values[i];
-				int entryPosLHC = oldOffsIndex + n*(IK_WIDTH(dims)+postLenTotal);
-				Bits.writeArray(bia2, entryPosLHC, IK_WIDTH(dims), i);
-				Bits.copyBitsLeft(
-						ba, oldOffsData + postLenTotal*i, 
-						bia2, entryPosLHC + IK_WIDTH(dims),
-						postLenTotal);
-				n++;
-			}
-		}
-		ba = Bits.arrayReplace(ba, bia2);
-		values = Refs.arrayReplace(values, v2);
-		return oldEntry;
-	}
-	
-	
 	/**
 	 * 
 	 * @param hcPos
@@ -902,42 +788,27 @@ public class Node {
 			return;
 		}
 
-		//switch representation (HC <-> Linear)?
-		if (!isAHC() && shouldSwitchToAHC(bufEntryCnt + 1, dims)) {
-			switchLhcToAhcAndGrow(bufEntryCnt, dims);
-			//no need to update pin now, we are in HC now.
-		}
-
 		incEntryCount();
 
 		int offsIndex = getBitPosIndex();
-		if (isAHC()) {
-			//hyper-cube
-			int offsPostKey = posToOffsBitsDataAHC(hcPos, offsIndex, dims);
-			for (int i = 0; i < key.length; i++) {
-				Bits.writeArray(ba, offsPostKey + postLen * i, postLen, key[i]);
-			}
-			values[(int) hcPos] = value;
-		} else {
-			//get position
-			pin = -(pin+1);
+		//get position
+		pin = -(pin+1);
 
-			//resize array
-			ba = Bits.arrayEnsureSize(ba, calcArraySizeTotalBits(bufEntryCnt+1, dims));
-			long[] ia = ba;
-			int offs = pinToOffsBitsLHC(pin, offsIndex, dims);
-			Bits.insertBits(ia, offs, IK_WIDTH(dims) + dims*postLen);
-			//insert key
-			Bits.writeArray(ia, offs, IK_WIDTH(dims), hcPos);
-			//insert value:
-			offs += IK_WIDTH(dims);
-			for (int i = 0; i < key.length; i++) {
-				Bits.writeArray(ia, offs, postLen, key[i]);
-				offs += postLen;
-			}
-			values = Refs.insertSpaceAtPos(values, pin, bufEntryCnt+1);
-			values[pin] = value;
+		//resize array
+		ba = Bits.arrayEnsureSize(ba, calcArraySizeTotalBits(bufEntryCnt+1, dims));
+		long[] ia = ba;
+		int offs = pinToOffsBitsLHC(pin, offsIndex, dims);
+		Bits.insertBits(ia, offs, IK_WIDTH(dims) + dims*postLen);
+		//insert key
+		Bits.writeArray(ia, offs, IK_WIDTH(dims), hcPos);
+		//insert value:
+		offs += IK_WIDTH(dims);
+		for (int i = 0; i < key.length; i++) {
+			Bits.writeArray(ia, offs, postLen, key[i]);
+			offs += postLen;
 		}
+		values = Refs.insertSpaceAtPos(values, pin, bufEntryCnt+1);
+		values[pin] = value;
 	}
 
 	void postToNI(int startBit, int postLen, long[] outKey, long hcPos, long[] prefix, long mask) {
@@ -983,40 +854,21 @@ public class Node {
 		long prefixMask = (-1L) << postLen;
 		
 		//read posts 
-		if (isAHC()) {
-			int oldOffsIndex = getBitPosIndex();
-			int oldPostBitsVal = posToOffsBitsDataAHC(0, oldOffsIndex, dims);
-			int postLenTotal = dims*postLen;
-			final long[] buffer = new long[dims];
-			for (int i = 0; i < (1L<<dims); i++) {
-				Object o = values[i];
-				if (o == null) {
-					continue;
-				} 
-				int dataOffs = oldPostBitsVal + i*postLenTotal;
-				postToNI(dataOffs, postLen, buffer, i, prefix, prefixMask);
-				//We use 'null' as parameter to indicate that we want 
-				//to skip checking for splitNode or increment of entryCount
-				NodeTreeV11.addEntry(ind, i, buffer, o, null);
-			}
-		} else {
-			int offsIndex = getBitPosIndex();
-			int dataOffs = pinToOffsBitsLHC(0, offsIndex, dims);
-			int postLenTotal = dims*postLen;
-			final long[] buffer = new long[dims];
-			for (int i = 0; i < bufEntryCnt; i++) {
-				long p2 = Bits.readArray(ba, dataOffs, IK_WIDTH(dims));
-				dataOffs += IK_WIDTH(dims);
-				Object e = values[i];
-				postToNI(dataOffs, postLen, buffer, p2, prefix, prefixMask);
-				//We use 'null' as parameter to indicate that we want 
-				//to skip checking for splitNode or increment of entryCount
-				NodeTreeV11.addEntry(ind, p2, buffer, e, null);
-				dataOffs += postLenTotal;
-			}
+		int offsIndex = getBitPosIndex();
+		int dataOffs = pinToOffsBitsLHC(0, offsIndex, dims);
+		int postLenTotal = dims*postLen;
+		final long[] buffer = new long[dims];
+		for (int i = 0; i < bufEntryCnt; i++) {
+			long p2 = Bits.readArray(ba, dataOffs, IK_WIDTH(dims));
+			dataOffs += IK_WIDTH(dims);
+			Object e = values[i];
+			postToNI(dataOffs, postLen, buffer, p2, prefix, prefixMask);
+			//We use 'null' as parameter to indicate that we want 
+			//to skip checking for splitNode or increment of entryCount
+			NodeTreeV11.addEntry(ind, p2, buffer, e, null);
+			dataOffs += postLenTotal;
 		}
 
-		setAHC(false);
 		ba = Bits.arrayTrim(ba, calcArraySizeTotalBitsNt());
 		values = Refs.arrayReplace(values, null); 
 	}
@@ -1039,74 +891,40 @@ public class Node {
 		int entryCountNew = ntGetSize() - 1;
 		decEntryCount();
 
-		//calc node mode.
-		boolean shouldBeAHC = useAHC(entryCountNew, dims);
-		setAHC(shouldBeAHC);
-
-
 		Object oldValue = null;
 		int offsIndex = getBitPosIndex();
 		long[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(entryCountNew, dims));
 		//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
 		Bits.copyBitsLeft(ba, 0, bia2, 0, offsIndex);
 		int postLenTotal = dims*postLen;
-		if (shouldBeAHC) {
-			//HC mode
-			Object[] v2 = Refs.arrayCreate(1<<dims);
-			int startBitData = posToOffsBitsDataAHC(0, offsIndex, dims);
-			PhIterator64<Object> it = ntIterator(dims);
-			while (it.hasNext()) {
-				NtEntry<Object> e = it.nextEntryReuse();
-				long pos = e.key();
-				if (pos == posToRemove) {
-					//skip the item that should be deleted.
-					oldValue = e.value();
-					v2[(int) pos] = null;
-					continue;
-				}
-				int p2 = (int) pos;
-				int offsBitData = startBitData + postLen * dims * p2;
-				if (e.value() instanceof Node) {
-					//subnode
-					Node node = (Node) e.value();
-					infixFromNI(bia2, offsBitData, e.getKdKey(), node.getInfixLen());
-				} else {
-					postFromNI(bia2, offsBitData, e.getKdKey(), postLen);
-				}
-				v2[p2] = e.value();
+		//LHC mode
+		Object[] v2 = Refs.arrayCreate(entryCountNew);
+		int n=0;
+		PhIterator64<Object> it = ntIterator(dims);
+		int entryPosLHC = offsIndex;
+		while (it.hasNext()) {
+			NtEntry<Object> e = it.nextEntryReuse();
+			long pos = e.key();
+			if (pos == posToRemove) {
+				//skip the item that should be deleted.
+				oldValue = e.value();
+				continue;
 			}
-			ba = Bits.arrayReplace(ba, bia2);
-			values = Refs.arrayReplace(values, v2);
-		} else {
-			//LHC mode
-			Object[] v2 = Refs.arrayCreate(entryCountNew);
-			int n=0;
-			PhIterator64<Object> it = ntIterator(dims);
-			int entryPosLHC = offsIndex;
-			while (it.hasNext()) {
-				NtEntry<Object> e = it.nextEntryReuse();
-				long pos = e.key();
-				if (pos == posToRemove) {
-					//skip the item that should be deleted.
-					oldValue = e.value();
-					continue;
-				}
-				//write hc-key
-				Bits.writeArray(bia2, entryPosLHC, IK_WIDTH(dims), pos);
-				entryPosLHC += IK_WIDTH(dims);
-				v2[n] = e.value();
-				if (e.value() instanceof Node) {
-					Node node = (Node) e.getValue();
-					infixFromNI(bia2, entryPosLHC, e.getKdKey(), node.getInfixLen());
-				} else {
-					postFromNI(bia2, entryPosLHC, e.getKdKey(), postLen);
-				}
-				entryPosLHC += postLenTotal;
-				n++;
+			//write hc-key
+			Bits.writeArray(bia2, entryPosLHC, IK_WIDTH(dims), pos);
+			entryPosLHC += IK_WIDTH(dims);
+			v2[n] = e.value();
+			if (e.value() instanceof Node) {
+				Node node = (Node) e.getValue();
+				infixFromNI(bia2, entryPosLHC, e.getKdKey(), node.getInfixLen());
+			} else {
+				postFromNI(bia2, entryPosLHC, e.getKdKey(), postLen);
 			}
-			ba = Bits.arrayReplace(ba, bia2);
-			values = Refs.arrayReplace(values, v2);
-		}			
+			entryPosLHC += postLenTotal;
+			n++;
+		}
+		ba = Bits.arrayReplace(ba, bia2);
+		values = Refs.arrayReplace(values, v2);
 
 		NtNodePool.offer(ind);
 		ind = null;
@@ -1136,11 +954,11 @@ public class Node {
 		PhTreeHelper.applyHcPos(hcPos, postLen, inOutPrefix);
 
 		if (o instanceof Node) {
-			return checkAndApplyInfix(((Node)o).getInfixLen(), pin, hcPos, 
+			return checkAndApplyInfix(((Node)o).getInfixLen(), pin, 
 					inOutPrefix, rangeMin, rangeMax) ? o : null;
 		}
 		
-		if (checkAndGetPost(pin, hcPos, inOutPrefix, outKey, rangeMin, rangeMax)) {
+		if (checkAndGetPost(pin, inOutPrefix, outKey, rangeMin, rangeMax)) {
 			return o;
 		}
 		return null;
@@ -1149,11 +967,11 @@ public class Node {
 	private static int N_GOOD = 0;
 	private static int N = 0;
 	
-	private boolean checkAndApplyInfix(int infixLen, int pin, long hcPos, long[] valTemplate, 
+	private boolean checkAndApplyInfix(int infixLen, int pin, long[] valTemplate, 
 			long[] rangeMin, long[] rangeMax) {
 		int dims = valTemplate.length;
 		//first check if node-prefix allows sub-node to contain any useful values
-		int subOffs = pinToOffsBitsData(pin, hcPos, dims);
+		int subOffs = pinToOffsBitsData(pin, dims);
 		
 		if (PhTreeHelper.DEBUG) {
 			N_GOOD++;
@@ -1284,10 +1102,10 @@ public class Node {
 		return true;
 	}
 
-	private boolean checkAndGetPost(int pin, long hcPos, long[] inPrefix, long[] outKey, 
+	private boolean checkAndGetPost(int pin, long[] inPrefix, long[] outKey, 
 			long[] rangeMin, long[] rangeMax) {
 		long[] ia = ba;
-		int offs = pinToOffsBitsData(pin, hcPos, rangeMin.length);
+		int offs = pinToOffsBitsData(pin, rangeMin.length);
 		final long mask = (~0L)<<postLen;
 		for (int i = 0; i < outKey.length; i++) {
 			long k = (inPrefix[i] & mask) | Bits.readArray(ia, offs, postLen);
@@ -1313,50 +1131,20 @@ public class Node {
 		}
 		
 		//switch representation (HC <-> Linear)?
-		if (isAHC() && shouldSwitchToLHC(bufEntryCnt, dims)) {
-			//revert to linearized representation, if applicable
-			Object oldVal = switchAhcToLhcAndShrink(bufEntryCnt, dims, hcPos);
-			decEntryCount();
-			return oldVal;
-		}			
-
 		int offsIndex = getBitPosIndex();
 		Object oldVal;
-		if (isAHC()) {
-			//hyper-cube
-			oldVal = values[(int) hcPos]; 
-			values[(int) hcPos] = null;
-			//Nothing else to do, values can just stay where they are
-		} else {
-			//linearized cube:
-			//remove key and value
-			int posBit = pinToOffsBitsLHC(posInNode, offsIndex, dims);
-			Bits.removeBits(ba, posBit, IK_WIDTH(dims) + dims*postLen);
-			//shrink array
-			ba = Bits.arrayTrim(ba, calcArraySizeTotalBits(bufEntryCnt-1, dims));
-			//values:
-			oldVal = values[posInNode]; 
-			values = Refs.removeSpaceAtPos(values, posInNode, bufEntryCnt-1);
-		}
+		//linearized cube:
+		//remove key and value
+		int posBit = pinToOffsBitsLHC(posInNode, offsIndex, dims);
+		Bits.removeBits(ba, posBit, IK_WIDTH(dims) + dims*postLen);
+		//shrink array
+		ba = Bits.arrayTrim(ba, calcArraySizeTotalBits(bufEntryCnt-1, dims));
+		//values:
+		oldVal = values[posInNode]; 
+		values = Refs.removeSpaceAtPos(values, posInNode, bufEntryCnt-1);
 
 		decEntryCount();
 		return oldVal;
-	}
-
-
-	/**
-	 * @return True if the post-fixes are stored as hyper-cube
-	 */
-	boolean isAHC() {
-		return isHC;
-	}
-
-
-	/**
-	 * Set whether the post-fixes are stored as hyper-cube.
-	 */
-	void setAHC(boolean b) {
-		isHC = b;
 	}
 
 
@@ -1393,10 +1181,6 @@ public class Node {
 	}
 
 
-	private int posToOffsBitsDataAHC(long hcPos, int offsIndex, int dims) {
-		return offsIndex + INN_HC_WIDTH * (1<<dims) + postLen * dims * (int)hcPos;
-	}
-	
 	private int pinToOffsBitsDataLHC(int pin, int offsIndex, int dims) {
 		return offsIndex + (IK_WIDTH(dims) + postLen * dims) * pin + IK_WIDTH(dims);
 	}
@@ -1405,13 +1189,9 @@ public class Node {
 		return offsIndex + (IK_WIDTH(dims) + postLen * dims) * pin;
 	}
 	
-	int pinToOffsBitsData(int pin, long hcPos, int dims) {
+	int pinToOffsBitsData(int pin, int dims) {
 		int offsIndex = getBitPosIndex();
-		if (isAHC()) {
-			return posToOffsBitsDataAHC(hcPos, offsIndex, dims);
-		} else {
-			return pinToOffsBitsLHC(pin, offsIndex, dims) + IK_WIDTH(dims);
-		}
+		return pinToOffsBitsLHC(pin, offsIndex, dims) + IK_WIDTH(dims);
 	}
 	
 	/**
@@ -1421,22 +1201,16 @@ public class Node {
 	 * @return The position of the entry, for example as in the value[]. 
 	 */
 	int getPosition(long hcPos, final int dims) {
-		if (isAHC()) {
-			//hyper-cube
-			int posInt = (int) hcPos;  //Hypercube can not be larger than 2^31
-			return (values[posInt] != null) ? posInt : -(posInt)-1;
+		if (isNT()) {
+			//For NI, this value is not used, because checking for presence is quite 
+			//expensive. However, we have to return a positive value to avoid abortion
+			//of search (negative indicates that no value exists). It is hack though...
+			return Integer.MAX_VALUE;
 		} else {
-			if (isNT()) {
-				//For NI, this value is not used, because checking for presence is quite 
-				//expensive. However, we have to return a positive value to avoid abortion
-				//of search (negative indicates that no value exists). It is hack though...
-				return Integer.MAX_VALUE;
-			} else {
-				//linearized cube
-				int offsInd = getBitPosIndex();
-				return Bits.binarySearch(ba, offsInd, getEntryCount(), hcPos, IK_WIDTH(dims), 
-						dims * postLen);
-			}
+			//linearized cube
+			int offsInd = getBitPosIndex();
+			return Bits.binarySearch(ba, offsInd, getEntryCount(), hcPos, IK_WIDTH(dims), 
+					dims * postLen);
 		}
 	}
 
