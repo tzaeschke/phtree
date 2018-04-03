@@ -146,6 +146,10 @@ public class NtNode<T> {
 		return (hcPos >>> (postLen*MAX_DIM)) & MAX_DIM_MASK;
 	}
 
+	static long pos2LocalPos(long[] hcPos, int postLen) {
+		return (hcPos >>> (postLen*MAX_DIM)) & MAX_DIM_MASK;
+	}
+
 	static long pos2LocalPosNegative(long hcPos, int postLen) {
 		return hcPos >> (postLen*MAX_DIM);
 	}

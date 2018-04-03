@@ -313,21 +313,27 @@ public class NodeIteratorNoGC<T> {
 		int postLen = node.getPostLen();
 		long maskHcBit = 1L << postLen;
 		long maskVT = (-1L) << postLen;
-		long lowerLimit = 0;
-		long upperLimit = 0;
+		long[] lowerLimit = maskLower;
+		long[] upperLimit = maskUpper;
+		BitsHD.set0(lowerLimit);
+		BitsHD.set0(upperLimit);
+		int maskSlot = 0;
+		long mask1 = 1L << (BitsHD.mod65x(valTemplate.length) - 1);
 		//to prevent problems with signed long when using 64 bit
 		if (maskHcBit >= 0) { //i.e. postLen < 63
 			for (int i = 0; i < valTemplate.length; i++) {
-				lowerLimit <<= 1;
-				upperLimit <<= 1;
 				long nodeBisection = (valTemplate[i] | maskHcBit) & maskVT; 
 				if (rangeMin[i] >= nodeBisection) {
 					//==> set to 1 if lower value should not be queried 
-					lowerLimit |= 1L;
+					lowerLimit[maskSlot] |= mask1;
 				}
 				if (rangeMax[i] >= nodeBisection) {
 					//Leave 0 if higher value should not be queried.
-					upperLimit |= 1L;
+					upperLimit[maskSlot] |= mask1;
+				}
+				if ((mask1 >>= 1) == 0) {
+					mask1 = 1L << 63;
+					maskSlot++;
 				}
 			}
 		} else {
@@ -338,25 +344,24 @@ public class NodeIteratorNoGC<T> {
 			//Solution: We leave HC as it is.
 
 			for (int i = 0; i < valTemplate.length; i++) {
-				lowerLimit <<= 1;
-				upperLimit <<= 1;
 				if (rangeMin[i] < 0) {
 					//If minimum is positive, we don't need the search negative values 
 					//==> set upperLimit to 0, prevent searching values starting with '1'.
-					upperLimit |= 1L;
+					upperLimit[maskSlot] |= mask1;
 				}
 				if (rangeMax[i] < 0) {
 					//Leave 0 if higher value should not be queried
 					//If maximum is negative, we do not need to search positive values 
 					//(starting with '0').
 					//--> lowerLimit = '1'
-					lowerLimit |= 1L;
+					lowerLimit[maskSlot] |= mask1;
+				}
+				if ((mask1 >>= 1) == 0) {
+					mask1 = 1L << 63;
+					maskSlot++;
 				}
 			}
 		}
-
-		this.maskLower = lowerLimit;
-		this.maskUpper = upperLimit;
 	}
 	
 	boolean adjustMinMax(long[] rangeMin, long[] rangeMax) {
@@ -392,14 +397,13 @@ public class NodeIteratorNoGC<T> {
 		if ((useHcIncrementer || useNiHcIncrementer) && !checkHcPos(next)) {
 			//Adjust pos in HCI mode such that it works for the next inc()
 			//At this point, next is >= maskLower
-			long[] pos = next-1;
+			BitsHD.dec(next);
 			//After the following, pos==START or pos==(a valid entry such that inc(pos) is
 			//the next valid entry after the original `next`)
-			while (!checkHcPos(pos) && pos > START) {
+			while (!checkHcPos(next) && BitsHD.isLess(maskLower, next)) {//pos > START) {
 				//normal iteration to ensure we to get a valid POS for HCI-inc()
-				pos--;
+				BitsHD.dec(next);
 			}
-			next = pos;
 		}
 		return true;
 	}

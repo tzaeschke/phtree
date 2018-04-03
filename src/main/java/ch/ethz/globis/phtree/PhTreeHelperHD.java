@@ -277,7 +277,7 @@ public abstract class PhTreeHelperHD {
     	int currentDim = val.length - 1;
     	for (int i = 0; i < posHD.length; i++) {
         	long pos = Long.rotateLeft(posHD[i], currentPostLen); //leftmost bit is at position of mask
-        	for (int d = bitsToProcess; d >= 0; d--) {
+        	for (int d = bitsToProcess-1; d >= 0; d--) {
     			//Hack to avoid branching. However, this is faster than rotating 'pos' i.o. posMask
     			val[currentDim] = (val[currentDim] & ~mask) | (mask & pos);
     			pos = Long.rotateRight(pos, 1);

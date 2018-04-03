@@ -81,13 +81,11 @@ public class NodeIteratorListReuse<T, R> {
 		 * @param node
 		 * @param dims
 		 * @param valTemplate A null indicates that no values are to be extracted.
-		 * @param lower The minimum HC-Pos that a value should have.
-		 * @param upper
 		 * @param minValue The minimum value that any found value should have. 
 		 * 				   If the found value is lower, the search continues.
 		 * @param maxValue
 		 */
-		void reinitAndRun(Node node, long lower, long upper) {
+		void reinitAndRun(Node node) {
 			this.node = node;
 			boolean isNI = node.isNT();
 			this.niIterator = null;
@@ -301,6 +299,7 @@ public class NodeIteratorListReuse<T, R> {
 	}
 	
 	void run(Node node) {
+		NodeIterator nIt = pool.prepare(valTemplate.length);
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -316,21 +315,27 @@ public class NodeIteratorListReuse<T, R> {
 		//
 		long maskHcBit = 1L << node.getPostLen();
 		long maskVT = (-1L) << node.getPostLen();
-		long lowerLimit = 0;
-		long upperLimit = 0;
+		long[] lowerLimit = nIt.maskLower;
+		long[] upperLimit = nIt.maskUpper;
+		BitsHD.set0(lowerLimit);
+		BitsHD.set0(upperLimit);
+		int maskSlot = 0;
+		long mask1 = 1L << (BitsHD.mod65x(valTemplate.length) - 1);
 		//to prevent problems with signed long when using 64 bit
 		if (maskHcBit >= 0) { //i.e. postLen < 63
 			for (int i = 0; i < valTemplate.length; i++) {
-				lowerLimit <<= 1;
-				upperLimit <<= 1;
 				long nodeBisection = (valTemplate[i] | maskHcBit) & maskVT; 
 				if (rangeMin[i] >= nodeBisection) {
 					//==> set to 1 if lower value should not be queried 
-					lowerLimit |= 1L;
+					lowerLimit[maskSlot] |= mask1;
 				}
 				if (rangeMax[i] >= nodeBisection) {
 					//Leave 0 if higher value should not be queried.
-					upperLimit |= 1L;
+					upperLimit[maskSlot] |= mask1;
+				}
+				if ((mask1 >>= 1) == 0) {
+					mask1 = 1L << 63;
+					maskSlot++;
 				}
 			}
 		} else {
@@ -341,24 +346,25 @@ public class NodeIteratorListReuse<T, R> {
 			//Solution: We leave HC as it is.
 
 			for (int i = 0; i < valTemplate.length; i++) {
-				lowerLimit <<= 1;
-				upperLimit <<= 1;
 				if (rangeMin[i] < 0) {
 					//If minimum is positive, we don't need the search negative values 
 					//==> set upperLimit to 0, prevent searching values starting with '1'.
-					upperLimit |= 1L;
+					upperLimit[maskSlot] |= mask1;
 				}
 				if (rangeMax[i] < 0) {
 					//Leave 0 if higher value should not be queried
 					//If maximum is negative, we do not need to search positive values 
 					//(starting with '0').
 					//--> lowerLimit = '1'
-					lowerLimit |= 1L;
+					lowerLimit[maskSlot] |= mask1;
+				}
+				if ((mask1 >>= 1) == 0) {
+					mask1 = 1L << 63;
+					maskSlot++;
 				}
 			}
 		}
-		NodeIterator nIt = pool.prepare(valTemplate.length);
-		nIt.reinitAndRun(node, lowerLimit, upperLimit);
+		nIt.reinitAndRun(node);
 		pool.pop();
 	}
 

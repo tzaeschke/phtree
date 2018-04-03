@@ -1,5 +1,7 @@
 package ch.ethz.globis.phtree.v11hd;
 
+import java.util.Arrays;
+
 import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
 
@@ -19,6 +21,7 @@ import ch.ethz.globis.phtree.util.BitsLong;
 public class BitsHD {
 
     private static final long UNIT_0xFF = 0xFFFFFFFFFFFFFFFFL;  	//0xFF for byte=8 bits=3exp
+	public static final long HIGH_1 = 1<<63;
 
 //	public static int mod64(int n) {
 //		return n & 0x3F;
@@ -162,7 +165,7 @@ public class BitsHD {
     		return;
     	}
     	int subEntryLen = BitsHD.mod65x(entryLen);
-    	for (int i = val.length - 1; i >=0; i++) {
+    	for (int i = 0; i < val.length; i++) {
     		BitsLong.writeArray(ba, offsetBit, subEntryLen, val[i]);
     		offsetBit += subEntryLen;
     		subEntryLen = 64;
@@ -176,6 +179,10 @@ public class BitsHD {
 
 	public static void set(long[] dst, long[] src) {
 		System.arraycopy(src, 0, dst, 0, src.length);
+	}
+	
+	public static void set0(long[] dst) {
+		Arrays.fill(dst, 0);
 	}
 	
 	/**
