@@ -3,12 +3,33 @@ package ch.ethz.globis.phtree.v11hd;
 import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
 
+/**
+ * High-dimensional unsigned bitstrings (actually, simply unsigned bitstrings). 
+ * 
+ * Conventions:
+ * - The most significant bit is on the far left, it is the MSB of long[0]
+ * - The long[] have always the correct size (never to large, and all identical
+ *   in case multiple arguments are given.
+ * - Values are treated as 'unsigned' 
+ * 
+ * 
+ * @author Tilmann Zäschke
+ *
+ */
 public class BitsHD {
 
     private static final long UNIT_0xFF = 0xFFFFFFFFFFFFFFFFL;  	//0xFF for byte=8 bits=3exp
 
-	public static int mod64(int n) {
-		return n & 0x3F;
+//	public static int mod64(int n) {
+//		return n & 0x3F;
+//	}
+	
+	/**
+	 * @param n input
+	 * @return (n%64), except for multiples of 64, where it returns '64'
+	 */
+	public static int mod65x(int n) {
+		return 1 + ((n-1) & 0x3F);
 	}
 	
 	
@@ -33,20 +54,23 @@ public class BitsHD {
     	int entryWidth = keyWidth + valueWidth; 
     	int min = 0;
     	int max = nEntries - 1;
+    	int maxI = key.length-1;
 
     	while (min <= max) {
     		int mid = (min + max) >>> 1;
     		int readPos = mid*entryWidth+startBit;
-    		int readSize = BitsHD.mod64(keyWidth);
-    		for (int i = 0; i < key.length; i++) {
+    		int readSize = BitsHD.mod65x(keyWidth);
+    		for (int i = 0; i <= maxI; i++) {
 	            long midKey = Bits.readArray(ba, readPos, readSize);
-	
-	            if (midKey < key[i]) {
+	            int comp = Long.compareUnsigned(midKey, key[i]); 
+	            if (comp < 0) {
 	            	min = mid + 1;
-	            } else if (midKey > key[i]) {
+	            	break;
+	            } else if (comp > 0) {
 	            	max = mid - 1;
+	            	break;
 	            } else {
-	            	if (i == 0) {
+	            	if (i == maxI) {
 	            		return mid; // key found
 	            	}
 	            	//else: continue checking this key
@@ -60,31 +84,31 @@ public class BitsHD {
 
 
 	public static boolean isLess(long[] a, long[] b) {
-		for (int i = a.length-1; i >= 0; i++) {
-			if (a[i] < b[i]) {
-				return true;
-			}
-			if (a[i] > b[i]) {
-				return false;
+		for (int i = 0; i < a.length; i++) {
+			if (a[i] != b[i]) {
+//				if (i == a.length-1) {
+//					return a[i] < b[i];
+//				}
+				return Long.compareUnsigned(a[i], b[i]) < 0;
 			}
 		}
 		return false;
 	}
 	   
 	public static boolean isLessEq(long[] a, long[] b) {
-		for (int i = a.length-1; i >= 0; i++) {
-			if (a[i] < b[i]) {
-				return true;
-			}
-			if (a[i] > b[i]) {
-				return false;
+		for (int i = 0; i < a.length; i++) {
+			if (a[i] != b[i]) {
+//				if (i == a.length-1) {
+//					return a[i] < b[i];
+//				}
+				return Long.compareUnsigned(a[i], b[i]) < 0;
 			}
 		}
 		return true;
 	}
 	   
 	public static boolean isEq(long[] a, long[] b) {
-		for (int i = a.length-1; i >= 0; i++) {
+		for (int i = 0; i < a.length; i++) {
 			if (a[i] != b[i]) {
 				return false;
 			}
@@ -100,7 +124,7 @@ public class BitsHD {
     	}
     	
     	long[] ret = PhTreeHelperHD.newHDPos(entryLen);
-    	int subEntryLen = mod64(entryLen);
+    	int subEntryLen = mod65x(entryLen);
     	for (int i = 0; i < ret.length; i++) {
     		ret[i] = BitsLong.readArray(ba, offsetBit, subEntryLen);
     		//TODO make/use read64()/write64 functions?
@@ -116,7 +140,7 @@ public class BitsHD {
     		return;
     	}
     	
-    	int subEntryLen = mod64(entryLen);
+    	int subEntryLen = mod65x(entryLen);
     	for (int i = 0; i < out.length; i++) {
     		out[i] = BitsLong.readArray(ba, offsetBit, subEntryLen);
     		//TODO make/use read64()/write64 functions?
@@ -137,7 +161,7 @@ public class BitsHD {
     	if (entryLen == 0) {
     		return;
     	}
-    	int subEntryLen = BitsHD.mod64(entryLen);
+    	int subEntryLen = BitsHD.mod65x(entryLen);
     	for (int i = val.length - 1; i >=0; i++) {
     		BitsLong.writeArray(ba, offsetBit, subEntryLen, val[i]);
     		offsetBit += subEntryLen;
@@ -169,6 +193,25 @@ public class BitsHD {
 		return true;
 	}
 
+	public static long[] inc(long[] v) {
+		for (int i = v.length-1; i >= 0; i--) {
+			long prev = v[i]++;
+			if (Long.compareUnsigned(prev,  v[i]) < 0) {
+				return v;
+			}
+		}		
+		return v;
+	}
+	
+	public static long[] dec(long[] v) {
+		for (int i = v.length-1; i >= 0; i--) {
+			long prev = v[i]--;
+			if (Long.compareUnsigned(prev,  v[i]) > 0) {
+				return v;
+			}
+		}		
+		return v;
+	}
 	
 	/**
 	 * Best HC incrementer ever.
@@ -178,41 +221,22 @@ public class BitsHD {
 	 * @return 'false' if an overflow occurred, otherwise true (meaning the return value is 
 	 * larger than the input value).
 	 */
-	static boolean incHD(long[] v, long[] min, long[] max) {
-		for (int i = 0; i < v.length; i++) {
+	public static boolean incHD(long[] v, long[] min, long[] max) {
+		int msb = v.length-1;
+		for (int i = msb; i >= 0; i--) {
 			long in = v[i];
 			long result = inc(in, min[i], max[i]);
 			v[i] = result;
-			if (result > in) {
+			if (Long.compareUnsigned(result, in) > 0) {
 				//we can abort now
 				return true;
 			}
 		}
-		return false;
-	}
-
-	/**
-	 * Best HC incrementer ever.
-	 * It's called 'unsafe' because it assumes that 'out' is already initialized
-	 * with 'v': This method aborts without setting _all_ bits in out. It only sets those
-	 * that are different from 'v'. 
-	 * @param v
-	 * @param min
-	 * @param max
-	 * @param out Return value
-	 * @return 'false' if an overflow occurred, otherwise true (meaning the return value is 
-	 * larger than the input value).
-	 */
-	static boolean incUnsafeHD(long[] v, long[] min, long[] max, long[] out) {
-		for (int i = 0; i < v.length; i++) {
-			long in = v[i];
-			long result = inc(in, min[i], max[i]);
-			out[i] = result;
-			if (result > in) {
-				//we can abort now
-				return true;
-			}
-		}
+//		int i = msb;
+//		long in = v[i];
+//		long result = inc(in, min[i], max[i]);
+//		v[i] = result;
+//		return result > in;
 		return false;
 	}
 
@@ -231,15 +255,14 @@ public class BitsHD {
 	}
 
 	public static int getFilterBits(long[] maskLower, long[] maskUpper, int dims) {
-		long maxHcAddr = ~((-1L)<<dims);
-		for (int i = maskLower.length - 1; i >=0; i++) {
-			int nSetFilterBits = Long.bitCount(maskLower[i] | ((~maskUpper[i]) & maxHcAddr));
-			if (nSetFilterBits > 0) {
-				return nSetFilterBits + i*64;
-			}
+		int msbDims = BitsHD.mod65x(dims);
+		long maxHcAddr = msbDims == 64 ? UNIT_0xFF : ~((-1L)<<dims);
+		int nSetFilterBits = 0;
+		for (int i = 0; i < maskLower.length; i++) {
+			nSetFilterBits += Long.bitCount(maskLower[i] | ((~maskUpper[i]) & maxHcAddr));
 			maxHcAddr = UNIT_0xFF;
 		}
-		return 0;
+		return nSetFilterBits;
 	}
 	
 }

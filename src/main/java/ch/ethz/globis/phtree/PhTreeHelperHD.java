@@ -206,21 +206,20 @@ public abstract class PhTreeHelperHD {
 //            pos |= (valMask & valSet[i]) >>> postLen;
 //        }
 
-    	int maxDim = valSet.length-1;
     	long[] posHD = newHDPos(valSet.length);
         //get fraction
-        int maxI = maxDim & 0x003f;
+        int bitsPerSlot = BitsHD.mod65x(valSet.length);
         int valsetPos = 0;
         //result slot (rs)
         for (int rs = 0; rs < posHD.length; rs++) {
         	long pos = 0;
-            for (int i = 0; i <= maxI; i++) {
+            for (int i = 0; i < bitsPerSlot; i++) {
             	pos <<= 1;
             	//set pos-bit if bit is set in value
                 pos |= (valMask & valSet[valsetPos++]) >>> postLen;
             }
             posHD[rs] = pos;
-            maxI = 63;
+            bitsPerSlot = 64;
         }
         
         return posHD;
@@ -274,9 +273,9 @@ public abstract class PhTreeHelperHD {
     	
     	//TODO: do not reference Bits64 here!
     	long mask = 1L << currentPostLen;
-    	int bitsToProcess = BitsHD.mod64(val.length);
+    	int bitsToProcess = BitsHD.mod65x(val.length);
     	int currentDim = val.length - 1;
-    	for (int i = 0; i < val.length; i++) {
+    	for (int i = 0; i < posHD.length; i++) {
         	long pos = Long.rotateLeft(posHD[i], currentPostLen); //leftmost bit is at position of mask
         	for (int d = bitsToProcess; d >= 0; d--) {
     			//Hack to avoid branching. However, this is faster than rotating 'pos' i.o. posMask

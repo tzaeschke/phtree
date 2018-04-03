@@ -6,7 +6,6 @@
  */
 package ch.ethz.globis.phtree.v11hd;
 
-import java.io.ObjectInputStream.GetField;
 import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
@@ -245,7 +244,7 @@ public class NodeIteratorListReuse<T, R> {
 				} else {
 					PhEntry<T> resultBuffer = results.phGetTempEntry();
 					System.arraycopy(e.getKdKey(), 0, resultBuffer.getKey(), 0, dims);
-					readValue(e.key(), v, resultBuffer);
+					readValue(e.getKdKey(), v, resultBuffer);
 				}
 			}
 			return;

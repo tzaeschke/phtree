@@ -30,7 +30,6 @@ public class NodeIteratorFullNoGC<T> {
 	private boolean isNI;
 	private int postLen;
 	private long[] next;
-	private boolean hasNext = false;
 	private Node node;
 	private int currentOffsetKey;
 	private NtIteratorMinMax<Object> ntIterator;
@@ -39,7 +38,6 @@ public class NodeIteratorFullNoGC<T> {
 	private int postEntryLenLHC;
 	private final long[] valTemplate;
 	private PhFilter checker;
-	private final long maxPos;
 	private final long[] currentPos;
 
 
@@ -50,7 +48,6 @@ public class NodeIteratorFullNoGC<T> {
 	 */
 	public NodeIteratorFullNoGC(int dims, long[] valTemplate) {
 		this.dims = dims;
-		this.maxPos = (1L << dims) -1;
 		this.valTemplate = valTemplate;
 		this.currentPos = BitsHD.newArray(dims);
 	}
@@ -176,7 +173,7 @@ public class NodeIteratorFullNoGC<T> {
 		while (ntIterator.hasNext()) {
 			NtEntry<Object> e = ntIterator.nextEntryReuse();
 			if (readValue(e.key(), e.getKdKey(), e.value(), result)) {
-				next = e.key();
+				next = e.getKdKey();
 				return;
 			}
 		}
