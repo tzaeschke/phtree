@@ -24,13 +24,13 @@ import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMinMax;
  */
 public class NodeIteratorFullNoGC<T> {
 	
-	private static final long FINISHED = Long.MAX_VALUE; 
+	private static final long[] FINISHED = new long[0]; 
 	
 	private final int dims;
-	private boolean isHC;
 	private boolean isNI;
 	private int postLen;
-	private long next = -1;
+	private long[] next;
+	private boolean hasNext = false;
 	private Node node;
 	private int currentOffsetKey;
 	private NtIteratorMinMax<Object> ntIterator;
@@ -40,6 +40,7 @@ public class NodeIteratorFullNoGC<T> {
 	private final long[] valTemplate;
 	private PhFilter checker;
 	private final long maxPos;
+	private final long[] currentPos;
 
 
 	/**
@@ -51,6 +52,7 @@ public class NodeIteratorFullNoGC<T> {
 		this.dims = dims;
 		this.maxPos = (1L << dims) -1;
 		this.valTemplate = valTemplate;
+		this.currentPos = BitsHD.newArray(dims);
 	}
 	
 	/**
@@ -64,7 +66,7 @@ public class NodeIteratorFullNoGC<T> {
 	 * @param checker result verifier, can be null.
 	 */
 	private void reinit(Node node, PhFilter checker) {
-		next = -1;
+		next = FINISHED;
 		nEntriesFound = 0;
 		this.checker = checker;
 	
@@ -100,7 +102,7 @@ public class NodeIteratorFullNoGC<T> {
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	@SuppressWarnings("unchecked")
-	private boolean readValue(int posInNode, long hcPos, PhEntry<T> result) {
+	private boolean readValue(int posInNode, long[] hcPos, PhEntry<T> result) {
 		long[] key = result.getKey();
 		Object v = node.getEntryPIN(posInNode, hcPos, valTemplate, key);
 		if (v == null) {
@@ -155,33 +157,16 @@ public class NodeIteratorFullNoGC<T> {
 			return;
 		}
 
-		if (isHC) {
-			getNextAHC(result);
-		} else {
-			getNextLHC(result);
-		}
-	}
-	
-	private void getNextAHC(PhEntry<T> result) {
-		//while loop until 1 is found.
-		long currentPos = next; 
-		do {
-			currentPos++;  //pos w/o bit-offset
-			if (currentPos > maxPos) {
-				next = FINISHED;
-				break;
-			}
-		} while (!readValue((int) currentPos, currentPos, result));
+		getNextLHC(result);
 	}
 	
 	private void getNextLHC(PhEntry<T> result) {
-		long currentPos;
 		do {
 			if (++nEntriesFound > nMaxEntries) {
 				next = FINISHED;
 				break;
 			}
-			currentPos = Bits.readArray(node.ba, currentOffsetKey, Node.IK_WIDTH(dims));
+			BitsHD.readArrayHD(node.ba, currentOffsetKey, Node.IK_WIDTH(dims), currentPos);
 			currentOffsetKey += postEntryLenLHC;
 			//check post-fix
 		} while (!readValue(nEntriesFound-1, currentPos, result));

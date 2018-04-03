@@ -6,11 +6,13 @@
  */
 package ch.ethz.globis.phtree.v11hd;
 
+import java.io.ObjectInputStream.GetField;
 import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMask;
 
 /**
@@ -35,10 +37,10 @@ public class NodeIteratorListReuse<T, R> {
 		private int size = 0;
 
 
-		NodeIterator prepare() {
+		NodeIterator prepare(int dims) {
 			NodeIterator ni = stack[size++];
 			if (ni == null)  {
-				ni = new NodeIterator();
+				ni = new NodeIterator(dims);
 				stack[size-1] = ni;
 			}
 			return ni;
@@ -64,10 +66,17 @@ public class NodeIteratorListReuse<T, R> {
 		private NtIteratorMask<Object> niIterator;
 		private int nMaxEntry;
 		private int nEntryFound = 0;
-		private long maskLower;
-		private long maskUpper;
+		private final long[] maskLower;
+		private final long[] maskUpper;
+		private final long[] currentPosBuf;
 		private boolean useHcIncrementer;
 
+		private NodeIterator(int dims) {
+			maskLower = BitsHD.newArray(dims);
+			maskUpper = BitsHD.newArray(dims);
+			currentPosBuf = BitsHD.newArray(dims);
+		}
+		
 		/**
 		 * 
 		 * @param node
@@ -85,8 +94,6 @@ public class NodeIteratorListReuse<T, R> {
 			this.niIterator = null;
 			nMaxEntry = node.getEntryCount();
 			this.nEntryFound = 0;
-			this.maskLower = lower;
-			this.maskUpper = upper;
 
 			useHcIncrementer = false;
 			if (isNI && niIterator == null) {
@@ -102,8 +109,7 @@ public class NodeIteratorListReuse<T, R> {
 
 		private void initHCI(boolean isNI) {
 			//LHC, NI, ...
-			long maxHcAddr = ~((-1L)<<dims);
-			int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
+			int nSetFilterBits = BitsHD.getFilterBits(maskLower, maskUpper, dims);
 			//nPossibleMatch = (2^k-x)
 			long nPossibleMatch = 1L << (dims - nSetFilterBits);
 			if (isNI) {
@@ -117,6 +123,7 @@ public class NodeIteratorListReuse<T, R> {
 					niIterator.reset(node.ind(), maskLower, maskUpper);
 				}
 			} else if (PhTreeHD11.HCI_ENABLED){
+				//TODO remove this? DOes this make sense with HD?
 				int logNPost = Long.SIZE - Long.numberOfLeadingZeros(nMaxEntry) + 1;
 				useHcIncrementer = (nMaxEntry > nPossibleMatch*(double)logNPost); 
 			}
@@ -136,10 +143,10 @@ public class NodeIteratorListReuse<T, R> {
 		}
 
 		@SuppressWarnings("unchecked")
-		private void readValue(int pin, long pos) {
+		private void readValue(int pin) {
 			PhEntry<T> resultBuffer = results.phGetTempEntry();
 			long[] key = resultBuffer.getKey();
-			Object o = node.checkAndGetEntryPIN(pin, pos, valTemplate, key, rangeMin, rangeMax);
+			Object o = node.checkAndGetEntryPIN(pin, currentPosBuf, valTemplate, key, rangeMin, rangeMax);
  			if (o == null) {
 				results.phReturnTemp(resultBuffer);
 				return;
@@ -152,7 +159,7 @@ public class NodeIteratorListReuse<T, R> {
 			checkAndAddResult(resultBuffer);
 		}
 
-		private void readValue(long pos, Object value, PhEntry<T> result) {
+		private void readValue(long[] pos, Object value, PhEntry<T> result) {
 			if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
 				return;
 			}
@@ -163,15 +170,14 @@ public class NodeIteratorListReuse<T, R> {
 		private void getAllHCI() {
 			//Ideally we would switch between b-serch-HCI and incr-search depending on the expected
 			//distance to the next value.
-			long currentPos = maskLower;
+			BitsHD.set(currentPosBuf, maskLower);
 			do {
-				int pin = node.getPosition(currentPos, dims);
+				int pin = node.getPosition(currentPosBuf, dims);
 				if (pin >= 0) {
-					readValue(pin, currentPos);
+					readValue(pin);
 				}
 				
-				currentPos = PhTreeHD11.inc(currentPos, maskLower, maskUpper);
-				if (currentPos <= maskLower) {
+				if (!BitsHD.incHD(currentPosBuf, maskLower, maskUpper)) {
 					break;
 				}
 			} while (results.size() < maxResults);
@@ -200,16 +206,16 @@ public class NodeIteratorListReuse<T, R> {
 				if (++nEntryFound > nMaxEntry) {
 					break;
 				}
-				long currentPos = Bits.readArray(node.ba, currentOffsetKey, Node.IK_WIDTH(dims));
+				BitsHD.readArrayHD(node.ba, currentOffsetKey, Node.IK_WIDTH(dims), currentPosBuf);
 				currentOffsetKey += postEntryLenLHC;
 				//check HC-pos
-				if (!checkHcPos(currentPos)) {
-					if (currentPos > maskUpper) {
+				if (!checkHcPos(currentPosBuf)) {
+					if (BitsHD.isLess(maskUpper, currentPosBuf)) {
 						break;
 					}
 				} else {
 					//check post-fix
-					readValue(nEntryFound - 1, currentPos);
+					readValue(nEntryFound - 1);
 				}
 			}
 		}
@@ -248,33 +254,34 @@ public class NodeIteratorListReuse<T, R> {
 		private void niAllNextHCI() {
 			//HCI is used for DIM <=6 or if results are sparse
 			//repeat until we found a value inside the given range
-			long currentPos = maskLower; 
+			BitsHD.set(currentPosBuf, maskLower); 
 			while (results.size() < maxResults) {
 				PhEntry<T> resultBuffer = results.phGetTempEntry();
-				Object v = node.ntGetEntry(currentPos, resultBuffer.getKey(), valTemplate);
+				Object v = node.ntGetEntry(currentPosBuf, resultBuffer.getKey(), valTemplate);
 				//sub-node?
 				if (v instanceof Node) {
 					Node sub = (Node) v;
-					PhTreeHelper.applyHcPos(currentPos, node.getPostLen(), valTemplate);
+					PhTreeHelperHD.applyHcPosHD(currentPosBuf, node.getPostLen(), valTemplate);
 					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(), 
 							valTemplate, rangeMin, rangeMax)) {
 						checkAndRunSubnode(sub, resultBuffer);
 					}
 				} else if (v != null) { 
 					//read and check post-fix
-					readValue(currentPos, v, resultBuffer);
+					readValue(currentPosBuf, v, resultBuffer);
 				}
 
-				currentPos = PhTreeHD11.inc(currentPos, maskLower, maskUpper);
-				if (currentPos <= maskLower) {
+				if (!BitsHD.incHD(currentPosBuf, maskLower, maskUpper)) {
+				//TODO remove
+				//if (currentPos <= maskLower) {
 					break;
 				}
 			}
 		}
 
 
-		private boolean checkHcPos(long pos) {
-			return ((pos | maskLower) & maskUpper) == pos;
+		private boolean checkHcPos(long[] pos) {
+			return BitsHD.checkHcPosHD(pos, maskLower, maskUpper);
 		}
 	}
 	
@@ -351,7 +358,7 @@ public class NodeIteratorListReuse<T, R> {
 				}
 			}
 		}
-		NodeIterator nIt = pool.prepare();
+		NodeIterator nIt = pool.prepare(valTemplate.length);
 		nIt.reinitAndRun(node, lowerLimit, upperLimit);
 		pool.pop();
 	}

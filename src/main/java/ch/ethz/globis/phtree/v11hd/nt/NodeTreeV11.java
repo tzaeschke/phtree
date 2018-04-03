@@ -72,7 +72,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	 * @param value The value of the key-value that is stored under the hcPos
 	 * @return The previous value at the position, if any.
 	 */
-	private static <T> T addEntry(NtNode<T> root, long hcPos, 
+	private static <T> T addEntry(NtNode<T> root, long[] hcPos, 
 			long[] kdKey, Object value, IntVar entryCount) {
 		T t = addEntry(root, hcPos, kdKey, value, (Node)null);
 		if (t == null) {
@@ -82,7 +82,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> T addEntry(NtNode<T> root, long hcPos, 
+	public static <T> T addEntry(NtNode<T> root, long[] hcPos, 
 			long[] kdKey, Object value, Node phNode) {
 		NtNode<T> currentNode = root;
 		while (true) {
@@ -215,7 +215,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
      * @param <T> value type
 	 */
 	public static <T> Object removeEntry(
-			NtNode<T> root, long hcPos, int outerDims, IntVar entryCount) {
+			NtNode<T> root, long[] hcPos, int outerDims, IntVar entryCount) {
 		Object t = removeEntry(root, hcPos, outerDims, null, null, null, (Node)null);
 		if (t != null) {
 			entryCount.dec();
@@ -236,7 +236,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
      * @param <T> value type
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> Object removeEntry(NtNode<T> root, long hcPos, int outerDims, 
+	public static <T> Object removeEntry(NtNode<T> root, long[] hcPos, int outerDims, 
 			long[] keyToMatch, long[] newKey, int[] insertRequired, Node phNode) {
     	NtNode<T> parentNode = null;
     	int parentPin = -1;
@@ -372,7 +372,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> Object getEntry(NtNode<T> root, long hcPos, long[] outKey, 
+	public static <T> Object getEntry(NtNode<T> root, long[] hcPos, long[] outKey, 
 			long[] kdKeyToMatch, Node phNode) {
 		NtNode<T> currentNode = root;
 		while (true) {

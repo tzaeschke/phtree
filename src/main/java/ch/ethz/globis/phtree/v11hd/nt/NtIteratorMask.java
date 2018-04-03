@@ -86,7 +86,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 		throw new UnsupportedOperationException();
 	}
 	
-	public NtIteratorMask<T> reset(NtNode<T> root, long minMask, long maxMask) {	
+	public NtIteratorMask<T> reset(NtNode<T> root, long[] minMask, long[] maxMask) {	
 		this.minMask = minMask;
 		this.maxMask = maxMask;
 		this.stack.size = 0;
@@ -188,7 +188,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 	 * @param newGlobalMinMask global min mask 
 	 * @param newGlobalMaxMask global max mask
 	 */
-	public void adjustMinMax(long newGlobalMinMask, long newGlobalMaxMask) {
+	public void adjustMinMax(long[] newGlobalMinMask, long[] newGlobalMaxMask) {
 		while (stack.size > 1 && !stack.peek().verifyMinMax(newGlobalMinMask, newGlobalMaxMask)) {
 			stack.pop();
 		}

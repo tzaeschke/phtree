@@ -226,7 +226,7 @@ public class NtNodeIteratorMask<T> {
 	 * @param prefix
 	 * @param postLen
 	 */
-	private void calcLimits(long globalMinMask, long globalMaxMask) {
+	private void calcLimits(long[] globalMinMask, long[] globalMaxMask) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -247,7 +247,7 @@ public class NtNodeIteratorMask<T> {
 		this.globalMaxMask = globalMaxMask;
 	}
 	
-	boolean adjustMinMax(long globalMinMask, long globalMaxMask) {
+	boolean adjustMinMax(long[] globalMinMask, long[] globalMaxMask) {
 		calcLimits(globalMinMask, globalMaxMask);
 
 		if (next >= this.maskUpper) {
@@ -289,7 +289,7 @@ public class NtNodeIteratorMask<T> {
 		reinit(node, valTemplate);
 	}
 
-	boolean verifyMinMax(long globalMinMask, long globalMaxMask) {
+	boolean verifyMinMax(long[] globalMinMask, long[] globalMaxMask) {
 		long mask = (-1L) << node.getPostLen()+1;
 		if ((prefix | ~mask) < globalMinMask ||
 				(prefix & mask) > globalMaxMask) {

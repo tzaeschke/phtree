@@ -32,6 +32,8 @@ import ch.ethz.globis.phtree.v11lhc.nt.NtNode;
 /**
  * n-dimensional index (quad-/oct-/n-tree).
  * 
+ * Version 11 LHC: AHC was removed for main nodes.
+ * 
  * Version 11: Use of NtTree for Nodes
  *             'null' values are replaced by NULL, this allows removal of AHC-exists bitmap
  *             Removal of recursion (and reimplementation) for get/insert/delete/update 

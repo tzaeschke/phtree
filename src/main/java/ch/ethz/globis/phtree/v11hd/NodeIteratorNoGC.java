@@ -23,12 +23,11 @@ import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMask;
  */
 public class NodeIteratorNoGC<T> {
 	
-	private static final long START = -1; 
+	private static final long[] START = new long[0]; 
 	
 	private final int dims;
-	private boolean isHC;
 	private boolean isNI;
-	private long next;
+	private long[] next;
 	private Node node;
 	private int currentOffsetKey;
 	private NtIteratorMask<Object> niIterator;
@@ -36,8 +35,9 @@ public class NodeIteratorNoGC<T> {
 	private int nFound = 0;
 	private int postEntryLenLHC;
 	private final long[] valTemplate;
-	private long maskLower;
-	private long maskUpper;
+	private final long[] maskLower;
+	private final long[] maskUpper;
+	private final long[] currentPos;
 	private long[] rangeMin;
 	private long[] rangeMax;
 	private boolean useHcIncrementer;
@@ -52,6 +52,9 @@ public class NodeIteratorNoGC<T> {
 	public NodeIteratorNoGC(int dims, long[] valTemplate) {
 		this.dims = dims;
 		this.valTemplate = valTemplate;
+		this.maskLower = BitsHD.newArray(dims);
+		this.maskUpper = BitsHD.newArray(dims);
+		this.currentPos = BitsHD.newArray(dims);
 	}
 	
 	/**
@@ -75,12 +78,10 @@ public class NodeIteratorNoGC<T> {
 		this.node = node;
 		this.isNI = node.isNT();
 		nMaxEntry = node.getEntryCount();
-		if (!isHC) {
-			//Position of the current entry
-			currentOffsetKey = node.getBitPosIndex();
-			//length of post-fix WITH key
-			postEntryLenLHC = Node.IK_WIDTH(dims) + dims*node.getPostLen();
-		}
+		//Position of the current entry
+		currentOffsetKey = node.getBitPosIndex();
+		//length of post-fix WITH key
+		postEntryLenLHC = Node.IK_WIDTH(dims) + dims*node.getPostLen();
 
 		useHcIncrementer = false;
 		useNiHcIncrementer = false;
@@ -99,8 +100,7 @@ public class NodeIteratorNoGC<T> {
 
 	private void initHCI() {
 		//LHC, NI, ...
-		long maxHcAddr = ~((-1L)<<dims);
-		int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
+		int nSetFilterBits = BitsHD.getFilterBits(maskLower, maskUpper, dims);
 		//nPossibleMatch = (2^k-x)
 		long nPossibleMatch = 1L << (dims - nSetFilterBits);
 		if (isNI) {
@@ -115,14 +115,8 @@ public class NodeIteratorNoGC<T> {
 				useNiHcIncrementer = false;
 			}
 		} else if (PhTreeHD11.HCI_ENABLED){
-			if (isHC) {
-				//nPossibleMatch < 2^k?
-				//PAPER
-				useHcIncrementer = nPossibleMatch*2 <= maxHcAddr;
-			} else {
-				int logNPost = Long.SIZE - Long.numberOfLeadingZeros(nMaxEntry) + 1+1;
-				useHcIncrementer = (nMaxEntry >= 2*nPossibleMatch*(double)logNPost); 
-			}
+			int logNPost = Long.SIZE - Long.numberOfLeadingZeros(nMaxEntry) + 1+1;
+			useHcIncrementer = (nMaxEntry >= 2*nPossibleMatch*(double)logNPost); 
 		}
 	}
 	
@@ -139,7 +133,7 @@ public class NodeIteratorNoGC<T> {
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	@SuppressWarnings("unchecked")
-	private boolean readValue(int pin, long pos, PhEntry<T> result) {
+	private boolean readValue(int pin, long[] pos, PhEntry<T> result) {
 		Object o = node.checkAndGetEntryPIN(pin, pos, valTemplate, result.getKey(), 
 				rangeMin, rangeMax);
 		if (o == null) {
@@ -164,7 +158,7 @@ public class NodeIteratorNoGC<T> {
 		return true;
 	}
 
-	private boolean readValue(long pos, Object value, PhEntry<T> result) {
+	private boolean readValue(long[] pos, Object value, PhEntry<T> result) {
 		if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
 			return false;
 		}
@@ -186,14 +180,12 @@ public class NodeIteratorNoGC<T> {
 	private boolean getNextHCI(PhEntry<T> result) {
 		//Ideally we would switch between b-serch-HCI and incr-search depending on the expected
 		//distance to the next value.
-		long currentPos = next;
 		do {
 			if (currentPos == START) {
 				//starting position
-				currentPos = maskLower;
+				BitsHD.set(currentPos, maskLower);
 			} else {
-				currentPos = PhTreeHD11.inc(currentPos, maskLower, maskUpper);
-				if (currentPos <= maskLower) {
+				if (!BitsHD.incHD(currentPos, maskLower, maskUpper)) {
 					return false;
 				}
 			}
@@ -213,26 +205,8 @@ public class NodeIteratorNoGC<T> {
 
 		if (useHcIncrementer) {
 			return getNextHCI(result);
-		} else if (isHC) {
-			return getNextAHC(result);
 		} else {
 			return getNextLHC(result);
-		}
-	}
-	
-	private boolean getNextAHC(PhEntry<T> result) {
-		//while loop until 1 is found.
-		long currentPos = next == START ? maskLower-1 : next; 
-		while (true) {
-			currentPos++;  //pos w/o bit-offset
-			if (currentPos > maskUpper) {
-				return false;
-			}
-			//check HC-pos
-			if (checkHcPos(currentPos) && readValue((int)currentPos, currentPos, result)) {
-				next = currentPos;
-				return true;
-			}
 		}
 	}
 	
@@ -241,7 +215,7 @@ public class NodeIteratorNoGC<T> {
 			if (++nFound > nMaxEntry) {
 				return false;
 			}
-			long currentPos = Bits.readArray(node.ba, currentOffsetKey, Node.IK_WIDTH(dims));
+			BitsHD.readArrayHD(node.ba, currentOffsetKey, Node.IK_WIDTH(dims), currentPos);
 			currentOffsetKey += postEntryLenLHC;
 			//check HC-pos
 			if (checkHcPos(currentPos)) {
@@ -250,7 +224,7 @@ public class NodeIteratorNoGC<T> {
 					next = currentPos; //This is required for kNN-adjusting of iterators
 					return true;
 				}
-			} else if (currentPos > maskUpper) {
+			} else if (BitsHD.isLess(maskUpper, currentPos)) {
 				return false;
 			}
 		}
@@ -265,8 +239,8 @@ public class NodeIteratorNoGC<T> {
 		while (niIterator.hasNext()) {
 			NtEntry<Object> e = niIterator.nextEntryReuse();
 			System.arraycopy(e.getKdKey(), 0, result.getKey(), 0, dims);
-			if (readValue(e.key(), e.value(), result)) {
-				next = e.getKey(); //This is required for kNN-adjusting of iterators
+			if (readValue(e.getKdKey(), e.value(), result)) {
+				next = e.getKdKey(); //This is required for kNN-adjusting of iterators
 				return true;
 			}
 		}
@@ -276,9 +250,9 @@ public class NodeIteratorNoGC<T> {
 	private boolean niFindNextHCI(PhEntry<T> result) {
 		//HCI
 		//repeat until we found a value inside the given range
-		long currentPos = next; 
+		long[] currentPos = next; 
 		do {
-			if (currentPos != START && currentPos >= maskUpper) {
+			if (currentPos != START && BitsHD.isLessEq(maskUpper, currentPos)) {
 				break;
 			}
 
@@ -286,8 +260,7 @@ public class NodeIteratorNoGC<T> {
 				//starting position
 				currentPos = maskLower;
 			} else {
-				currentPos = PhTreeHD11.inc(currentPos, maskLower, maskUpper);
-				if (currentPos <= maskLower) {
+				if (!BitsHD.incHD(currentPos, maskLower, maskUpper)) {
 					break;
 				}
 			}
@@ -308,8 +281,8 @@ public class NodeIteratorNoGC<T> {
 	}
 
 
-	private boolean checkHcPos(long pos) {
-		return ((pos | maskLower) & maskUpper) == pos;
+	private boolean checkHcPos(long[] pos) {
+		return BitsHD.checkHcPosHD(pos, maskLower, maskUpper);
 	}
 
 	public Node node() {
@@ -389,16 +362,13 @@ public class NodeIteratorNoGC<T> {
 	boolean adjustMinMax(long[] rangeMin, long[] rangeMax) {
 		calcLimits(rangeMin, rangeMax);
 
-		if (next >= this.maskUpper) {
+		if (BitsHD.isLessEq(this.maskUpper, next)) {
 			//we already fully traversed this node
 			return false;
 		}
 
-		if (next < this.maskLower) {
-			if (isHC) {
-				currentOffsetKey = node.getBitPosIndex();
-				next = START;
-			} else if (isNI) {
+		if (BitsHD.isLess(next, this.maskLower)) {
+			if (isNI) {
 				if (!useNiHcIncrementer) {
 					niIterator.adjustMinMax(maskLower, maskUpper);
 				} else {
@@ -422,7 +392,7 @@ public class NodeIteratorNoGC<T> {
 		if ((useHcIncrementer || useNiHcIncrementer) && !checkHcPos(next)) {
 			//Adjust pos in HCI mode such that it works for the next inc()
 			//At this point, next is >= maskLower
-			long pos = next-1;
+			long[] pos = next-1;
 			//After the following, pos==START or pos==(a valid entry such that inc(pos) is
 			//the next valid entry after the original `next`)
 			while (!checkHcPos(pos) && pos > START) {

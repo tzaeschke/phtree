@@ -6,9 +6,9 @@
  */
 package ch.ethz.globis.phtree.v11hd;
 
-import static ch.ethz.globis.phtree.PhTreeHelper.align8;
-import static ch.ethz.globis.phtree.PhTreeHelper.debugCheck;
-import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
+import static ch.ethz.globis.phtree.PhTreeHelperHD.align8;
+import static ch.ethz.globis.phtree.PhTreeHelperHD.debugCheck;
+import static ch.ethz.globis.phtree.PhTreeHelperHD.posInArrayHD;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +22,7 @@ import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhRangeQuery;
 import ch.ethz.globis.phtree.PhTree;
 import ch.ethz.globis.phtree.PhTreeConfig;
-import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
@@ -31,6 +31,8 @@ import ch.ethz.globis.phtree.v11hd.nt.NtNode;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
+ * 
+ * Version 11 HD: AHC was removed for main nodes. HC-Pos is now a long[].
  * 
  * Version 11: Use of NtTree for Nodes
  *             'null' values are replaced by NULL, this allows removal of AHC-exists bitmap
@@ -207,7 +209,7 @@ public class PhTreeHD11<T> implements PhTree<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public T put(long[] key, T value) {
-		Object nonNullValue = value == null ? PhTreeHelper.NULL : value;
+		Object nonNullValue = value == null ? PhTreeHelperHD.NULL : value;
 		if (getRoot() == null) {
 			insertRoot(key, nonNullValue);
 			return null;
@@ -223,7 +225,7 @@ public class PhTreeHD11<T> implements PhTree<T> {
 
     void insertRoot(long[] key, Object value) {
         root = Node.createNode(dims, 0, DEPTH_64-1);
-        long pos = posInArray(key, root.getPostLen());
+        long[] pos = posInArrayHD(key, root.getPostLen());
         root.addPostPIN(pos, -1, key, value);
         increaseNrEntries();
     }
@@ -248,7 +250,7 @@ public class PhTreeHD11<T> implements PhTree<T> {
 			Node currentNode = (Node) o;
 			o = currentNode.doIfMatching(key, true, null, null, null, this);
 		}
-		return o == PhTreeHelper.NULL ? null : (T) o;
+		return o == PhTreeHelperHD.NULL ? null : (T) o;
 	}
 
 
@@ -286,7 +288,7 @@ public class PhTreeHD11<T> implements PhTree<T> {
 			parentNode = currentNode;
 		}
 		
-		Object value = o == PhTreeHelper.NULL ? null : o;
+		Object value = o == PhTreeHelperHD.NULL ? null : o;
 
 		//traverse the tree from bottom to top
 		//this avoids extracting and checking infixes.
@@ -320,7 +322,7 @@ public class PhTreeHD11<T> implements PhTree<T> {
 				" HCI-on=" + HCI_ENABLED +  
 				" NtLimit=" + Node.NT_THRESHOLD +  
 				" NtMaxDim=" + NtNode.MAX_DIM +  
-				" DEBUG=" + PhTreeHelper.DEBUG;
+				" DEBUG=" + PhTreeHelperHD.DEBUG;
 	}
 
 	@Override
@@ -382,6 +384,8 @@ public class PhTreeHD11<T> implements PhTree<T> {
 		//To clean previous postfixes.
 		for (int i = 0; i < 1L << dims; i++) {
 			Object o = node.getEntry(i, key);
+			node.getEntryByPIN(i, null, postBuf)
+			node.getEntryPIN(i, null, postBuf)
 			if (o == null) {
 				continue;
 			}
