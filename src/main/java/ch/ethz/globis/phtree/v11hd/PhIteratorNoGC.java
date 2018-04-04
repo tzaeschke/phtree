@@ -11,7 +11,7 @@ import java.util.NoSuchElementException;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
-import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.PhTreeHelperHD;
 
 /**
  * This PhIterator uses a loop instead of recursion in findNextElement();. 
@@ -151,7 +151,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 	@Override
 	public T next() {
 		T v = nextEntryReuse().getValue();
-		return v == PhTreeHelper.NULL ? null : v;
+		return v == PhTreeHelperHD.NULL ? null : v;
 	}
 
 	/**

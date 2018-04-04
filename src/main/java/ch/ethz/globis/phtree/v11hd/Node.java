@@ -8,8 +8,8 @@ package ch.ethz.globis.phtree.v11hd;
 
 import static ch.ethz.globis.phtree.PhTreeHelperHD.posInArrayHD;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
-import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.PhIterator64;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.Refs;
@@ -1234,7 +1234,7 @@ public class Node {
     }
 
     NtIteratorMask<Object> ntIteratorWithMask(int dims, long[] maskLower, long[] maskUpper) {
-		return new NtIteratorMask<>(dims).reset(ind, maskLower, maskUpper);
+		return new NtIteratorMask<>(dims, maskLower, maskUpper).reset(ind);
 	}
 
 	Object[] values() {

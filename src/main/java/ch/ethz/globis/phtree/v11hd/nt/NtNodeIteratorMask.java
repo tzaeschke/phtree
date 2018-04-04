@@ -6,7 +6,7 @@
  */
 package ch.ethz.globis.phtree.v11hd.nt;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 
 /**
  * Iterator over a NodeTree.
@@ -31,18 +31,19 @@ public class NtNodeIteratorMask<T> {
 	private int nFound = 0;
 	private int postEntryLenLHC;
 	//The valTemplate contains the known prefix
-	private long prefix;
+	private long[] prefix;
 	private long maskLower;
 	private long maskUpper;
-	private long globalMinMask;
-	private long globalMaxMask;
+	private final long[] globalMinMask;
+	private final long[] globalMaxMask;
 	private boolean useHcIncrementer;
 
 	/**
 	 * 
 	 */
-	public NtNodeIteratorMask() {
-		//
+	public NtNodeIteratorMask(long[] globalMinMask, long[] globalMaxMask) {
+		this.globalMinMask = globalMinMask;
+		this.globalMaxMask = globalMaxMask;
 	}
 	
 	/**
@@ -53,7 +54,7 @@ public class NtNodeIteratorMask<T> {
 	 * @param globalMaxMask
 	 * @param prefix
 	 */
-	private void reinit(NtNode<T> node, long prefix) {
+	private void reinit(NtNode<T> node, long[] prefix) {
 		this.prefix = prefix;
 		next = START;
 		nextSubNode = null;
@@ -226,7 +227,7 @@ public class NtNodeIteratorMask<T> {
 	 * @param prefix
 	 * @param postLen
 	 */
-	private void calcLimits(long[] globalMinMask, long[] globalMaxMask) {
+	private void calcLimits() {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -243,12 +244,10 @@ public class NtNodeIteratorMask<T> {
 		int postLen = node.getPostLen();
 		this.maskLower = NtNode.pos2LocalPos(globalMinMask, postLen);
 		this.maskUpper = NtNode.pos2LocalPos(globalMaxMask, postLen);
-		this.globalMinMask = globalMinMask;
-		this.globalMaxMask = globalMaxMask;
 	}
 	
-	boolean adjustMinMax(long[] globalMinMask, long[] globalMaxMask) {
-		calcLimits(globalMinMask, globalMaxMask);
+	boolean adjustMinMax() {
+		calcLimits();
 
 		if (next >= this.maskUpper) {
 			//we already fully traversed this node
@@ -283,12 +282,13 @@ public class NtNodeIteratorMask<T> {
 		return true;
 	}
 
-	void init(long globalMinMask, long globalMaxMask, long valTemplate, NtNode<T> node) {
+	void init(long[] valTemplate, NtNode<T> node) {
 		this.node = node; //for calcLimits
-		calcLimits(globalMinMask, globalMaxMask);
+		calcLimits();
 		reinit(node, valTemplate);
 	}
 
+	//TODO use maskLower/upper here?
 	boolean verifyMinMax(long[] globalMinMask, long[] globalMaxMask) {
 		long mask = (-1L) << node.getPostLen()+1;
 		if ((prefix | ~mask) < globalMinMask ||
@@ -298,7 +298,8 @@ public class NtNodeIteratorMask<T> {
 		return true;
 	}
 
-	public long getPrefix() {
+	public long[] getPrefix() {
+		//TODO returning this is dangerous..??
 		return prefix;
 	}
 }

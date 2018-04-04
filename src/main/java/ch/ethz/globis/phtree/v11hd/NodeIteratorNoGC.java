@@ -6,7 +6,7 @@
  */
 package ch.ethz.globis.phtree.v11hd;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMask;
@@ -92,9 +92,9 @@ public class NodeIteratorNoGC<T> {
 		
 		if (isNI && !useNiHcIncrementer) {
 			if (niIterator == null) {
-				niIterator = new NtIteratorMask<>(dims);
+				niIterator = new NtIteratorMask<>(dims, maskLower, maskUpper);
 			}
-			niIterator.reset(node.ind(), maskLower, maskUpper);
+			niIterator.reset(node.ind());
 		}
 	}
 
@@ -239,8 +239,8 @@ public class NodeIteratorNoGC<T> {
 		while (niIterator.hasNext()) {
 			NtEntry<Object> e = niIterator.nextEntryReuse();
 			System.arraycopy(e.getKdKey(), 0, result.getKey(), 0, dims);
-			if (readValue(e.getKdKey(), e.value(), result)) {
-				next = e.getKdKey(); //This is required for kNN-adjusting of iterators
+			if (readValue(e.key(), e.value(), result)) {
+				next = e.getKey(); //This is required for kNN-adjusting of iterators
 				return true;
 			}
 		}

@@ -12,6 +12,7 @@ import ch.ethz.globis.phtree.util.PhIteratorBase;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.v11.PhTree11;
+import ch.ethz.globis.phtree.v11hd.PhTreeHD11;
 import ch.ethz.globis.phtree.v11lhc.PhTreeLhc11;
 
 /**
@@ -190,7 +191,7 @@ public interface PhTree<T> {
 	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(int dim) {
-		return new PhTreeLhc11<>(dim);
+		return new PhTreeHD11<>(dim);
 	}
 
 	/**
@@ -201,7 +202,7 @@ public interface PhTree<T> {
 	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(PhTreeConfig cfg) {
-		return new PhTreeLhc11<>(cfg);
+		return new PhTreeHD11<>(cfg);
 	}
 
 	/**

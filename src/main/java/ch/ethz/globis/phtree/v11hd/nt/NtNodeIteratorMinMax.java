@@ -6,7 +6,7 @@
  */
 package ch.ethz.globis.phtree.v11hd.nt;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 
 /**
  * Iterator over a NodeTree.
@@ -31,16 +31,18 @@ public class NtNodeIteratorMinMax<T> {
 	private int nFound = 0;
 	private int postEntryLenLHC;
 	//The valTemplate contains the known prefix
-	private long prefix;
+	private final long[] prefix;
 	private long localMin;
 	private long localMax;
-	private long globalMin;
-	private long globalMax;
+	private final long[] globalMin;
+	private final long[] globalMax;
 
 	/**
 	 */
-	public NtNodeIteratorMinMax() {
-		//
+	public NtNodeIteratorMinMax(long[] prefix, long[] globalMin, long[] globalMax) {
+		this.prefix = prefix;
+		this.globalMin = globalMin;
+		this.globalMax = globalMax;
 	}
 	
 	/**
@@ -51,10 +53,7 @@ public class NtNodeIteratorMinMax<T> {
 	 * @param globalMaxMask
 	 * @param prefix
 	 */
-	private void reinit(NtNode<T> node, long prefix, long globalMin, long globalMax) {
-		this.prefix = prefix;
-		this.globalMin = globalMin;
-		this.globalMax = globalMax;
+	private void reinit(NtNode<T> node) {
 		next = START;
 		nextSubNode = null;
 		currentOffsetKey = 0;
@@ -183,7 +182,7 @@ public class NtNodeIteratorMinMax<T> {
 	 * @param postLen
 	 * @return 'false' if the new upper limit is smaller than the current HC-pos.
 	 */
-	boolean calcLimits(long globalMin, long globalMax, long prefix, boolean isNegativeRoot) {
+	boolean calcLimits(long[] prefix, boolean isNegativeRoot) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -230,14 +229,14 @@ public class NtNodeIteratorMinMax<T> {
 		return true;
 	}
 	
-	void init(long globalMin, long globalMax, long valTemplate, NtNode<T> node, 
-			boolean isNegativeRoot) {
+	void init(long[] valTemplate, NtNode<T> node, boolean isNegativeRoot) {
 		this.node = node; //for calcLimits
-		calcLimits(globalMin, globalMax, valTemplate, isNegativeRoot);
-		reinit(node, valTemplate, globalMin, globalMax);
+		calcLimits(valTemplate, isNegativeRoot);
+		reinit(node, valTemplate);
 	}
 
-	public long getPrefix() {
+	public long[] getPrefix() {
+		//TODO returning this is dangerous?!?!?
 		return prefix;
 	}
 }

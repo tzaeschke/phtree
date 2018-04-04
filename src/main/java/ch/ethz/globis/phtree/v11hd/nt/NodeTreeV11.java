@@ -10,11 +10,12 @@ import static ch.ethz.globis.phtree.PhTreeHelper.align8;
 
 import java.util.List;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI;
 import ch.ethz.globis.phtree.util.IntVar;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v11hd.Bits;
+import ch.ethz.globis.phtree.v11hd.BitsHD;
 import ch.ethz.globis.phtree.v11hd.Node;
 
 /**
@@ -23,13 +24,13 @@ import ch.ethz.globis.phtree.v11hd.Node;
  * A NodeTree splits a k-dimensional node into a hierarchy of smaller nodes by splitting,
  * for example, the 16-dim key into 2 8-dim keys.
  * 
- * Unlike the normal PH-Tree, NodeTrees do not support infixes.
+ * Unlike the normal PH-Tree, NodeTrees do not support infixes. (TODO?)
  * 
  * @author ztilmann
  *
  * @param <T> The value type of the tree 
  */
-public class NodeTreeV11<T> implements MaxKTreeI {
+public class NodeTreeV11<T> implements MaxKTreeHdI {
 
 	//Enable HC incrementer / iteration
 	static final boolean HCI_ENABLED = true; 
@@ -85,7 +86,9 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	public static <T> T addEntry(NtNode<T> root, long[] hcPos, 
 			long[] kdKey, Object value, Node phNode) {
 		NtNode<T> currentNode = root;
+		final long[] postInFix = new long[hcPos.length];
 		while (true) {
+			BitsHD.set0(postInFix);
 			long localHcPos = NtNode.pos2LocalPos(hcPos, currentNode.getPostLen());
 			int pin = currentNode.getPosition(localHcPos, NtNode.MAX_DIM);
 			if (pin < 0) {
@@ -97,22 +100,20 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 
 			Object localVal = currentNode.getValueByPIN(pin);
 			boolean isSubNode = localVal instanceof NtNode;
-			long postInFix;
 			int conflictingLevels;
 			NtNode<T> sub = null;
 			if (isSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
-					postInFix = currentNode.localReadInfix(pin, localHcPos);
+					currentNode.localReadInfix(pin, localHcPos, postInFix);
 					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
-					postInFix = 0;
 					conflictingLevels = 0;
 				}
 			} else {
-				postInFix = currentNode.localReadPostfix(pin, localHcPos);
+				currentNode.localReadPostfix(pin, localHcPos, postInFix);
 				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
 				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
 			}				
@@ -242,7 +243,9 @@ public class NodeTreeV11<T> implements MaxKTreeI {
     	int parentPin = -1;
     	long parentHcPos = -1;
     	NtNode<T> currentNode = root;
+		final long[] postInFix = new long[hcPos.length];
 		while (true) {
+			BitsHD.set0(postInFix);
 			long localHcPos = NtNode.pos2LocalPos(hcPos, currentNode.getPostLen());
 			int pin = currentNode.getPosition(localHcPos, NtNode.MAX_DIM);
 			if (pin < 0) {
@@ -252,21 +255,20 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 
 			Object localVal = currentNode.getValueByPIN(pin);
 			boolean isLocalSubNode = localVal instanceof NtNode;
-			long postInFix;
 			int conflictingLevels;
 			NtNode<T> sub = null;
 			if (isLocalSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
-					postInFix = currentNode.localReadInfix(pin, localHcPos);
+					currentNode.localReadInfix(pin, localHcPos, postInFix);
 					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
 					conflictingLevels = 0;
 				}
 			} else {
-				postInFix = currentNode.localReadPostfix(pin, localHcPos);
+				currentNode.localReadPostfix(pin, localHcPos, postInFix);
 				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
 				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
 			}				
@@ -375,7 +377,9 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	public static <T> Object getEntry(NtNode<T> root, long[] hcPos, long[] outKey, 
 			long[] kdKeyToMatch, Node phNode) {
 		NtNode<T> currentNode = root;
+		final long[] postInFix = new long[hcPos.length];
 		while (true) {
+			BitsHD.set0(postInFix);
 			long localHcPos = NtNode.pos2LocalPos(hcPos, currentNode.getPostLen());
 			int pin = currentNode.getPosition(localHcPos, NtNode.MAX_DIM);
 			if (pin < 0) {
@@ -390,21 +394,20 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 				localVal = currentNode.getValueByPIN(pin);
 			}
 			boolean isLocalSubNode = localVal instanceof NtNode;
-			long postInFix;
 			int conflictingLevels;
 			NtNode<T> sub = null;
 			if (isLocalSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
-					postInFix = currentNode.localReadInfix(pin, localHcPos);
+					currentNode.localReadInfix(pin, localHcPos, postInFix);
 					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
 					conflictingLevels = 0;
 				}
 			} else {
-				postInFix = currentNode.localReadPostfix(pin, localHcPos);
+				currentNode.localReadPostfix(pin, localHcPos, postInFix);
 				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
 				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
 			}				
@@ -439,9 +442,11 @@ public class NodeTreeV11<T> implements MaxKTreeI {
      * @param <T> value type
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T replaceValue(NtNode<T> root, long hcPos, Object value) {
+	public static <T> T replaceValue(NtNode<T> root, long[] hcPos, Object value) {
 		NtNode<T> currentNode = root;
+		final long[] postInFix = new long[hcPos.length]; //TODO pool?
 		while (true) {
+			BitsHD.set0(postInFix);
 			long localHcPos = NtNode.pos2LocalPos(hcPos, currentNode.getPostLen());
 			int pin = currentNode.getPosition(localHcPos, NtNode.MAX_DIM);
 			if (pin < 0) {
@@ -451,21 +456,20 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 
 			Object localVal = currentNode.getValueByPIN(pin);
 			boolean isSubNode = localVal instanceof NtNode;
-			long postInFix;
 			int conflictingLevels;
 			NtNode<T> sub = null;
 			if (isSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
-					postInFix = currentNode.localReadInfix(pin, localHcPos);
+					currentNode.localReadInfix(pin, localHcPos, postInFix);
 					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
 					conflictingLevels = 0;
 				}
 			} else {
-				postInFix = currentNode.localReadPostfix(pin, localHcPos);
+				currentNode.localReadPostfix(pin, localHcPos, postInFix);
 				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
 				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
 			}				
@@ -530,33 +534,33 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 		return root;
 	}
 	
-	public T put(long key, long[] kdKey, T value) {
+	public T put(long[] key, long[] kdKey, T value) {
 		return NodeTreeV11.addEntry(
 				root, key, kdKey, value == null ? NT_NULL : value, nEntries);
 	}
 	
-	public boolean putB(long key, long[] kdKey) {
+	public boolean putB(long[] key, long[] kdKey) {
 		return NodeTreeV11.addEntry(
 				root, key, kdKey, NT_NULL, nEntries) != null;
 	}
 	
-	public boolean contains(long key, long[] outKdKey) {
+	public boolean contains(long[] key, long[] outKdKey) {
 		return NodeTreeV11.getEntry(root, key, outKdKey, null, null) != null;
 	}
 	
 	@SuppressWarnings("unchecked")
-	public T get(long key, long[] outKdKey) {
+	public T get(long[] key, long[] outKdKey) {
 		Object ret = NodeTreeV11.getEntry(root, key, outKdKey, null, null);
 		return ret == NT_NULL ? null : (T)ret;
 	}
 	
 	@SuppressWarnings("unchecked")
-	public T remove(long key) {
+	public T remove(long[] key) {
 		Object ret = NodeTreeV11.removeEntry(root, key, getKeyBitWidth(), nEntries);
 		return ret == NT_NULL ? null : (T)ret;
 	}
 	
-	public boolean removeB(long key) {
+	public boolean removeB(long[] key) {
 		Object ret = NodeTreeV11.removeEntry(root, key, getKeyBitWidth(), nEntries);
 		return ret != null;
 	}
@@ -593,9 +597,9 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 		}
 	}
 	
-	public NtIteratorMask<T> queryWithMask(long minMask, long maxMask) {
-		NtIteratorMask<T> it = new NtIteratorMask<>(getKeyBitWidth());
-		it.reset(root, minMask, maxMask);
+	public NtIteratorMask<T> queryWithMask(long[] minMask, long[] maxMask) {
+		NtIteratorMask<T> it = new NtIteratorMask<>(getKeyBitWidth(), minMask, maxMask);
+		it.reset(root);
 		return it;
 	}
 	

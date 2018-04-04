@@ -8,9 +8,10 @@ package ch.ethz.globis.phtree.v11hd.nt;
 
 import java.util.NoSuchElementException;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI;
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
-import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.PhIterator64;
+import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 
 /**
@@ -41,13 +42,13 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 			return size == 0;
 		}
 
-		public NtNodeIteratorMinMax<T> prepareAndPush(NtNode<T> node, long currentPrefix) {
+		public NtNodeIteratorMinMax<T> prepareAndPush(NtNode<T> node, long[] currentPrefix) {
 			NtNodeIteratorMinMax<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NtNodeIteratorMinMax<>();
+				ni = new NtNodeIteratorMinMax<>(parentMinMask, parentMaxMask);
 				stack[size-1] = ni;
 			}
-			ni.init(min, max, currentPrefix, node, isRootNegative && size==1);
+			ni.init(currentPrefix, node, isRootNegative && size==1);
 			return ni;
 		}
 
@@ -61,8 +62,8 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 	}
 
 	private final PhIteratorStack stack;
-	private long min;
-	private long max;
+	private final long[] parentMinMask;
+	private final long[] parentMaxMask;
 	private final boolean isRootNegative;
 	
 	private final NtEntry<T> resultBuf1;
@@ -70,28 +71,31 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 	private boolean isFreeBuf1;
 	boolean isFinished = false;
 	
-	public NtIteratorMinMax(int keyBitWidth) {
+	public NtIteratorMinMax(int keyBitWidth, long[] min, long[] max) {
 		this.stack = new PhIteratorStack(NtNode.calcTreeHeight(keyBitWidth));
 		this.isRootNegative = keyBitWidth == 64;
 		this.resultBuf1 = new NtEntry<>(0, new long[keyBitWidth], null);
 		this.resultBuf2 = new NtEntry<>(0, new long[keyBitWidth], null);
+		this.parentMinMask = min;
+		this.parentMaxMask = max;
 	}	
 		
 	@SuppressWarnings("unchecked")
 	@Override
-	public void reset(MaxKTreeI tree, long min, long max) {
-		reset((NtNode<T>)tree.getRoot(), min, max);
+	public void reset(MaxKTreeHdI tree, long[] minMask, long[] maxMask) {
+		if (minMask != this.parentMinMask || maxMask != this.parentMaxMask) {
+			throw new IllegalArgumentException();
+		}
+		reset((NtNode<T>)tree.getRoot());
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public void reset(MaxKTreeI tree) {
+	public void reset(MaxKTreeHdI tree) {
 		reset((NtNode<T>)tree.getRoot(), Long.MIN_VALUE, Long.MAX_VALUE);
 	}
 	
-	public PhIterator64<T> reset(NtNode<T> root, long min, long max) {	
-		this.min = min;
-		this.max = max;
+	public PhIterator64<T> reset(NtNode<T> root) {	
 		this.stack.size = 0;
 		this.isFinished = false;
 		
@@ -127,7 +131,7 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 	}
 	
 	@Override
-	public long nextKey() {
+	public long[] nextKey() {
 		return nextEntryReuse().getKey();
 	}
 

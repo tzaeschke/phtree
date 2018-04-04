@@ -8,9 +8,8 @@ package ch.ethz.globis.phtree.v11hd;
 
 import java.util.List;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMask;
 
@@ -117,7 +116,7 @@ public class NodeIteratorListReuse<T, R> {
 				useHcIncrementer = PhTreeHD11.HCI_ENABLED && dims < 50 
 						&& (nChild > nPossibleMatch*(double)logNChild*2);
 				if (!useHcIncrementer) {
-					niIterator.reset(node.ind(), maskLower, maskUpper);
+					niIterator.reset(node.ind());
 				}
 			} else if (PhTreeHD11.HCI_ENABLED){
 				//TODO remove this? DOes this make sense with HD?
@@ -234,7 +233,7 @@ public class NodeIteratorListReuse<T, R> {
 				Object v = e.value();
 				if (v instanceof Node) {
 					Node nextSubNode = (Node) v; 
-					PhTreeHelper.applyHcPos(e.key(), node.getPostLen(), valTemplate);
+					PhTreeHelperHD.applyHcPosHD(e.key(), node.getPostLen(), valTemplate);
 					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), e.getKdKey(),
 							valTemplate, rangeMin, rangeMax)) {
 						checkAndRunSubnode(nextSubNode, null);
@@ -242,7 +241,7 @@ public class NodeIteratorListReuse<T, R> {
 				} else {
 					PhEntry<T> resultBuffer = results.phGetTempEntry();
 					System.arraycopy(e.getKdKey(), 0, resultBuffer.getKey(), 0, dims);
-					readValue(e.getKdKey(), v, resultBuffer);
+					readValue(e.key(), v, resultBuffer);
 				}
 			}
 			return;

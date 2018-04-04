@@ -8,10 +8,17 @@ package ch.ethz.globis.phtree.v11hd.nt;
 
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
+import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 
 /**
  * Node of the nested PH-tree.
+ * 
+ * Terminology:
+ * - hcPos: hcPos in the outer node
+ * - localHcPos: hcPos in the inner node
+ * - keyKD: key(vector) of the entry (as given by user)
+ * - key: key in the inner node == hcPos of the outer node 
  * 
  * @author ztilmann
  *
@@ -147,29 +154,32 @@ public class NtNode<T> {
 	}
 
 	static long pos2LocalPos(long[] hcPos, int postLen) {
-		return (hcPos >>> (postLen*MAX_DIM)) & MAX_DIM_MASK;
+		//TODO test/verify...
+		int offset = hcPos.length * 64 - (postLen+1)*MAX_DIM;
+		return Bits.readArray(hcPos, offset, MAX_DIM);
+		//return (hcPos >>> (postLen*MAX_DIM)) & MAX_DIM_MASK;
 	}
 
 	static long pos2LocalPosNegative(long hcPos, int postLen) {
 		return hcPos >> (postLen*MAX_DIM);
 	}
 	
-    long localReadInfix(int pin, long localHcPos) {
+    void localReadInfix(int pin, long localHcPos, long[] outInfix) {
 		int infixBits = getPostLen() * MAX_DIM;
 		int infixPos = pinToOffsBitsData(pin, localHcPos, MAX_DIM); 
-		return Bits.readArray(ba, infixPos, infixBits);
+		BitsHD.readArrayHD(ba, infixPos, infixBits, outInfix);
 	}
 
-    long localReadPostfix(int pin, long localHcPos) {
+    void localReadPostfix(int pin, long localHcPos, long[] outPostfix) {
 		int postBits = getPostLen() * MAX_DIM;
 		int postPos = pinToOffsBitsData(pin, localHcPos, MAX_DIM); 
-		return Bits.readArray(ba, postPos, postBits);
+		BitsHD.readArrayHD(ba, postPos, postBits, outPostfix);
 	}
 
     long localReadAndApplyReadPostfixAndHc(int pin, long localHcPos, long prefix) {
 		int postBits = getPostLen() * MAX_DIM;
 		int postPos = pinToOffsBitsData(pin, localHcPos, MAX_DIM); 
-		long postFix = Bits.readArray(ba, postPos, postBits);
+		long postFix = BitsHD.readArrayHD(ba, postPos, postBits);
  		long mask = (-1L) << postBits; //  = 111100000000
  		mask <<= MAX_DIM;
      	return (prefix & mask) | (localHcPos << postBits) | postFix;
@@ -183,20 +193,20 @@ public class NtNode<T> {
 		return Bits.readArray(ba, keyPos, MAX_DIM);
 	}
 
-    void localAddEntry(long localHcPos, long postFix, long[] kdKey, Object value) {
+    void localAddEntry(long localHcPos, long[] postFix, long[] kdKey, Object value) {
     	int pin = getPosition(localHcPos, MAX_DIM);
     	localAddEntryPIN(pin, localHcPos, postFix, kdKey, value);
     }
     
-    void localAddEntryPIN(int pin, long localHcPos, long postFix, long[] key, Object value) {
+    void localAddEntryPIN(int pin, long localHcPos, long[] postFix, long[] key, Object value) {
     	addEntryPIN(localHcPos, pin, postFix, key, value, MAX_DIM);
     }
     
-    void localReplaceEntryWithSub(int pin, long localHcPos, long hcPos, NtNode<T> newSub) {
+    void localReplaceEntryWithSub(int pin, long localHcPos, long[] hcPos, NtNode<T> newSub) {
     	//let's write the whole postfix...
 		int totalInfixLen = getPostLen() * MAX_DIM;
 		int infixPos = pinToOffsBitsData(pin, localHcPos, MAX_DIM);
-		Bits.writeArray(ba, infixPos, totalInfixLen, hcPos);
+		BitsHD.writeArrayHD(ba, infixPos, totalInfixLen, hcPos);
 		
     	replaceValueSub(pin, newSub);
     }
@@ -223,14 +233,14 @@ public class NtNode<T> {
      * @param mask Mask that indicates which bits to check. Only bits where mask=1 are checked.
      * @return Number of conflicting bits or 0 if none.
      */
-    private static final int getMaxConflictingBitsWithMask(long v1, long v2, long mask) {
+    private static final int getMaxConflictingBitsWithMask(long[] v1, long[] v2, long mask) {
         //write all differences to x, we just check x afterwards
         long x = v1 ^ v2;
         x &= mask;
         return Long.SIZE - Long.numberOfLeadingZeros(x);
     }
 
-	static int getConflictingLevels(long key, long infix, 
+	static int getConflictingLevels(long[] key, long[] infix, 
 			int parentPostLen, int subPostLen) {
 		int subInfixLen = parentPostLen-subPostLen-1;
 		if (subInfixLen == 0) {
@@ -250,7 +260,7 @@ public class NtNode<T> {
      * @param mask Mask that indicates which bits to check. Only bits where mask=1 are checked.
      * @return Number of conflicting bits or 0 if none.
      */
-    static final int getMaxConflictingLevelsWithMask(long v1, long v2, long mask) {
+    static final int getMaxConflictingLevelsWithMask(long[] v1, long[] v2, long mask) {
         int confBits = getMaxConflictingBitsWithMask(v1, v2, mask);
         return (confBits + MAX_DIM -1) / MAX_DIM;
     }
@@ -446,7 +456,7 @@ public class NtNode<T> {
 	 * @param pin position in node: ==hcPos for AHC or pos in array for LHC
 	 * @param key
 	 */
-	void addEntryPIN(long hcPos, int negPin, long key, long[] kdKey, Object value, int dims) {
+	void addEntryPIN(long hcPos, int negPin, long[] keyHD, long[] kdKey, Object value, int dims) {
 		final int bufEntryCnt = getEntryCount();
 		final int kdDims = kdKey.length;
 		//decide here whether to use hyper-cube or linear representation
@@ -466,7 +476,7 @@ public class NtNode<T> {
 		if (isAHC()) {
 			//hyper-cube
 			int offsPostKey = posToOffsBitsDataAHC(hcPos, offsIndex, dims);
-			Bits.writeArray(ba, offsPostKey, postLen*dims, key);
+			BitsHD.writeArrayHD(ba, offsPostKey, postLen*dims, keyHD);
 			int kdPos = posToKdPosAHC(hcPos, kdDims);
 			RefsLong.writeArray(kdKey, kdKeys, kdPos);
 			values[(int) hcPos] = value;
@@ -486,7 +496,7 @@ public class NtNode<T> {
 			kdKeys = RefsLong.insertArray(kdKeys, kdKey, kdPos);
 			//insert value:
 			offs += IK_WIDTH(dims);
-			Bits.writeArray(ia, offs, postLen*dims, key);
+			BitsHD.writeArrayHD(ia, offs, postLen*dims, keyHD);
 			values = Refs.insertSpaceAtPos(values, pin, bufEntryCnt+1);
 			values[pin] = value;
 		}

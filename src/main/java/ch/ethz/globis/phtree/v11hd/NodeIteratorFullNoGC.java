@@ -6,10 +6,10 @@
  */
 package ch.ethz.globis.phtree.v11hd;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMinMax;
 
 
@@ -121,8 +121,8 @@ public class NodeIteratorFullNoGC<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	private boolean readValue(long pos, long[] kdKey, Object value, PhEntry<T> result) {
-		PhTreeHelper.applyHcPos(pos, postLen, valTemplate);
+	private boolean readValue(long[] pos, long[] kdKey, Object value, PhEntry<T> result) {
+		PhTreeHelperHD.applyHcPosHD(pos, postLen, valTemplate);
 		if (value instanceof Node) {
 			Node sub = (Node) value;
 			node.getInfixOfSubNt(kdKey, valTemplate);
@@ -172,8 +172,10 @@ public class NodeIteratorFullNoGC<T> {
 	private void niFindNext(PhEntry<T> result) {
 		while (ntIterator.hasNext()) {
 			NtEntry<Object> e = ntIterator.nextEntryReuse();
+			//TODO can we simplify this? e.key()/getKdKey() should should contain the
+			//  complete value, or not? Why applyPos.. again (inside readValue)?
 			if (readValue(e.key(), e.getKdKey(), e.value(), result)) {
-				next = e.getKdKey();
+				next = e.key();
 				return;
 			}
 		}

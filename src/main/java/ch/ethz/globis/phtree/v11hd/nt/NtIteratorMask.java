@@ -8,9 +8,10 @@ package ch.ethz.globis.phtree.v11hd.nt;
 
 import java.util.NoSuchElementException;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI;
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
-import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.PhIterator64;
+import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 
 /**
@@ -41,13 +42,13 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 			return size == 0;
 		}
 
-		public NtNodeIteratorMask<T> prepareAndPush(NtNode<T> node, long currentPrefix) {
+		public NtNodeIteratorMask<T> prepareAndPush(NtNode<T> node, long[] currentPrefix) {
 			NtNodeIteratorMask<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NtNodeIteratorMask<>();
+				ni = new NtNodeIteratorMask<>(parentMinMask, parentMaxMask);
 				stack[size-1] = ni;
 			}
-			ni.init(minMask, maxMask, currentPrefix, node);
+			ni.init(currentPrefix, node);
 			return ni;
 		}
 
@@ -61,34 +62,37 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 	}
 
 	private final PhIteratorStack stack;
-	private long minMask;
-	private long maxMask;
+	private final long[] parentMinMask;
+	private final long[] parentMaxMask;
 	
 	private final NtEntry<T> resultBuf1;
 	private final NtEntry<T> resultBuf2;
 	private boolean isFreeBuf1;
 	boolean isFinished = false;
 	
-	public NtIteratorMask(int keyBitWidth) {
+	public NtIteratorMask(int keyBitWidth, long[] parentMinMask, long[] parentMaxMask) {
 		this.stack = new PhIteratorStack(NtNode.calcTreeHeight(keyBitWidth));
 		this.resultBuf1 = new NtEntry<>(0, new long[keyBitWidth], null);
 		this.resultBuf2 = new NtEntry<>(0, new long[keyBitWidth], null);
+		this.parentMinMask = BitsHD.newArray(keyBitWidth);
+		this.parentMaxMask = BitsHD.newArray(keyBitWidth);
 	}	
 		
 	@SuppressWarnings("unchecked")
 	@Override
-	public void reset(MaxKTreeI tree, long minMask, long maxMask) {
-		reset((NtNode<T>)tree.getRoot(), minMask, maxMask);
+	public void reset(MaxKTreeHdI tree, long[] minMask, long[] maxMask) {
+		if (minMask != this.parentMaxMask || maxMask != this.parentMaxMask) {
+			throw new IllegalArgumentException();
+		}
+		reset((NtNode<T>)tree.getRoot());
 	}
 	
 	@Override
-	public void reset(MaxKTreeI tree) {
+	public void reset(MaxKTreeHdI tree) {
 		throw new UnsupportedOperationException();
 	}
 	
-	public NtIteratorMask<T> reset(NtNode<T> root, long[] minMask, long[] maxMask) {	
-		this.minMask = minMask;
-		this.maxMask = maxMask;
+	public NtIteratorMask<T> reset(NtNode<T> root) {	
 		this.stack.size = 0;
 		this.isFinished = false;
 		
@@ -124,7 +128,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 	}
 	
 	@Override
-	public long nextKey() {
+	public long[] nextKey() {
 		return nextEntryReuse().getKey();
 	}
 
@@ -214,7 +218,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 //		}
 
 		while (!stack.isEmpty() 
-				&& !stack.peek().adjustMinMax(newGlobalMinMask, newGlobalMaxMask)) {
+				&& !stack.peek().adjustMinMax()) {
 			stack.pop();
 		}
 	}

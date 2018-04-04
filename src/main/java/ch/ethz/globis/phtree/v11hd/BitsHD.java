@@ -119,7 +119,7 @@ public class BitsHD {
 		return true;
 	}
 	   
-	
+	@Deprecated
     public static long[] readArrayHD(long[] ba, int offsetBit, int entryLen) {
     	if (entryLen == 0) {
     		//TODO return [0]?
