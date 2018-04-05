@@ -177,7 +177,35 @@ public class NtNode<T> {
 		BitsHD.readArrayHD(ba, postPos, postBits, outPostfix);
 	}
 
-    long localReadAndApplyReadPostfixAndHc(int pin, long localHcPos, long prefix) {
+    void localReadAndApplyReadPostfixAndHc(int pin, long localHcPos, long[] prefix) {
+		int postBits = getPostLen() * MAX_DIM;
+		int postPos = pinToOffsBitsData(pin, localHcPos, MAX_DIM); 
+		int iMin = prefix.length - BitsHD.div64(postBits-1) - 1;
+		int bitsInSlot = BitsHD.mod65x(postBits);
+		//set hcPos
+		int offsetBit = prefix.length*64 - (postBits + MAX_DIM);
+		Bits.writeArray(prefix, offsetBit, MAX_DIM, localHcPos);
+		//write first part
+// 		long mask = bitsInSlot == 64 ? -1L : (-1L) << bitsInSlot;//postBits; //  = 111100000000
+// 		mask <<= MAX_DIM;
+// 		int postBitInSlot = 
+//		long postFix = Bits.readArray(ba, postPos, bitsInSlot);
+//     	prefix[iMin] = (prefix[iMin] & mask) | postFix;
+//     	postPos += bitsInSlot;
+//     	//TODO use
+     	BitsHD.readArrayHD(ba, postPos, postBits, prefix);
+//		for (int i = iMin; i < prefix.length; i++) {
+//			postFix = Bits.readArray(ba, postPos, bitsInSlot);
+//	     	prefix[i] = postFix;
+//			postPos += 64;
+//		}
+//		long postFix = BitsHD.readArrayHD(ba, postPos, postBits);
+// 		long mask = (-1L) << postBits; //  = 111100000000
+// 		mask <<= MAX_DIM;
+//     	return (prefix & mask) | (localHcPos << postBits) | postFix;
+     }
+
+    private long localReadAndApplyReadPostfixAndHc(int pin, long localHcPos, long prefix) {
 		int postBits = getPostLen() * MAX_DIM;
 		int postPos = pinToOffsBitsData(pin, localHcPos, MAX_DIM); 
 		long postFix = BitsHD.readArrayHD(ba, postPos, postBits);

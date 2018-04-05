@@ -7,6 +7,7 @@
 package ch.ethz.globis.phtree.v11hd.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
+import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 /**
  * Iterator over a NodeTree.
@@ -39,8 +40,9 @@ public class NtNodeIteratorMinMax<T> {
 
 	/**
 	 */
-	public NtNodeIteratorMinMax(long[] prefix, long[] globalMin, long[] globalMax) {
-		this.prefix = prefix;
+	public NtNodeIteratorMinMax(long[] globalMin, long[] globalMax) {
+		//TODO?!?!? Reuse valTemplate???
+		this.prefix = new long[globalMin.length];
 		this.globalMin = globalMin;
 		this.globalMax = globalMax;
 	}
@@ -53,7 +55,8 @@ public class NtNodeIteratorMinMax<T> {
 	 * @param globalMaxMask
 	 * @param prefix
 	 */
-	private void reinit(NtNode<T> node) {
+	private void reinit(NtNode<T> node, long[] valTemplate) {
+		BitsHD.set(prefix, valTemplate); //TODO
 		next = START;
 		nextSubNode = null;
 		currentOffsetKey = 0;
@@ -105,17 +108,20 @@ public class NtNodeIteratorMinMax<T> {
 			return false;
 		}
 		
-		prefix = node.localReadAndApplyReadPostfixAndHc(pin, pos, prefix);
+		node.localReadAndApplyReadPostfixAndHc(pin, pos, prefix);
 		
 		if (v instanceof NtNode) {
 			NtNode<T> sub = (NtNode<T>) v;
-			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
-			if (prefix < (globalMin & mask) || (prefix & mask) > globalMax) {
+			//TODO clean up
+			if (!checkPrefix((sub.getPostLen()+1)*NtNode.MAX_DIM)) {
+//			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
+//			if (prefix < (globalMin & mask) || (prefix & mask) > globalMax) {
 				return false;
 			}
 			nextSubNode = sub;
 		} else {
-			if (prefix < globalMin || prefix > globalMax) {
+			if (!checkPrefix(0)) {
+			//if (prefix < globalMin || prefix > globalMax) {
 				return false;
 			}
 			nextSubNode = null;
@@ -124,6 +130,22 @@ public class NtNodeIteratorMinMax<T> {
 		}
 		result.setKey(prefix);
 		return true;
+	}
+
+	//TODO we could also respect 'higher' bits to ignore -> Speed up
+	private boolean checkPrefix(int bitsToIgnore) {
+		int slotsToIgnore = BitsHD.div64(bitsToIgnore);
+		for (int i = 0; i < prefix.length-slotsToIgnore-1; i++) {
+			if (prefix[i] < (globalMin[i]) || (prefix[i]) > globalMax[i]) {
+				return false;
+			}
+		}
+		int i = prefix.length-slotsToIgnore;
+//		long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
+//		int bitsInLastSlotToIgnore = BitsHD.mod64(bitsToIgnore); 
+//		long mask = bitsInLastSlotToIgnore == 0 ? -1L : (-1L) << bitsInLastSlotToIgnore;
+		long mask = (-1L) << BitsHD.mod64(bitsToIgnore);
+		return (prefix[i] >= (globalMin[i] & mask) && (prefix[i] & mask) <= globalMax[i]);
 	}
 
 	private void getNext(NtEntry<T> result) {

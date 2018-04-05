@@ -74,8 +74,9 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 	public NtIteratorMinMax(int keyBitWidth, long[] min, long[] max) {
 		this.stack = new PhIteratorStack(NtNode.calcTreeHeight(keyBitWidth));
 		this.isRootNegative = keyBitWidth == 64;
-		this.resultBuf1 = new NtEntry<>(0, new long[keyBitWidth], null);
-		this.resultBuf2 = new NtEntry<>(0, new long[keyBitWidth], null);
+		//TODO do we need a new array here?
+		this.resultBuf1 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
+		this.resultBuf2 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
 		this.parentMinMask = min;
 		this.parentMaxMask = max;
 	}	
@@ -105,7 +106,8 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 			return this;
 		}
 		
-		stack.prepareAndPush(root, 0);
+		//TODO pass in array?
+		stack.prepareAndPush(root, null);
 		findNextElement();
 		return this;
 	}

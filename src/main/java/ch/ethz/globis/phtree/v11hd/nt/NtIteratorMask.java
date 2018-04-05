@@ -72,8 +72,9 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 	
 	public NtIteratorMask(int keyBitWidth, long[] parentMinMask, long[] parentMaxMask) {
 		this.stack = new PhIteratorStack(NtNode.calcTreeHeight(keyBitWidth));
-		this.resultBuf1 = new NtEntry<>(0, new long[keyBitWidth], null);
-		this.resultBuf2 = new NtEntry<>(0, new long[keyBitWidth], null);
+		//TODO create new array necessary?
+		this.resultBuf1 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
+		this.resultBuf2 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
 		this.parentMinMask = BitsHD.newArray(keyBitWidth);
 		this.parentMaxMask = BitsHD.newArray(keyBitWidth);
 	}	
@@ -84,7 +85,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 		if (minMask != this.parentMaxMask || maxMask != this.parentMaxMask) {
 			throw new IllegalArgumentException();
 		}
-		reset((NtNode<T>)tree.getRoot());
+		reset((NtNode<T>)tree.getRoot(), tree.getKeyBitWidth());
 	}
 	
 	@Override
@@ -92,7 +93,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 		throw new UnsupportedOperationException();
 	}
 	
-	public NtIteratorMask<T> reset(NtNode<T> root) {	
+	public NtIteratorMask<T> reset(NtNode<T> root, int bitsPerKey) {	
 		this.stack.size = 0;
 		this.isFinished = false;
 		
@@ -102,7 +103,8 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 			return this;
 		}
 		
-		stack.prepareAndPush(root, 0);
+		//TODO pass array in?
+		stack.prepareAndPush(root, BitsHD.newArray(bitsPerKey));
 		findNextElement();
 		return this;
 	}

@@ -601,7 +601,7 @@ public class NodeTreeV11<T> implements MaxKTreeHdI {
 	
 	public PhIterator64<T> query(long min, long max) {
 		NtIteratorMinMax<T> it = new NtIteratorMinMax<>(getKeyBitWidth());
-		it.reset(root, min, max);
+ 		it.reset(root, min, max);
 		return it;
 	}
 	

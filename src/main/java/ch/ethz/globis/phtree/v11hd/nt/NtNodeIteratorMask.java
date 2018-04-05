@@ -7,6 +7,7 @@
 package ch.ethz.globis.phtree.v11hd.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
+import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 /**
  * Iterator over a NodeTree.
@@ -31,7 +32,7 @@ public class NtNodeIteratorMask<T> {
 	private int nFound = 0;
 	private int postEntryLenLHC;
 	//The valTemplate contains the known prefix
-	private long[] prefix;
+	private final long[] prefix;
 	private long maskLower;
 	private long maskUpper;
 	private final long[] globalMinMask;
@@ -42,6 +43,7 @@ public class NtNodeIteratorMask<T> {
 	 * 
 	 */
 	public NtNodeIteratorMask(long[] globalMinMask, long[] globalMaxMask) {
+		this.prefix = new long[globalMinMask.length];
 		this.globalMinMask = globalMinMask;
 		this.globalMaxMask = globalMaxMask;
 	}
@@ -55,7 +57,8 @@ public class NtNodeIteratorMask<T> {
 	 * @param prefix
 	 */
 	private void reinit(NtNode<T> node, long[] prefix) {
-		this.prefix = prefix;
+		//this.prefix = prefix;
+		BitsHD.set(this.prefix, prefix); //TODO
 		next = START;
 		nextSubNode = null;
 		currentOffsetKey = 0;
@@ -120,17 +123,21 @@ public class NtNodeIteratorMask<T> {
 			return false;
 		}
 		
-		prefix = node.localReadAndApplyReadPostfixAndHc(pin, pos, prefix);
+		node.localReadAndApplyReadPostfixAndHc(pin, pos, prefix);
 		
 		if (v instanceof NtNode) {
 			NtNode<T> sub = (NtNode<T>) v;
-			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
-			if (((prefix | globalMinMask) & globalMaxMask & mask) != (prefix & mask)) {
+			if (!checkPrefix((sub.getPostLen()+1)*NtNode.MAX_DIM)) {
+				//TODO remove
+//			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
+//			if (((prefix | globalMinMask) & globalMaxMask & mask) != (prefix & mask)) {
 				return false;
 			}
 			nextSubNode = sub;
 		} else {
-			if (((prefix | globalMinMask) & globalMaxMask) != prefix) {
+			if (!checkPrefix(0)) {
+				//TODO remove
+//			if (((prefix | globalMinMask) & globalMaxMask) != prefix) {
 				return false;
 			}
 			nextSubNode = null;
@@ -141,6 +148,22 @@ public class NtNodeIteratorMask<T> {
 		return true;
 	}
 
+	//TODO we could also respect 'higher' bits to ignore -> Speed up
+	private boolean checkPrefix(int bitsToIgnore) {
+		int slotsToIgnore = BitsHD.div64(bitsToIgnore);
+		for (int i = 0; i < prefix.length-slotsToIgnore-1; i++) {
+			if (((prefix[i] | globalMinMask[i]) & globalMaxMask[i]) != (prefix[i])) {
+				return false;
+			}
+		}
+		int i = prefix.length-slotsToIgnore-1;
+//		long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
+//		int bitsInLastSlotToIgnore = BitsHD.mod64(bitsToIgnore); 
+//		long mask = bitsInLastSlotToIgnore == 0 ? -1L : (-1L) << bitsInLastSlotToIgnore;
+		long mask = (-1L) << BitsHD.mod64(bitsToIgnore);
+		return ((prefix[i] | globalMinMask[i]) & globalMaxMask[i] & mask) == (prefix[i] & mask);
+	}
+	
 	private long getNextHCI(NtEntry<T> result) {
 		//Ideally we would switch between b-serch-HCI and incr-search depending on the expected
 		//distance to the next value.

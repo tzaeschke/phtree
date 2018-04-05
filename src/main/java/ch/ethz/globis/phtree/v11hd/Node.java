@@ -1234,7 +1234,7 @@ public class Node {
     }
 
     NtIteratorMask<Object> ntIteratorWithMask(int dims, long[] maskLower, long[] maskUpper) {
-		return new NtIteratorMask<>(dims, maskLower, maskUpper).reset(ind);
+		return new NtIteratorMask<>(dims, maskLower, maskUpper).reset(ind, dims);
 	}
 
 	Object[] values() {

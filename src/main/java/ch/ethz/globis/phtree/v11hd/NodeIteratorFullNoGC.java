@@ -6,6 +6,8 @@
  */
 package ch.ethz.globis.phtree.v11hd;
 
+import java.util.Arrays;
+
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
@@ -76,9 +78,13 @@ public class NodeIteratorFullNoGC<T> {
 		//Position of the current entry
 		if (isNI) {
 			if (ntIterator == null) {
-				ntIterator = new NtIteratorMinMax<>(dims);
+				//TODO remove this..???
+				long[] min = BitsHD.newArray(dims); //0
+				long[] max = BitsHD.newArray(dims); //Long.MAX_VALUE
+				Arrays.fill(max, -1L);
+				ntIterator = new NtIteratorMinMax<>(dims, min, max);
 			}
-			ntIterator.reset(node.ind(), 0, Long.MAX_VALUE);
+			ntIterator.reset(node.ind());
 		} else {
 			currentOffsetKey = node.getBitPosIndex();
 			postEntryLenLHC = Node.IK_WIDTH(dims)+dims*postLen;
