@@ -85,7 +85,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 		if (minMask != this.parentMaxMask || maxMask != this.parentMaxMask) {
 			throw new IllegalArgumentException();
 		}
-		reset((NtNode<T>)tree.getRoot(), tree.getKeyBitWidth());
+		reset((NtNode<T>)tree.getRoot());
 	}
 	
 	@Override
@@ -93,7 +93,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 		throw new UnsupportedOperationException();
 	}
 	
-	public NtIteratorMask<T> reset(NtNode<T> root, int bitsPerKey) {	
+	public NtIteratorMask<T> reset(NtNode<T> root) {	
 		this.stack.size = 0;
 		this.isFinished = false;
 		
@@ -104,7 +104,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 		}
 		
 		//TODO pass array in?
-		stack.prepareAndPush(root, BitsHD.newArray(bitsPerKey));
+		stack.prepareAndPush(root, new long[parentMaxMask.length]);
 		findNextElement();
 		return this;
 	}

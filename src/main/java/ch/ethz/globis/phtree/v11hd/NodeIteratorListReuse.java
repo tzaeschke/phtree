@@ -116,7 +116,7 @@ public class NodeIteratorListReuse<T, R> {
 				useHcIncrementer = PhTreeHD11.HCI_ENABLED && dims < 50 
 						&& (nChild > nPossibleMatch*(double)logNChild*2);
 				if (!useHcIncrementer) {
-					niIterator.reset(node.ind(), dims);
+					niIterator.reset(node.ind());
 				}
 			} else if (PhTreeHD11.HCI_ENABLED){
 				//TODO remove this? DOes this make sense with HD?

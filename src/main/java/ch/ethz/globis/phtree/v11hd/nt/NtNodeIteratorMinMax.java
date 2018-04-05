@@ -140,7 +140,7 @@ public class NtNodeIteratorMinMax<T> {
 				return false;
 			}
 		}
-		int i = prefix.length-slotsToIgnore;
+		int i = prefix.length-slotsToIgnore-1;
 //		long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
 //		int bitsInLastSlotToIgnore = BitsHD.mod64(bitsToIgnore); 
 //		long mask = bitsInLastSlotToIgnore == 0 ? -1L : (-1L) << bitsInLastSlotToIgnore;
@@ -226,12 +226,15 @@ public class NtNodeIteratorMinMax<T> {
 			this.localMin = 0;
 			this.localMax = ~((-1L) << NtNode.MAX_DIM);
 		} else {
-			if ((globalMin ^ prefix) >> postLen == 0) {
+			if (compareWithPrefixEquals0(globalMin, prefix, postLen)) {
+				//TODO cleanup
+			//if ((globalMin ^ prefix) >> postLen == 0) {
 				this.localMin = NtNode.pos2LocalPos(globalMin, postLen);
 			} else {
 				this.localMin = 0;
 			}
-			if ((globalMax ^ prefix) >> postLen == 0) {
+			if (compareWithPrefixEquals0(globalMax, prefix, postLen)) {
+//			if ((globalMax ^ prefix) >> postLen == 0) {
 				this.localMax = NtNode.pos2LocalPos(globalMax, postLen);
 			} else {
 				this.localMax = ~((-1L) << NtNode.MAX_DIM);
@@ -247,6 +250,21 @@ public class NtNodeIteratorMinMax<T> {
 		//TODO
 		if (localMin > localMax) {
 			throw new IllegalStateException("localMin=" + localMin + " / " + localMax);
+		}
+		return true;
+	}
+	
+	private boolean compareWithPrefixEquals0(long[] minMax, long[] prefix, int postLen) {
+		int withMask = postLen == 0 ? 0 : (BitsHD.div64(postLen - 1) + 1);
+		int iMax = prefix.length - withMask;
+		for (int i = 0; i < iMax; i++) {
+			if ((minMax[i] ^ prefix[i]) >> postLen != 0) {
+				return false;
+			}			
+		}
+		if (withMask > 0) {
+			int shift = BitsHD.mod64(postLen);
+			return ((minMax[iMax] ^ prefix[iMax]) >> shift == 0);
 		}
 		return true;
 	}

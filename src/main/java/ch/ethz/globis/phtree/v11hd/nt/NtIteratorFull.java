@@ -27,73 +27,67 @@ import ch.ethz.globis.phtree.v11hd.BitsHD;
  *
  * @param <T> value type
  */
-public final class NtIteratorMinMax<T> implements PhIterator64<T> {
+public final class NtIteratorFull<T> implements PhIterator64<T> {
 
 	private class PhIteratorStack {
-		private final NtNodeIteratorMinMax<T>[] stack;
+		private final NtNodeIteratorFull<T>[] stack;
 		private int size = 0;
 		
 		@SuppressWarnings("unchecked")
 		public PhIteratorStack(int depth) {
-			stack = new NtNodeIteratorMinMax[depth];
+			stack = new NtNodeIteratorFull[depth];
 		}
 
 		public boolean isEmpty() {
 			return size == 0;
 		}
 
-		public NtNodeIteratorMinMax<T> prepareAndPush(NtNode<T> node, long[] currentPrefix) {
-			NtNodeIteratorMinMax<T> ni = stack[size++];
+		public NtNodeIteratorFull<T> prepareAndPush(NtNode<T> node, long[] currentPrefix) {
+			NtNodeIteratorFull<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NtNodeIteratorMinMax<>(parentMinMask, parentMaxMask);
+				ni = new NtNodeIteratorFull<>(keyBitWidth);
 				stack[size-1] = ni;
 			}
 			ni.init(currentPrefix, node, isRootNegative && size==1);
 			return ni;
 		}
 
-		public NtNodeIteratorMinMax<T> peek() {
+		public NtNodeIteratorFull<T> peek() {
 			return stack[size-1];
 		}
 
-		public NtNodeIteratorMinMax<T> pop() {
+		public NtNodeIteratorFull<T> pop() {
 			return stack[--size];
 		}
 	}
 
 	private final PhIteratorStack stack;
-	private final long[] parentMinMask;
-	private final long[] parentMaxMask;
 	private final boolean isRootNegative;
 	
 	private final NtEntry<T> resultBuf1;
 	private final NtEntry<T> resultBuf2;
 	private boolean isFreeBuf1;
-	boolean isFinished = false;
+	private boolean isFinished = false;
+	private final int keyBitWidth;
 	
-	public NtIteratorMinMax(int keyBitWidth, long[] min, long[] max) {
+	public NtIteratorFull(int keyBitWidth) {
 		this.stack = new PhIteratorStack(NtNode.calcTreeHeight(keyBitWidth));
 		this.isRootNegative = keyBitWidth == 64;
 		//TODO do we need a new array here?
 		this.resultBuf1 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
 		this.resultBuf2 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
-		this.parentMinMask = min;
-		this.parentMaxMask = max;
+		this.keyBitWidth = keyBitWidth;
 	}	
 		
-	@SuppressWarnings("unchecked")
 	@Override
 	public void reset(MaxKTreeHdI tree, long[] minMask, long[] maxMask) {
-		if (minMask != this.parentMinMask || maxMask != this.parentMaxMask) {
-			throw new IllegalArgumentException();
-		}
-		reset((NtNode<T>)tree.getRoot());
+		throw new IllegalArgumentException();
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public void reset(MaxKTreeHdI tree) {
-		throw new UnsupportedOperationException();
-		//reset((NtNode<T>)tree.getRoot(), Long.MIN_VALUE, Long.MAX_VALUE);
+		reset((NtNode<T>)tree.getRoot());
 	}
 	
 	public PhIterator64<T> reset(NtNode<T> root) {	
@@ -107,7 +101,7 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 		}
 		
 		//TODO really pass in array?
-		stack.prepareAndPush(root, new long[parentMinMask.length]);
+		stack.prepareAndPush(root, BitsHD.newArray(keyBitWidth));
 		findNextElement();
 		return this;
 	}
@@ -115,7 +109,7 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 	private void findNextElement() {
 		NtEntry<T> result = isFreeBuf1 ? resultBuf1 : resultBuf2; 
 		while (!stack.isEmpty()) {
-			NtNodeIteratorMinMax<T> p = stack.peek();
+			NtNodeIteratorFull<T> p = stack.peek();
 			while (p.increment(result)) {
 				if (p.isNextSub()) {
 					p = stack.prepareAndPush(p.getCurrentSubNode(), p.getPrefix());

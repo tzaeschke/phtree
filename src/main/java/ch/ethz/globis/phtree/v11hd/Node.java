@@ -15,8 +15,8 @@ import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
 import ch.ethz.globis.phtree.v11hd.nt.NodeTreeV11;
+import ch.ethz.globis.phtree.v11hd.nt.NtIteratorFull;
 import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMask;
-import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMinMax;
 import ch.ethz.globis.phtree.v11hd.nt.NtNode;
 import ch.ethz.globis.phtree.v11hd.nt.NtNodePool;
 
@@ -1230,11 +1230,11 @@ public class Node {
 	}
 
     PhIterator64<Object> ntIterator(int dims) {
-        return new NtIteratorMinMax<>(dims).reset(ind, Long.MIN_VALUE, Long.MAX_VALUE);
+        return new NtIteratorFull<>(dims).reset(ind);
     }
 
     NtIteratorMask<Object> ntIteratorWithMask(int dims, long[] maskLower, long[] maskUpper) {
-		return new NtIteratorMask<>(dims, maskLower, maskUpper).reset(ind, dims);
+		return new NtIteratorMask<>(dims, maskLower, maskUpper).reset(ind);
 	}
 
 	Object[] values() {
