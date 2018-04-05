@@ -113,9 +113,10 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 				}
 			} else {
 				postInFix = currentNode.localReadPostfix(pin, localHcPos);
-				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
-				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
-			}				
+				//long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
+				//conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				//TODO
+				conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, currentNode.getPostLen());			}				
 
 			if (conflictingLevels != 0) {
 				int newPostLen =  conflictingLevels - 1;
@@ -253,25 +254,27 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 			Object localVal = currentNode.getValueByPIN(pin);
 			boolean isLocalSubNode = localVal instanceof NtNode;
 			long postInFix;
-			int conflictingLevels;
+			boolean conflictingLevels;
 			NtNode<T> sub = null;
 			if (isLocalSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
 					postInFix = currentNode.localReadInfix(pin, localHcPos);
-					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
+					conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
-					conflictingLevels = 0;
+					conflictingLevels = false;
 				}
 			} else {
 				postInFix = currentNode.localReadPostfix(pin, localHcPos);
-				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
-				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				//long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
+				//conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				//TODO
+				conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, currentNode.getPostLen());				
 			}				
 
-			if (conflictingLevels != 0) {
+			if (conflictingLevels) {
 				//no match
 				return null;
 			}
@@ -391,25 +394,27 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 			}
 			boolean isLocalSubNode = localVal instanceof NtNode;
 			long postInFix;
-			int conflictingLevels;
+			boolean conflictingLevels;
 			NtNode<T> sub = null;
 			if (isLocalSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
 					postInFix = currentNode.localReadInfix(pin, localHcPos);
-					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
+					conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
-					conflictingLevels = 0;
+					conflictingLevels = false;
 				}
 			} else {
 				postInFix = currentNode.localReadPostfix(pin, localHcPos);
-				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
-				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				//long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
+				//conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				//TODO
+				conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, currentNode.getPostLen());				
 			}				
 
-			if (conflictingLevels != 0) {
+			if (conflictingLevels) {
 				//no match
 				return null;
 			}
@@ -466,8 +471,10 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 				}
 			} else {
 				postInFix = currentNode.localReadPostfix(pin, localHcPos);
-				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
-				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				//long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
+				//conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				//TODO
+				conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, currentNode.getPostLen());				
 			}				
 
 			if (conflictingLevels != 0) {

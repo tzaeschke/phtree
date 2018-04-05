@@ -15,6 +15,7 @@ import java.util.Random;
 import org.junit.Test;
 
 import ch.ethz.globis.phtree.util.BitsLong;
+import ch.ethz.globis.phtree.v11.Bits;
 
 /**
  * 
@@ -710,6 +711,15 @@ public class TestBitsLong {
     	for (int i = 0; i < nBits; i++) {
     		BitsLong.setBit(trg, posTrg + i, BitsLong.getBit(src, posSrc + i));
     	}
+    }
+    
+    @Test
+    public void testNumberOfConflictingBits() {
+    	assertEquals(0, Bits.getMaxConflictingBits(0, 0, 0, 63));
+    	assertEquals(64, Bits.getMaxConflictingBits(0, -1L, 0, 63));
+    	assertEquals(64, Bits.getMaxConflictingBits(0, -1L, 63, 63));
+    	assertEquals(1, Bits.getMaxConflictingBits(0, -1L, 0, 0));
+    	assertEquals(0, Bits.getMaxConflictingBits(0, 1, 1, 1));
     }
     
 	@Test

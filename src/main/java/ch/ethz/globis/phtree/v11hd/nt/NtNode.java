@@ -8,6 +8,7 @@ package ch.ethz.globis.phtree.v11hd.nt;
 
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
+import ch.ethz.globis.phtree.v11.nt.Bits;
 import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 
@@ -225,45 +226,53 @@ public class NtNode<T> {
     }
 
 	
+	static int getConflictingLevels(long[] key, long[] infix, int postLen) {
+		if (postLen == 0) {
+			return 0;
+		}
+		int endInclusive = postLen * MAX_DIM - 1;
+		int confBits = BitsHD.getMaxConflictingBits(key, infix, endInclusive);
+		return (confBits + MAX_DIM - 1) / MAX_DIM;
+	}
+
+	static boolean hasConflictingLevels(long[] key, long[] infix, int postLen) {
+		if (postLen == 0) {
+			return false;
+		}
+		int endInclusive = postLen * MAX_DIM - 1;
+		return BitsHD.hasConflictingBits(key, infix, endInclusive);
+	}
+
     /**
-     * Calculates the number of conflicting bits, consisting of the most significant bit
-     * and all bit 'right'of it (all less significant bits).
-     * @param v1
-     * @param v2
-     * @param mask Mask that indicates which bits to check. Only bits where mask=1 are checked.
+     * Calculates the number of conflicting tree-levels, consisting of the most significant level
+     * and all levels 'below' it (all less significant levels).
+     * @param key value 1
+     * @param infix value 2
+     * @param parentPostLen bits to check (inclusive). Counting from right (least significant bit).
+     * @param subPostLen bits to ignore (exclusive; less than parentPostLen)
      * @return Number of conflicting bits or 0 if none.
      */
-    private static final int getMaxConflictingBitsWithMask(long[] v1, long[] v2, long mask) {
-        //write all differences to x, we just check x afterwards
-        long x = v1 ^ v2;
-        x &= mask;
-        return Long.SIZE - Long.numberOfLeadingZeros(x);
-    }
-
-	static int getConflictingLevels(long[] key, long[] infix, 
-			int parentPostLen, int subPostLen) {
+	static int getConflictingLevels(long[] key, long[] infix, int parentPostLen, int subPostLen) {
 		int subInfixLen = parentPostLen-subPostLen-1;
 		if (subInfixLen == 0) {
 			return 0;
 		}
-		long mask = ~((-1L)<<(subInfixLen*MAX_DIM)); // e.g. (0-->0), (1-->1), (8-->127=0x01111111)
-		int maskOffset = (subPostLen+1) * MAX_DIM;
-		mask = maskOffset==64 ? 0 : mask<< maskOffset; //last bit is stored in bool-array
-		return getMaxConflictingLevelsWithMask(key, infix, mask);
+		int startExclusive = (subPostLen+1) * MAX_DIM;
+		int endInclusive = parentPostLen * MAX_DIM - 1;
+		int confBits = BitsHD.getMaxConflictingBits(key, infix, startExclusive, endInclusive);
+		return (confBits + MAX_DIM - 1) / MAX_DIM;
 	}
 
-    /**
-     * Calculates the number of conflicting tre-level, consisting of the most significant level
-     * and all levels 'below' it (all less significant levels).
-     * @param v1
-     * @param v2
-     * @param mask Mask that indicates which bits to check. Only bits where mask=1 are checked.
-     * @return Number of conflicting bits or 0 if none.
-     */
-    static final int getMaxConflictingLevelsWithMask(long[] v1, long[] v2, long mask) {
-        int confBits = getMaxConflictingBitsWithMask(v1, v2, mask);
-        return (confBits + MAX_DIM -1) / MAX_DIM;
-    }
+	static boolean hasConflictingLevels(long[] key, long[] infix, int parentPostLen, int subPostLen) {
+		int subInfixLen = parentPostLen-subPostLen-1;
+		if (subInfixLen == 0) {
+			return false;
+		}
+		int startExclusive = (subPostLen+1) * MAX_DIM;
+		int endInclusive = parentPostLen * MAX_DIM - 1;
+		return BitsHD.hasConflictingBits(key, infix, startExclusive, endInclusive);
+	}
+
 
     static long applyHcPos(long localHcPos, int postLen, long prefix) {
 		long mask = ~((-1L) << MAX_DIM); // =000000001111

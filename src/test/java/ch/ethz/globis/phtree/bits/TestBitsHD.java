@@ -103,6 +103,28 @@ public class TestBitsHD {
     	assertTrue(BitsHD.isLessEq(new long[] {1, 1}, new long[] {1,1}));
     }
     
+    @Test
+    public void testConflictingBits() {
+    	long[] v01 = new long[]{0, 0, 0};
+    	long[] v02 = new long[]{0, 0, 0};
+    	long[] v11 = new long[]{1, 1, 1};
+    	long[] v12 = new long[]{1, 1, 1};
+    	assertEquals(0, BitsHD.getMaxConflictingBits(v01, v02, 0, 191));
+    	assertEquals(0, BitsHD.getMaxConflictingBits(v11, v12, 0, 191));
+    	assertEquals(1, BitsHD.getMaxConflictingBits(v01, new long[] {0,0,1}, 0, 191));
+    	assertEquals(2, BitsHD.getMaxConflictingBits(v01, new long[] {0,0,2}, 0, 191));
+    	assertEquals(64, BitsHD.getMaxConflictingBits(v01, new long[] {0,0,-1L}, 0, 191));
+    	assertEquals(64, BitsHD.getMaxConflictingBits(v01, new long[] {0,0,-1L}, 1, 191));
+    	assertEquals(0, BitsHD.getMaxConflictingBits(v01, new long[] {0,0,-1L}, 64, 191));
+    	assertEquals(65, BitsHD.getMaxConflictingBits(v01, new long[] {0,1,0}, 1, 191));
+    	assertEquals(65, BitsHD.getMaxConflictingBits(v01, new long[] {0,1,0}, 1, 64));
+    	assertEquals(0, BitsHD.getMaxConflictingBits(v01, new long[] {0,1,0}, 1, 63));
+    	assertEquals(0, BitsHD.getMaxConflictingBits(v01, new long[] {0,1,1}, 1, 63));
+    	assertEquals(0, BitsHD.getMaxConflictingBits(v01, new long[] {0,1,1}, 1, 63));
+    	assertEquals(64, BitsHD.getMaxConflictingBits(v01, new long[] {0,1,-1L}, 1, 63));
+    	assertEquals(63, BitsHD.getMaxConflictingBits(v01, new long[] {0,1,-1L}, 1, 62));
+    }
+    
 	@Test
 	public void testBinarySearch() {
 		long[] ba = {0,1, 0,34, 0,43, 10,12, 100,255, 100,1000, 100,-1L, 101, 1};

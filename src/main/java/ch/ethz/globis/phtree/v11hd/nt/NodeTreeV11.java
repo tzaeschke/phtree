@@ -114,8 +114,7 @@ public class NodeTreeV11<T> implements MaxKTreeHdI {
 				}
 			} else {
 				currentNode.localReadPostfix(pin, localHcPos, postInFix);
-				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
-				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, currentNode.getPostLen());
 			}				
 
 			if (conflictingLevels != 0) {
@@ -255,25 +254,24 @@ public class NodeTreeV11<T> implements MaxKTreeHdI {
 
 			Object localVal = currentNode.getValueByPIN(pin);
 			boolean isLocalSubNode = localVal instanceof NtNode;
-			int conflictingLevels;
+			boolean conflictingLevels;
 			NtNode<T> sub = null;
 			if (isLocalSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
 					currentNode.localReadInfix(pin, localHcPos, postInFix);
-					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
+					conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
-					conflictingLevels = 0;
+					conflictingLevels = false;
 				}
 			} else {
 				currentNode.localReadPostfix(pin, localHcPos, postInFix);
-				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
-				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, currentNode.getPostLen());
 			}				
 
-			if (conflictingLevels != 0) {
+			if (conflictingLevels) {
 				//no match
 				return null;
 			}
@@ -394,25 +392,24 @@ public class NodeTreeV11<T> implements MaxKTreeHdI {
 				localVal = currentNode.getValueByPIN(pin);
 			}
 			boolean isLocalSubNode = localVal instanceof NtNode;
-			int conflictingLevels;
+			boolean conflictingLevels;
 			NtNode<T> sub = null;
 			if (isLocalSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
 					currentNode.localReadInfix(pin, localHcPos, postInFix);
-					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
+					conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
-					conflictingLevels = 0;
+					conflictingLevels = false;
 				}
 			} else {
 				currentNode.localReadPostfix(pin, localHcPos, postInFix);
-				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
-				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, currentNode.getPostLen());
 			}				
 
-			if (conflictingLevels != 0) {
+			if (conflictingLevels) {
 				//no match
 				return null;
 			}
@@ -456,25 +453,24 @@ public class NodeTreeV11<T> implements MaxKTreeHdI {
 
 			Object localVal = currentNode.getValueByPIN(pin);
 			boolean isSubNode = localVal instanceof NtNode;
-			int conflictingLevels;
+			boolean conflictingLevels;
 			NtNode<T> sub = null;
 			if (isSubNode) {
 				sub = (NtNode<T>) localVal;
 				//check infix if infixLen > 0
 				if (currentNode.getPostLen() - sub.getPostLen() > 1) {
 					currentNode.localReadInfix(pin, localHcPos, postInFix);
-					conflictingLevels = NtNode.getConflictingLevels(hcPos, postInFix, 
+					conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, 
 							currentNode.getPostLen(), sub.getPostLen());
 				} else {
-					conflictingLevels = 0;
+					conflictingLevels = false;
 				}
 			} else {
 				currentNode.localReadPostfix(pin, localHcPos, postInFix);
-				long mask = ~((-1L) << (currentNode.getPostLen()*NtNode.MAX_DIM));
-				conflictingLevels = NtNode.getMaxConflictingLevelsWithMask(hcPos, postInFix, mask);
+				conflictingLevels = NtNode.hasConflictingLevels(hcPos, postInFix, currentNode.getPostLen());
 			}				
 
-			if (conflictingLevels != 0) {
+			if (conflictingLevels) {
 				//not found
 				throw new IllegalArgumentException();
 			}

@@ -191,7 +191,7 @@ public interface PhTree<T> {
 	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(int dim) {
-		return new PhTreeHD11<>(dim);
+		return new PhTree11<>(dim);
 	}
 
 	/**
@@ -202,7 +202,7 @@ public interface PhTree<T> {
 	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(PhTreeConfig cfg) {
-		return new PhTreeHD11<>(cfg);
+		return new PhTree11<>(cfg);
 	}
 
 	/**

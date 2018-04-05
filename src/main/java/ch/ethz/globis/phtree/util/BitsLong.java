@@ -11,6 +11,7 @@ import static ch.ethz.globis.phtree.PhTreeHelper.DEBUG;
 import java.util.Arrays;
 
 import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 /**
  * Bit-stream manipulation functions.
@@ -581,6 +582,68 @@ public class BitsLong {
     	}
     	return -(min + 1);  // key not found.
     }
+    
+	
+    /**
+     * 
+     * @param v1 value 1
+     * @param v2 value 2
+     * @param rangeMax range (inclusive)
+     * @return Number of conflicting bits (number of highest conf. bit + 1)
+     */
+    public static final boolean hasConflictingBits(long v1, long v2, int rangeMax) {
+    	int rmMod64 = BitsHD.mod64(rangeMax);
+    	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
+    	long x = (v1 ^ v2) & mask;
+    	return x != 0;
+    }
+
+    /**
+     * 
+     * @param v1 value 1
+     * @param v2 value 2
+     * @param rangeMax range (inclusive)
+     * @return Number of conflicting bits (number of highest conf. bit + 1)
+     */
+    public static final int getMaxConflictingBits(long v1, long v2, int rangeMax) {
+    	int rmMod64 = BitsHD.mod64(rangeMax);
+    	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
+    	long x = (v1 ^ v2) & mask;
+    	return Long.SIZE - Long.numberOfLeadingZeros(x);
+    }
+
+    /**
+     * 
+     * @param v1 value 1
+     * @param v2 value 2
+     * @param rangeMin range (exclusive): 0 means 'no minimum'.
+     * @param rangeMax range (inclusive)
+     * @return Number of conflicting bits (number of highest conf. bit + 1)
+     */
+    public static final int getMaxConflictingBits(long v1, long v2, int rangeMin, int rangeMax) {
+    	int rmMod64 = BitsHD.mod64(rangeMax);
+    	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
+    	long x = (v1 ^ v2) & mask;
+    	int cb = Long.SIZE - Long.numberOfLeadingZeros(x);
+    	return cb > rangeMin ? cb : 0; 
+    }
+
+    /**
+     * 
+     * @param v1 value 1
+     * @param v2 value 2
+     * @param rangeMin range (exclusive): 0 means 'no minimum'.
+     * @param rangeMax range (inclusive)
+     * @return Number of conflicting bits (number of highest conf. bit + 1)
+     */
+    public static final boolean hasConflictingBits(long v1, long v2, int rangeMin, int rangeMax) {
+    	int rmMod64 = BitsHD.mod64(rangeMax);
+    	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
+    	long x = (v1 ^ v2) & mask;
+    	int cb = Long.SIZE - Long.numberOfLeadingZeros(x);
+    	return cb > rangeMin; 
+    }
+
     
     /**
      * Calculate array size for given number of bits.

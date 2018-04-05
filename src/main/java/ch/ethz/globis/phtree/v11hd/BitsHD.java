@@ -27,14 +27,21 @@ public class BitsHD {
 //		return n & 0x3F;
 //	}
 	
-	/**
-	 * @param n input
-	 * @return (n%64), except for multiples of 64, where it returns '64'
-	 */
-	public static int mod65x(int n) {
-		return 1 + ((n-1) & 0x3F);
+	public static int mod64(int x) {
+		return x & 0x3F;
 	}
 	
+	/**
+	 * @param x input
+	 * @return (n%64), except for multiples of 64, where it returns '64'
+	 */
+	public static int mod65x(int x) {
+		return 1 + ((x-1) & 0x3F);
+	}
+	
+	public static int div64(int x) {
+		return x >> 6;
+	}
 	
 	public static long[] bOr (long[] a, long[] b) {
 		return null;
@@ -271,5 +278,100 @@ public class BitsHD {
 		}
 		return nSetFilterBits;
 	}
+	
+	
+    /**
+     * @param v1 value 1
+     * @param v2 value 2
+     * @param rangeMax range (inclusive)
+     * @return Number of conflicting bits (number of highest conf. bit + 1)
+     */
+    public static final int getMaxConflictingBits(long[] v1, long[] v2, int rangeMax) {
+    	int iMin = v1.length - BitsHD.div64(rangeMax) - 1;
+    	int rmMod64 = BitsHD.mod64(rangeMax);
+    	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
+    	for (int i = iMin; i < v1.length; i++) {
+            long x = (v1[i] ^ v2[i]) & mask;
+            if (x != 0) {
+            	int cb = Long.SIZE - Long.numberOfLeadingZeros(x);
+            	cb += Long.SIZE * (v1.length - i - 1);
+            	return cb; 
+            }
+            mask = -1L;
+    	}
+    	return 0;
+    }
+	
+	
+    /**
+     * 
+     * @param v1 value 1
+     * @param v2 value 2
+     * @param rangeMin range (exclusive): 0 means 'no minimum'.
+     * @param rangeMax range (inclusive)
+     * @return Number of conflicting bits (number of highest conf. bit + 1)
+     */
+    public static final int getMaxConflictingBits(long[] v1, long[] v2, int rangeMin, int rangeMax) {
+    	int iMin = v1.length - BitsHD.div64(rangeMax) - 1;
+    	int iMax = v1.length - BitsHD.div64(rangeMin+1);
+    	int rmMod64 = BitsHD.mod64(rangeMax);
+    	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
+    	for (int i = iMin; i < iMax; i++) {
+            long x = (v1[i] ^ v2[i]) & mask;
+            if (x != 0) {
+            	int cb = Long.SIZE - Long.numberOfLeadingZeros(x);
+            	cb += Long.SIZE * (v1.length - i - 1);
+            	return cb > rangeMin ? cb : 0; 
+            }
+            mask = -1L;
+    	}
+    	return 0;
+    }
+	
+    /**
+     * @param v1 value 1
+     * @param v2 value 2
+     * @param rangeMax range (inclusive)
+     * @return Number of conflicting bits (number of highest conf. bit + 1)
+     */
+    public static final boolean hasConflictingBits(long[] v1, long[] v2, int rangeMax) {
+    	int iMin = v1.length - BitsHD.div64(rangeMax) - 1;
+    	int rmMod64 = BitsHD.mod64(rangeMax);
+    	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
+    	for (int i = iMin; i < v1.length; i++) {
+            long x = (v1[i] ^ v2[i]) & mask;
+            if (x != 0) {
+            	return true; 
+            }
+            mask = -1L;
+    	}
+    	return false;
+    }
+	
+	
+    /**
+     * 
+     * @param v1 value 1
+     * @param v2 value 2
+     * @param rangeMin range (exclusive): 0 means 'no minimum'.
+     * @param rangeMax range (inclusive)
+     * @return Number of conflicting bits (number of highest conf. bit + 1)
+     */
+    public static final boolean hasConflictingBits(long[] v1, long[] v2, int rangeMin, int rangeMax) {
+    	int iMin = v1.length - BitsHD.div64(rangeMax) - 1;
+    	int iMax = v1.length - BitsHD.div64(rangeMin+1);
+    	int rmMod64 = BitsHD.mod64(rangeMax);
+    	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
+    	for (int i = iMin; i < iMax; i++) {
+            long x = (v1[i] ^ v2[i]) & mask;
+            if (x != 0) {
+            	int cb = Long.SIZE - Long.numberOfLeadingZeros(x);
+            	cb += Long.SIZE * (v1.length - i - 1);
+            	return cb > rangeMin; 
+            }
+            mask = -1L;
+    	}
+    	return false;
+    }
 	
 }
