@@ -4,7 +4,7 @@
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v11hd.nt;
+package ch.ethz.globis.phtree.v11hd2.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.v11hd.BitsHD;
@@ -18,7 +18,7 @@ import ch.ethz.globis.phtree.v11hd.BitsHD;
  *
  * @param <T> value type
  */
-public class NtNodeIteratorMinMax<T> {
+public class NtNodeIteratorMask<T> {
 	
 	private static final long FINISHED = Long.MAX_VALUE; 
 	private static final long START = -1; 
@@ -33,18 +33,19 @@ public class NtNodeIteratorMinMax<T> {
 	private int postEntryLenLHC;
 	//The valTemplate contains the known prefix
 	private final long[] prefix;
-	private long localMin;
-	private long localMax;
-	private final long[] globalMin;
-	private final long[] globalMax;
+	private long maskLower;
+	private long maskUpper;
+	private final long[] globalMinMask;
+	private final long[] globalMaxMask;
+	private boolean useHcIncrementer;
 
 	/**
+	 * 
 	 */
-	public NtNodeIteratorMinMax(long[] globalMin, long[] globalMax) {
-		//TODO?!?!? Reuse valTemplate???
-		this.prefix = new long[globalMin.length];
-		this.globalMin = globalMin;
-		this.globalMax = globalMax;
+	public NtNodeIteratorMask(long[] globalMinMask, long[] globalMaxMask) {
+		this.prefix = new long[globalMinMask.length];
+		this.globalMinMask = globalMinMask;
+		this.globalMaxMask = globalMaxMask;
 	}
 	
 	/**
@@ -55,8 +56,9 @@ public class NtNodeIteratorMinMax<T> {
 	 * @param globalMaxMask
 	 * @param prefix
 	 */
-	private void reinit(NtNode<T> node, long[] valTemplate) {
-		BitsHD.set(prefix, valTemplate); //TODO
+	private void reinit(NtNode<T> node, long[] prefix) {
+		//this.prefix = prefix;
+		BitsHD.set(this.prefix, prefix); //TODO
 		next = START;
 		nextSubNode = null;
 		currentOffsetKey = 0;
@@ -71,6 +73,23 @@ public class NtNodeIteratorMinMax<T> {
 			//length of post-fix WITH key
 			postEntryLenLHC = NtNode.IK_WIDTH(NtNode.MAX_DIM) + NtNode.MAX_DIM*node.getPostLen();
 		}
+
+		useHcIncrementer = false;
+
+		if (NtNode.MAX_DIM > 3) {
+			//LHC, NI, ...
+			long maxHcAddr = ~((-1L)<<NtNode.MAX_DIM);
+			int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
+			//nPossibleMatch = (2^k-x)
+			long nPossibleMatch = 1L << (NtNode.MAX_DIM - nSetFilterBits);
+			if (isHC) {
+				//nPossibleMatch < 2^k?
+				useHcIncrementer = nPossibleMatch < maxHcAddr;
+			} else {
+				int logNPost = Long.SIZE - Long.numberOfLeadingZeros(nMaxEntry) + 1;
+				useHcIncrementer = nMaxEntry > nPossibleMatch*(double)logNPost; 
+			}
+		}
 	}
 
 	/**
@@ -80,10 +99,6 @@ public class NtNodeIteratorMinMax<T> {
 	boolean increment(NtEntry<T> result) {
 		getNext(result);
 		return next != FINISHED;
-	}
-
-	long getCurrentPos() {
-		return next;
 	}
 
 	/**
@@ -112,21 +127,22 @@ public class NtNodeIteratorMinMax<T> {
 		
 		if (v instanceof NtNode) {
 			NtNode<T> sub = (NtNode<T>) v;
-			//TODO clean up
 			if (!checkPrefix((sub.getPostLen()+1)*NtNode.MAX_DIM)) {
+				//TODO remove
 //			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
-//			if (prefix < (globalMin & mask) || (prefix & mask) > globalMax) {
+//			if (((prefix | globalMinMask) & globalMaxMask & mask) != (prefix & mask)) {
 				return false;
 			}
 			nextSubNode = sub;
 		} else {
 			if (!checkPrefix(0)) {
-			//if (prefix < globalMin || prefix > globalMax) {
+				//TODO remove
+//			if (((prefix | globalMinMask) & globalMaxMask) != prefix) {
 				return false;
 			}
 			nextSubNode = null;
 			node.getKdKeyByPIN(pin, result.getKdKey());
-			result.setValue(v == NodeTreeV11.NT_NULL ? null : (T)v);
+			result.setValue( v == NodeTreeV11.NT_NULL ? null : (T)v );
 		}
 		result.setKey(prefix);
 		return true;
@@ -136,8 +152,7 @@ public class NtNodeIteratorMinMax<T> {
 	private boolean checkPrefix(int bitsToIgnore) {
 		int slotsToIgnore = BitsHD.div64(bitsToIgnore);
 		for (int i = 0; i < prefix.length-slotsToIgnore-1; i++) {
-			if (Long.compareUnsigned(prefix[i], globalMin[i]) < 0 
-					|| Long.compareUnsigned(prefix[i], globalMax[i]) > 0) {
+			if (((prefix[i] | globalMinMask[i]) & globalMaxMask[i]) != (prefix[i])) {
 				return false;
 			}
 		}
@@ -146,12 +161,35 @@ public class NtNodeIteratorMinMax<T> {
 //		int bitsInLastSlotToIgnore = BitsHD.mod64(bitsToIgnore); 
 //		long mask = bitsInLastSlotToIgnore == 0 ? -1L : (-1L) << bitsInLastSlotToIgnore;
 		long mask = (-1L) << BitsHD.mod64(bitsToIgnore);
-		return Long.compareUnsigned(prefix[i], (globalMin[i] & mask)) >= 0  
-				&& Long.compareUnsigned((prefix[i] & mask), globalMax[i]) <= 0;
+		return ((prefix[i] | globalMinMask[i]) & globalMaxMask[i] & mask) == (prefix[i] & mask);
+	}
+	
+	private long getNextHCI(NtEntry<T> result) {
+		//Ideally we would switch between b-serch-HCI and incr-search depending on the expected
+		//distance to the next value.
+		long currentPos = next;
+		do {
+			if (currentPos == START) {
+				//starting position
+				currentPos = maskLower;
+			} else {
+				currentPos = NodeTreeV11.inc(currentPos, maskLower, maskUpper);
+				if (currentPos <= maskLower) {
+					return FINISHED;
+				}
+			}
+
+			int pin = node.getPosition(currentPos, NtNode.MAX_DIM);
+			if (pin >= 0 && readValue(pin, currentPos, result)) {
+				return currentPos;
+			}
+		} while (true);
 	}
 
 	private void getNext(NtEntry<T> result) {
-		if (isHC) {
+		if (useHcIncrementer) {
+			next = getNextHCI(result);
+		} else if (isHC) {
 			getNextAHC(result);
 		} else {
 			getNextLHC(result);
@@ -159,9 +197,10 @@ public class NtNodeIteratorMinMax<T> {
 	}
 	
 	private void getNextAHC(NtEntry<T> result) {
-		long currentPos = next == START ? localMin : next+1; 
-		while (currentPos <= localMax) {
-			if (readValue((int)currentPos, currentPos, result)) {
+		long currentPos = next == START ? maskLower : next+1; 
+		while (currentPos <= maskUpper) {
+			//check HC-pos
+			if (checkHcPos(currentPos) && readValue((int)currentPos, currentPos, result)) {
 				next = currentPos;
 				return;
 			}
@@ -176,19 +215,25 @@ public class NtNodeIteratorMinMax<T> {
 					Bits.readArray(node.ba, currentOffsetKey, NtNode.IK_WIDTH(NtNode.MAX_DIM));
 			currentOffsetKey += postEntryLenLHC;
 			//check HC-pos
-			if (currentPos <= localMax) {
+			if (checkHcPos(currentPos)) {
 				//check post-fix
 				if (readValue(nFound-1, currentPos, result)) {
 					next = currentPos;
 					return;
 				}
 			} else {
-				break;
+				if (currentPos > maskUpper) {
+					break;
+				}
 			}
 		}
 		next = FINISHED;
 	}
 	
+
+	private boolean checkHcPos(long pos) {
+		return ((pos | maskLower) & maskUpper) == pos;
+	}
 
 	public NtNode<T> getCurrentSubNode() {
 		return nextSubNode;
@@ -200,13 +245,12 @@ public class NtNodeIteratorMinMax<T> {
 
 	/**
 	 * 
-	 * @param globalMin
-	 * @param globalMax
+	 * @param globalMinMask
+	 * @param globalMaxMask
 	 * @param prefix
 	 * @param postLen
-	 * @return 'false' if the new upper limit is smaller than the current HC-pos.
 	 */
-	boolean calcLimits(long[] prefix, boolean isNegativeRoot) {
+	private void calcLimits() {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -221,64 +265,64 @@ public class NtNodeIteratorMinMax<T> {
 		// query higher ||                                     NO               YES
 		//
 		int postLen = node.getPostLen();
-		if (isNegativeRoot) {
-			//TODO this doesn't really work. Is there a better way that also keeps the ordering?
-//			this.localMin = NtNode.pos2LocalPosNegative(globalMin, postLen);
-//			this.localMax = NtNode.pos2LocalPosNegative(globalMax, postLen);
-			this.localMin = 0;
-			this.localMax = ~((-1L) << NtNode.MAX_DIM);
-		} else {
-			if (compareWithPrefixEquals0(globalMin, prefix, postLen)) {
-				//TODO cleanup
-			//if ((globalMin ^ prefix) >> postLen == 0) {
-				this.localMin = NtNode.pos2LocalPos(globalMin, postLen);
-			} else {
-				this.localMin = 0;
-			}
-			if (compareWithPrefixEquals0(globalMax, prefix, postLen)) {
-//			if ((globalMax ^ prefix) >> postLen == 0) {
-				this.localMax = NtNode.pos2LocalPos(globalMax, postLen);
-			} else {
-				this.localMax = ~((-1L) << NtNode.MAX_DIM);
-			}
+		this.maskLower = NtNode.pos2LocalPos(globalMinMask, postLen);
+		this.maskUpper = NtNode.pos2LocalPos(globalMaxMask, postLen);
+	}
+	
+	boolean adjustMinMax() {
+		calcLimits();
+
+		if (next >= this.maskUpper) {
+			//we already fully traversed this node
+			return false;
 		}
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		if (localMin > localMax) {
-			throw new IllegalStateException("localMin=" + localMin + " / " + localMax);
+
+		if (next < this.maskLower) {
+			//we do NOT set currentOffsetKey here:
+			//It is only used by LHC, and for LHC we simply keep iterating with checkHcPos()
+			//until we hit the next valid entry. There are only 2^6=64 entries...
+			//currentOffsetKey = node.getBitPosIndex();
+			next = START;
+			return true;
+		}
+			
+		//TODO switch to HCI if too few quadrants remain???
+		if (useHcIncrementer && !checkHcPos(next)) {
+			//Adjust pos in HCI mode such that it works for the next inc()
+			//At this point, next is >= maskLower
+			long pos = next-1;
+			//TODO the following is a bit brute force. But, it is still fast and should
+			//     rarely happen, i.e. only for:
+			//        (HCI mode) && (lowerLimit changes) && (newLowerLimit < next)
+			//After the following, pos==START or pos==(a valid entry such that inc(pos) is
+			//the next valid entry after the original `next`)
+			while (!checkHcPos(pos) && pos > START) {
+				//normal iteration to ensure we to get a valid POS for HCI-inc()
+				pos--;
+			}
+			next = pos;
 		}
 		return true;
 	}
-	
-	private boolean compareWithPrefixEquals0(long[] minMax, long[] prefix, int postLen) {
-		int withMask = postLen == 0 ? 0 : (BitsHD.div64(postLen - 1) + 1);
-		int iMax = prefix.length - withMask;
-		for (int i = 0; i < iMax; i++) {
-			if ((minMax[i] ^ prefix[i]) >> postLen != 0) {
-				return false;
-			}			
-		}
-		if (withMask > 0) {
-			int shift = BitsHD.mod64(postLen);
-			return ((minMax[iMax] ^ prefix[iMax]) >> shift == 0);
-		}
-		return true;
-	}
-	
-	void init(long[] valTemplate, NtNode<T> node, boolean isNegativeRoot) {
+
+	void init(long[] valTemplate, NtNode<T> node) {
 		this.node = node; //for calcLimits
-		calcLimits(valTemplate, isNegativeRoot);
+		calcLimits();
 		reinit(node, valTemplate);
 	}
 
+	//TODO use maskLower/upper here?
+	boolean verifyMinMax(long[] globalMinMask, long[] globalMaxMask) {
+		long mask = (-1L) << node.getPostLen()+1;
+		if ((prefix | ~mask) < globalMinMask ||
+				(prefix & mask) > globalMaxMask) {
+			return false;
+		}
+		return true;
+	}
+
 	public long[] getPrefix() {
-		//TODO returning this is dangerous?!?!?
+		//TODO returning this is dangerous..??
 		return prefix;
 	}
 }

@@ -4,7 +4,7 @@
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v11hd.nt;
+package ch.ethz.globis.phtree.v11hd2.nt;
 
 import java.util.NoSuchElementException;
 
@@ -75,8 +75,8 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 		//TODO create new array necessary?
 		this.resultBuf1 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
 		this.resultBuf2 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
-		this.parentMinMask = parentMinMask;
-		this.parentMaxMask = parentMaxMask;
+		this.parentMinMask = parentMinMask; //BitsHD.newArray(keyBitWidth);
+		this.parentMaxMask = parentMaxMask;//BitsHD.newArray(keyBitWidth);
 	}	
 		
 	@SuppressWarnings("unchecked")

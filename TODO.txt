@@ -1,0 +1,27 @@
+- Not optimal: all iterators locate the 'next' element before returning a current element (true?).
+  This is inefficient because there a lot of iterators in a stack. Especially problematic when 
+  returning nearest neighbor.
+- Not optimal: When reading NT-Nodes, the tree always applies valTemplate/hcPos etc to the result
+  kdKey, even though the kdKey is already complete  
+- The node iterators should now the global min/maxRange to efficiently check kdKeys without
+  popping out of the local iterators and then popping in again if it is a mismatch.
+  
+  
+- Insert the following line into MaxKTreeI.getKdKey() and run TestRangeQuery.testNeighbour4_5of4
+			System.out.println("READING: " + Arrays.toString(kdKey) + " / " + Arrays.toString(key) + " obj=" + System.identityHashCode(this));
+  Then check whether it is efficient
+  
+ HD-Pure NT
+ ----------
+  - All of the above
+  - Change NT-Nodes to contain only an array Entry-Elements (worse memory locality but much simpler
+    to avoid GC (we don't need temporary elements anymore). This make it simpler to refactor
+    iterators to only look for the next element when it is really required... -> Is this
+    really an issue with 1NN? Isn't it efficient (usually required) to check all entries in a node?
+    
+  - Completely remove Node-Class? NtNode to have flag 'isRoot'...?
+  - Or: Node to have complete Prefix? -> Avoid generating the prefix all the time (2*O(d)): 
+    readHc + readInfix
+    
+  - applyHdPos() appears to be broken for DIM>=64. Test!
+      

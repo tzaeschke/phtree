@@ -4,7 +4,7 @@
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v11hd.nt;
+package ch.ethz.globis.phtree.v11hd2.nt;
 
 import java.util.NoSuchElementException;
 
@@ -27,73 +27,72 @@ import ch.ethz.globis.phtree.v11hd.BitsHD;
  *
  * @param <T> value type
  */
-public final class NtIteratorMask<T> implements PhIterator64<T> {
+public final class NtIteratorFull<T> implements PhIterator64<T> {
 
 	private class PhIteratorStack {
-		private final NtNodeIteratorMask<T>[] stack;
+		private final NtNodeIteratorFull<T>[] stack;
 		private int size = 0;
 		
 		@SuppressWarnings("unchecked")
 		public PhIteratorStack(int depth) {
-			stack = new NtNodeIteratorMask[depth];
+			stack = new NtNodeIteratorFull[depth];
 		}
 
 		public boolean isEmpty() {
 			return size == 0;
 		}
 
-		public NtNodeIteratorMask<T> prepareAndPush(NtNode<T> node, long[] currentPrefix) {
-			NtNodeIteratorMask<T> ni = stack[size++];
+		public NtNodeIteratorFull<T> prepareAndPush(NtNode<T> node, long[] currentPrefix) {
+			NtNodeIteratorFull<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NtNodeIteratorMask<>(parentMinMask, parentMaxMask);
+				ni = new NtNodeIteratorFull<>(keyBitWidth);
 				stack[size-1] = ni;
 			}
-			ni.init(currentPrefix, node);
+			ni.init(currentPrefix, node, isRootNegative && size==1);
 			return ni;
 		}
 
-		public NtNodeIteratorMask<T> peek() {
+		public NtNodeIteratorFull<T> peek() {
 			return stack[size-1];
 		}
 
-		public NtNodeIteratorMask<T> pop() {
+		public NtNodeIteratorFull<T> pop() {
 			return stack[--size];
 		}
 	}
 
 	private final PhIteratorStack stack;
-	private final long[] parentMinMask;
-	private final long[] parentMaxMask;
+	private final boolean isRootNegative;
 	
 	private final NtEntry<T> resultBuf1;
 	private final NtEntry<T> resultBuf2;
 	private boolean isFreeBuf1;
-	boolean isFinished = false;
+	private boolean isFinished = false;
+	private final int keyBitWidth;
 	
-	public NtIteratorMask(int keyBitWidth, long[] parentMinMask, long[] parentMaxMask) {
+	public NtIteratorFull(int keyBitWidth) {
 		this.stack = new PhIteratorStack(NtNode.calcTreeHeight(keyBitWidth));
-		//TODO create new array necessary?
+		this.isRootNegative = keyBitWidth == 64;
+		//TODO do we need a new array here?
 		this.resultBuf1 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
 		this.resultBuf2 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
-		this.parentMinMask = parentMinMask;
-		this.parentMaxMask = parentMaxMask;
+		System.out.println("Result object 1: " + System.identityHashCode(resultBuf1));
+		System.out.println("Result object 2: " + System.identityHashCode(resultBuf2));
+		this.keyBitWidth = keyBitWidth;
 	}	
 		
-	@SuppressWarnings("unchecked")
 	@Override
 	public void reset(MaxKTreeHdI tree, long[] minMask, long[] maxMask) {
-		if (minMask != this.parentMaxMask || maxMask != this.parentMaxMask) {
-			throw new IllegalArgumentException();
-		}
+		throw new IllegalArgumentException();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public void reset(MaxKTreeHdI tree) {
 		reset((NtNode<T>)tree.getRoot());
 	}
 	
-	@Override
-	public void reset(MaxKTreeHdI tree) {
-		throw new UnsupportedOperationException();
-	}
-	
-	public NtIteratorMask<T> reset(NtNode<T> root) {	
+	public PhIterator64<T> reset(NtNode<T> root) {	
 		this.stack.size = 0;
 		this.isFinished = false;
 		
@@ -103,8 +102,8 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 			return this;
 		}
 		
-		//TODO pass array in?
-		stack.prepareAndPush(root, new long[parentMaxMask.length]);
+		//TODO really pass in array?
+		stack.prepareAndPush(root, BitsHD.newArray(keyBitWidth));
 		findNextElement();
 		return this;
 	}
@@ -112,7 +111,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 	private void findNextElement() {
 		NtEntry<T> result = isFreeBuf1 ? resultBuf1 : resultBuf2; 
 		while (!stack.isEmpty()) {
-			NtNodeIteratorMask<T> p = stack.peek();
+			NtNodeIteratorFull<T> p = stack.peek();
 			while (p.increment(result)) {
 				if (p.isNextSub()) {
 					p = stack.prepareAndPush(p.getCurrentSubNode(), p.getPrefix());
@@ -183,46 +182,6 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
-	}
-
-	/**
-	 * This method should be called after changing the min/max values.
-	 * The method ensures that, at least for shrinking MBB, the iterator
-	 * is 'popped' in case it iterates over a node that does not intersect
-	 * with the new MBBs.  
-	 * 
-	 * @param newGlobalMinMask global min mask 
-	 * @param newGlobalMaxMask global max mask
-	 */
-	public void adjustMinMax(long[] newGlobalMinMask, long[] newGlobalMaxMask) {
-		while (stack.size > 1 && !stack.peek().verifyMinMax(newGlobalMinMask, newGlobalMaxMask)) {
-			stack.pop();
-		}
-		
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-//		if (checker != null) {
-//			while (!stack.isEmpty() && 
-//					!checker.isValid(stack.peek().valTemplate, stack.peek().postLen)) {
-//				stack.pop();
-//			}
-//		}
-
-		while (!stack.isEmpty() 
-				&& !stack.peek().adjustMinMax()) {
-			stack.pop();
-		}
 	}
 	
 }

@@ -4,7 +4,7 @@
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v11hd.nt;
+package ch.ethz.globis.phtree.v11hd2.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.v11hd.BitsHD;

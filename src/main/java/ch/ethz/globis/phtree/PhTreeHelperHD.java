@@ -189,6 +189,7 @@ public abstract class PhTreeHelperHD {
      * @param postLen the postfix length
      * @return Encoded HC position
      */
+    @Deprecated
     public static final long[] posInArrayHD(long[] valSet, int postLen) {
         //n=DIM,  i={0..n-1}
         // i = 0 :  |0|1|0|1|0|1|0|1|

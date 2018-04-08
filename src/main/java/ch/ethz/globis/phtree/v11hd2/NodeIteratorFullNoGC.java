@@ -4,7 +4,7 @@
  * This software is the proprietary information of ETH Zurich.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v11hd;
+package ch.ethz.globis.phtree.v11hd2;
 
 import java.util.Arrays;
 
@@ -12,7 +12,7 @@ import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTreeHelperHD;
-import ch.ethz.globis.phtree.v11hd.nt.NtIteratorMinMax;
+import ch.ethz.globis.phtree.v11hd2.nt.NtIteratorMinMax;
 
 
 
@@ -29,18 +29,12 @@ public class NodeIteratorFullNoGC<T> {
 	private static final long[] FINISHED = new long[0]; 
 	
 	private final int dims;
-	private boolean isNI;
 	private int postLen;
 	private long[] next;
 	private Node node;
-	private int currentOffsetKey;
 	private NtIteratorMinMax<Object> ntIterator;
-	private int nMaxEntries;
-	private int nEntriesFound = 0;
-	private int postEntryLenLHC;
 	private final long[] valTemplate;
 	private PhFilter checker;
-	private final long[] currentPos;
 
 
 	/**
@@ -51,7 +45,6 @@ public class NodeIteratorFullNoGC<T> {
 	public NodeIteratorFullNoGC(int dims, long[] valTemplate) {
 		this.dims = dims;
 		this.valTemplate = valTemplate;
-		this.currentPos = BitsHD.newArray(dims);
 	}
 	
 	/**
@@ -66,29 +59,21 @@ public class NodeIteratorFullNoGC<T> {
 	 */
 	private void reinit(Node node, PhFilter checker) {
 		next = null;
-		nEntriesFound = 0;
 		this.checker = checker;
 	
 		this.node = node;
-		this.isNI = node.isNT();
 		this.postLen = node.getPostLen();
-		nMaxEntries = node.getEntryCount();
 		
 		
 		//Position of the current entry
-		if (isNI) {
-			if (ntIterator == null) {
-				//TODO remove this..???
-				long[] min = BitsHD.newArray(dims); //0
-				long[] max = BitsHD.newArray(dims); //Long.MAX_VALUE
-				Arrays.fill(max, -1L);
-				ntIterator = new NtIteratorMinMax<>(dims, min, max);
-			}
-			ntIterator.reset(node.ind());
-		} else {
-			currentOffsetKey = node.getBitPosIndex();
-			postEntryLenLHC = Node.IK_WIDTH(dims)+dims*postLen;
+		if (ntIterator == null) {
+			//TODO remove this..???
+			long[] min = BitsHD.newArray(dims); //0
+			long[] max = BitsHD.newArray(dims); //Long.MAX_VALUE
+			Arrays.fill(max, -1L);
+			ntIterator = new NtIteratorMinMax<>(dims, min, max);
 		}
+		ntIterator.reset(node.ind());
 	}
 
 	/**
@@ -104,28 +89,6 @@ public class NodeIteratorFullNoGC<T> {
 	 * 
 	 * @return False if the value does not match the range, otherwise true.
 	 */
-	@SuppressWarnings("unchecked")
-	private boolean readValue(int posInNode, long[] hcPos, PhEntry<T> result) {
-		long[] key = result.getKey();
-		Object v = node.getEntryPIN(posInNode, hcPos, valTemplate, key);
-		if (v == null) {
-			return false;
-		}
-		
-		if (v instanceof Node) {
-			result.setNodeInternal(v);
-		} else {
-			if (checker != null && !checker.isValid(key)) {
-				return false;
-			}
-			//ensure that 'node' is set to null
-			result.setValueInternal((T) v );
-		}
-		next = hcPos;
-		
-		return true;
-	}
-
 	@SuppressWarnings("unchecked")
 	private boolean readValue(long[] pos, long[] kdKey, Object value, PhEntry<T> result) {
 		PhTreeHelperHD.applyHcPosHD(pos, postLen, valTemplate);
@@ -155,26 +118,10 @@ public class NodeIteratorFullNoGC<T> {
 
 
 	private void getNext(PhEntry<T> result) {
-		if (isNI) {
-			niFindNext(result);
-			return;
-		}
+		niFindNext(result);
+	}
+	
 
-		getNextLHC(result);
-	}
-	
-	private void getNextLHC(PhEntry<T> result) {
-		do {
-			if (++nEntriesFound > nMaxEntries) {
-				next = FINISHED;
-				break;
-			}
-			BitsHD.readArrayHD(node.ba, currentOffsetKey, Node.IK_WIDTH(dims), currentPos);
-			currentOffsetKey += postEntryLenLHC;
-			//check post-fix
-		} while (!readValue(nEntriesFound-1, currentPos, result));
-	}
-	
 	private void niFindNext(PhEntry<T> result) {
 		while (ntIterator.hasNext()) {
 			NtEntry<Object> e = ntIterator.nextEntryReuse();

@@ -6,12 +6,14 @@
  */
 package ch.ethz.globis.phtree.bits;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
+import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 /**
@@ -125,6 +127,23 @@ public class TestBitsHD {
     	assertEquals(63, BitsHD.getMaxConflictingBits(v01, new long[] {0,1,-1L}, 1, 62));
     }
     
+	@Test
+	public void testApplyHcPosHD() {
+		checkPosHD(new long[] {0, 0}, new long[]{0b11}, new long[] {2, 2});
+		checkPosHD(new long[] {7, 7}, new long[]{0b00}, new long[] {5, 5});
+		checkPosHD(new long[] {7, 0}, new long[]{0b01}, new long[] {5, 2});
+		checkPosHD(new long[] {0, 7}, new long[]{0b10}, new long[] {2, 5});
+	}
+
+	private static void checkPosHD(long[] valTempIn, long[] posHD, long[] valTempOut) {
+		long[] temp = valTempIn.clone();
+		PhTreeHelperHD.applyHcPosHD(posHD, 1, temp);
+		assertArrayEquals(valTempOut, temp);
+		
+		long[] posHDread = PhTreeHelperHD.posInArrayHD(temp, 1);
+		assertArrayEquals(posHD, posHDread);
+	}
+	
 	@Test
 	public void testBinarySearch() {
 		long[] ba = {0,1, 0,34, 0,43, 10,12, 100,255, 100,1000, 100,-1L, 101, 1};
