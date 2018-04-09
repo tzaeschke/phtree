@@ -321,19 +321,13 @@ public class NodeTreeV11<T> implements MaxKTreeHdI {
 					int pin2 = currentNode.findFirstEntry(NtNode.MAX_DIM);
 					long localHcPos2 = currentNode.localReadKey(pin2);
 					Object val2 = currentNode.getValueByPIN(pin2);
-					int postLen2 = currentNode.getPostLen()*NtNode.MAX_DIM;
-					//clean hcPos + postfix/infix 
-					long mask2 = (postLen2+NtNode.MAX_DIM==64) ? 0 : (-1L) << (postLen2+NtNode.MAX_DIM);
+					
+					long[] postInfix2 = new long[hcPos.length];
 					//get prefix
-					long postInfix2 = hcPos & mask2;
-					//get hcPos
-					postInfix2 |= localHcPos2 << postLen2;
-					//get postFix / infFix
-					if (val2 instanceof NtNode) {
-						postInfix2 |= currentNode.localReadInfix(pin2, localHcPos2);
-					} else {
-						postInfix2 |= currentNode.localReadPostfix(pin2, localHcPos2);
-					}
+					BitsHD.set(postInfix2, hcPos);
+					//read infix, postfix, ...
+					currentNode.localReadAndApplyReadPostfixAndHc(pin2, localHcPos2, postInfix2);
+
 					parentNode.replacePost(parentPin, parentHcPos, postInfix2, NtNode.MAX_DIM);
 					long[] kdKey2 = new long[outerDims];
 					currentNode.readKdKeyPIN(pin2, kdKey2);

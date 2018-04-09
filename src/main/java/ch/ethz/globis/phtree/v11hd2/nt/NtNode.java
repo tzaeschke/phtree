@@ -180,38 +180,11 @@ public class NtNode<T> {
     void localReadAndApplyReadPostfixAndHc(int pin, long localHcPos, long[] prefix) {
 		int postBits = getPostLen() * MAX_DIM;
 		int postPos = pinToOffsBitsData(pin, localHcPos, MAX_DIM); 
-		int iMin = prefix.length - BitsHD.div64(postBits-1) - 1;
-		int bitsInSlot = BitsHD.mod65x(postBits);
 		//set hcPos
 		int offsetBit = prefix.length*64 - (postBits + MAX_DIM);
 		Bits.writeArray(prefix, offsetBit, MAX_DIM, localHcPos);
-		//write first part
-// 		long mask = bitsInSlot == 64 ? -1L : (-1L) << bitsInSlot;//postBits; //  = 111100000000
-// 		mask <<= MAX_DIM;
-// 		int postBitInSlot = 
-//		long postFix = Bits.readArray(ba, postPos, bitsInSlot);
-//     	prefix[iMin] = (prefix[iMin] & mask) | postFix;
-//     	postPos += bitsInSlot;
-//     	//TODO use
+		//write postfix
      	BitsHD.readArrayHD(ba, postPos, postBits, prefix);
-//		for (int i = iMin; i < prefix.length; i++) {
-//			postFix = Bits.readArray(ba, postPos, bitsInSlot);
-//	     	prefix[i] = postFix;
-//			postPos += 64;
-//		}
-//		long postFix = BitsHD.readArrayHD(ba, postPos, postBits);
-// 		long mask = (-1L) << postBits; //  = 111100000000
-// 		mask <<= MAX_DIM;
-//     	return (prefix & mask) | (localHcPos << postBits) | postFix;
-     }
-
-    private long localReadAndApplyReadPostfixAndHc(int pin, long localHcPos, long prefix) {
-		int postBits = getPostLen() * MAX_DIM;
-		int postPos = pinToOffsBitsData(pin, localHcPos, MAX_DIM); 
-		long postFix = BitsHD.readArrayHD(ba, postPos, postBits);
- 		long mask = (-1L) << postBits; //  = 111100000000
- 		mask <<= MAX_DIM;
-     	return (prefix & mask) | (localHcPos << postBits) | postFix;
      }
 
     long localReadKey(int pin) {
@@ -382,9 +355,9 @@ public class NtNode<T> {
 		return NodeTreeV11.AHC_ENABLED && (dims<=31) && (sizeLHC*1.5 >= sizeAHC);
 	}
 
-	void replacePost(int pin, long hcPos, long newKey, int dims) {
+	void replacePost(int pin, long hcPos, long[] newKey, int dims) {
 		int offs = pinToOffsBitsData(pin, hcPos, dims);
-		Bits.writeArray(ba, offs, postLen*dims, newKey);
+		BitsHD.writeArrayHD(ba, offs, postLen*dims, newKey);
 	}
 
 	/**

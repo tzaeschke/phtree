@@ -154,10 +154,9 @@ public class BitsHD {
     	int iStart = out.length - BitsHD.div64(entryLen-1) - 1;
        	int subEntryLen = mod65x(entryLen);
        	
-       	//first read a partionl chunk
+       	//first read a partial chunk
        	long mask = subEntryLen == 64 ? 0 : (-1L) << subEntryLen;
 		out[iStart] = (out[iStart] & mask) | (BitsLong.readArray(ba, offsetBit, subEntryLen) & ~mask);
-		//TODO make/use read64()/write64 functions?
 		offsetBit += subEntryLen;  
 		
     	for (int i = iStart+1; i < out.length; i++) {
