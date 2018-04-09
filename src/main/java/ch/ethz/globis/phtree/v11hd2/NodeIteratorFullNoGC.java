@@ -33,18 +33,16 @@ public class NodeIteratorFullNoGC<T> {
 	private long[] next;
 	private Node node;
 	private NtIteratorMinMax<Object> ntIterator;
-	private final long[] valTemplate;
+	private long[] prefix;
 	private PhFilter checker;
 
 
 	/**
 	 * 
 	 * @param dims dimensions
-	 * @param valTemplate A null indicates that no values are to be extracted.
 	 */
-	public NodeIteratorFullNoGC(int dims, long[] valTemplate) {
+	public NodeIteratorFullNoGC(int dims) {
 		this.dims = dims;
-		this.valTemplate = valTemplate;
 	}
 	
 	/**
@@ -91,11 +89,10 @@ public class NodeIteratorFullNoGC<T> {
 	 */
 	@SuppressWarnings("unchecked")
 	private boolean readValue(long[] pos, long[] kdKey, Object value, PhEntry<T> result) {
-		PhTreeHelperHD.applyHcPosHD(pos, postLen, valTemplate);
 		if (value instanceof Node) {
 			Node sub = (Node) value;
-			node.getInfixOfSubNt(kdKey, valTemplate);
-			if (checker != null && !checker.isValid(sub.getPostLen()+1, valTemplate)) {
+			//TODO really? kdKey?
+			if (checker != null && !checker.isValid(sub.getPostLen()+1, kdKey)) {
 				return false;
 			}
 			result.setNodeInternal(sub);
@@ -103,7 +100,7 @@ public class NodeIteratorFullNoGC<T> {
 			long[] resultKey = result.getKey();
 			final long mask = (~0L)<<postLen;
 			for (int i = 0; i < resultKey.length; i++) {
-				resultKey[i] = (valTemplate[i] & mask) | kdKey[i];
+				resultKey[i] = kdKey[i]; //TODO arraycopy?!? Or directly return value of sub-iterator?
 			}
 
 			if (checker != null && !checker.isValid(resultKey)) {

@@ -6,6 +6,8 @@
 - The node iterators should now the global min/maxRange to efficiently check kdKeys without
   popping out of the local iterators and then popping in again if it is a mismatch.
   
+- NodeIteratorFull: remove applying valTemplate from readingNt keys (for-loop in readValue).  
+- NodeIteratorListReuse: niAllIterator: why check window here? Either check 'distance;  or do noch check at all...!!!
   
 - Insert the following line into MaxKTreeI.getKdKey() and run TestRangeQuery.testNeighbour4_5of4
 			System.out.println("READING: " + Arrays.toString(kdKey) + " / " + Arrays.toString(key) + " obj=" + System.identityHashCode(this));

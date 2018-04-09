@@ -54,7 +54,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 
 	private final int dims;
 	private int nMin;
-	private PhTreeHD11<T> pht;
+	private PhTreeHD11b<T> pht;
 	private PhDistance distance;
 	private final ArrayList<PhEntryDist<T>> entries = new ArrayList<>();
 	private int resultSize = 0;
@@ -64,7 +64,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	private final PhIteratorNoGC<T> iter;
 	private final PhFilterDistance checker;
 
-	public PhQueryKnnMbbPP(PhTreeHD11<T> pht) {
+	public PhQueryKnnMbbPP(PhTreeHD11b<T> pht) {
 		this.dims = pht.getDim();
 		this.mbbMin = new long[dims];
 		this.mbbMax = new long[dims];
@@ -154,7 +154,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 			ret[i] = key[i] & mask;
 		}
 		
-		NodeIteratorFullNoGC<T> ni = new NodeIteratorFullNoGC<>(dims, ret);
+		NodeIteratorFullNoGC<T> ni = new NodeIteratorFullNoGC<>(dims);
 		//This allows writing the result directly into 'ret'
 		PhEntry<T> result = new PhEntry<>(ret, null);
 		ni.init(node, null);

@@ -12,7 +12,6 @@ import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.PhIterator64;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelperHD;
-import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.v11hd2.nt.NodeTreeV11;
 import ch.ethz.globis.phtree.v11hd2.nt.NtIteratorFull;
 import ch.ethz.globis.phtree.v11hd2.nt.NtIteratorMask;
@@ -31,28 +30,8 @@ public class Node {
 	private static final int HC_BITS = 0;  //number of bits required for storing current (HC)-representation
 	/** Bias towards using AHC. AHC is used if (sizeLHC*AHC_LHC_BIAS) greater than (sizeAHC)  */
 	public static final double AHC_LHC_BIAS = 2.0; 
-	//public static final int NT_THRESHOLD = 150; //TODO 
-	public static final int NT_THRESHOLD = 1;
 
 	private int entryCnt = 0;
-
-	/**
-	 * Structure of the byte[] and the required bits
-	 * AHC:
-	 * | kdKey AHC        |
-	 * | 2^DIM*(DIM*pLen) |
-	 * 
-	 * LHC:
-	 * | hcPos / kdKeyLHC      |
-	 * | pCnt*(DIM + DIM*pLen) |
-	 * 
-	 * 
-	 * pLen = postLen
-	 * pCnt = postCount
-	 * sCnt = subCount
-	 */
-	long[] ba = null;
-
 	private byte postLen = 0;
 	private byte infixLen = 0; //prefix size
 
@@ -74,9 +53,6 @@ public class Node {
         if (original.ind != null) {
         	//copy NT tree
         	throw new UnsupportedOperationException();
-        }
-        if (original.ba != null) {
-        	this.ba = Bits.arrayClone(original.ba);
         }
     }
 
@@ -112,7 +88,6 @@ public class Node {
 	
 	void discardNode() {
 		NtNodePool.offer(ind);
-		Bits.arrayReplace(ba, null);
 		entryCnt = 0;
 		NodePool.offer(this);
 		ind = null;
@@ -122,33 +97,6 @@ public class Node {
 		int nBits = getBitPosIndex();
 		//post-fixes
 		return nBits;
-	}
-
-	private int calcArraySizeTotalBitsNt() {
-		return getBitPosIndex();
-	}
-
-
-	/**
-	 * 
-	 * @param pin
-	 * @param hcPos
-	 * @param outVal
-	 * @return whether the infix length is > 0
-	 */
-	boolean getInfixOfSub(int pin, long[] hcPos, long[] outVal) {
-		int offs = pinToOffsBitsData(pin, outVal.length);
-		if (!hasSubInfix(offs, outVal.length)) {
-			return false;
-		}
-		//To cut of trailing bits
-		long mask = (-1L) << postLen;
-		for (int i = 0; i < outVal.length; i++) {
-			//Replace val with infix (val may be !=0 from traversal)
-			outVal[i] = (mask & outVal[i]) | Bits.readArray(ba, offs, postLen);
-			offs += postLen;
-		}
-		return true;
 	}
 
 	void getInfixOfSubNt(long[] infix, long[] outKey) {
@@ -246,8 +194,6 @@ public class Node {
         	newNode.writeEntry(0, posSub2, key2, val2);
         	newNode.writeEntry(1, posSub1, key1, val1);
         }
-        newNode.incEntryCount();
-        newNode.incEntryCount();
         return newNode;
     }
 
@@ -313,6 +259,10 @@ public class Node {
 	 * @param newSubInfixLen -infix len for sub-nodes. This is ignored for post-fixes.
 	 */
 	private void writeEntry(int pin, long[] hcPos, long[] newKey, Object value) {
+		if (value instanceof Node) {
+			int newSubInfixLen = postLen - ((Node)value).getPostLen() - 1;  
+			((Node)value).setInfixLen(newSubInfixLen);
+		}
 		ntPut(hcPos, newKey, value);
 		return;
 	}
@@ -322,18 +272,6 @@ public class Node {
 		ntReplaceEntry(hcPos, infix, newSub);
 	}
 	
-	private void writeSubInfixInfo(long[] ba, int subInfoOffs, int subInfixLen) {
-		//-> Should work for AHC and LHC with (offs+postLen-1)
-		
-		//The last bit of the infix encode whether we have 0 infix length
-		//length
-		boolean hasInfix = subInfixLen != 0;
-		Bits.setBit(ba, subInfoOffs, hasInfix);
-	}
-	
-	private boolean hasSubInfix(int subInfoOffs, int dims) {
-		return Bits.getBit(ba, subInfoOffs + dims*postLen - 1);
-	}
 	
 	boolean hasSubInfixNI(long[] infix) {
 		//TODO reenable? But we also need to write it...
@@ -395,15 +333,11 @@ public class Node {
     	return NodeTreeV11.removeEntry(ind, hcPos, key.length, key, newKey, insertRequired, this);
 	}
 
-	Object ntGetEntry(long[] hcPos, long[] outKey, long[] valTemplate) {
-		//TODO apply hcPos
-		//TODO apply valTemplate to outkey
+	Object ntGetEntry(long[] hcPos, long[] outKey) {
 		return NodeTreeV11.getEntry(ind(), hcPos, outKey, null, null);
 	}
 
 	Object ntGetEntryIfMatches(long[] hcPos, long[] keyToMatch) {
-		//TODO apply hcPos
-		//TODO apply valTemplate to outkey
 		return NodeTreeV11.getEntry(ind(), hcPos, null, keyToMatch, this);
 	}
 
@@ -419,45 +353,9 @@ public class Node {
 	 * @param key
 	 */
 	void addPostPIN(long[] hcPos, int pin, long[] key, Object value) {
-		final int dims = key.length;
-		final int bufEntryCnt = getEntryCount();
-		//decide here whether to use hyper-cube or linear representation
-		//--> Initially, the linear version is always smaller, because the cube has at least
-		//    two entries, even for a single dimension. (unless DIM > 2*REF=2*32 bit 
-		//    For one dimension, both need one additional bit to indicate either
-		//    null/not-null (hypercube, actually two bit) or to indicate the index. 
-
-		//TODO remove
-//		if (!isNT()) {
-//			ntBuild(bufEntryCnt, dims, key);
-//		}
 		ntPut(hcPos, key, value);
 	}
 
-	void postToNI(int startBit, int postLen, long[] outKey, long[] hcPos, long[] prefix, long mask) {
-		for (int d = 0; d < outKey.length; d++) {
-			outKey[d] = Bits.readArray(ba, startBit, postLen) | (prefix[d] & mask);
-			startBit += postLen;
-		}
-		PhTreeHelperHD.applyHcPosHD(hcPos, postLen, outKey);
-	}
-
-	void postFromNI(long[] ia, int startBit, long key[], int postLen) {
-		//insert postifx
-		for (int d = 0; d < key.length; d++) {
-			Bits.writeArray(ia, startBit + postLen * d, postLen, key[d]);
-		}
-	}
-
-	void infixFromNI(long[] ba, int startBit, long[] key, int subInfixLen) {
-		//insert infix:
-		for (int i = 0; i < key.length; i++) {
-			Bits.writeArray(ba, startBit, postLen, key[i]);
-			startBit += postLen;
-		}
-		int subInfoOffs = startBit-1; 
-		writeSubInfixInfo(ba, subInfoOffs, subInfixLen);
-	}
 
 	/**
 	 * WARNING: This is overloaded in subclasses of Node.
@@ -467,98 +365,13 @@ public class Node {
 		return NtNode.createRoot(dims);
 	}
 	
-	private void ntBuild(int bufEntryCnt, int dims, long[] prefix) {
-		//Migrate node to node-index representation
-		if (ind != null) {
-			throw new IllegalStateException();
-		}
-		ind = createNiIndex(dims);
-
-//		long prefixMask = (-1L) << postLen;
-		
-		//read posts 
-//		int offsIndex = getBitPosIndex();
-//		int dataOffs = pinToOffsBitsLHC(0, offsIndex, dims);
-//		int postLenTotal = dims*postLen;
-//		final long[] buffer = new long[dims];
-//		for (int i = 0; i < bufEntryCnt; i++) {
-//			long[] p2 = BitsHD.readArrayHD(ba, dataOffs, IK_WIDTH(dims));
-//			dataOffs += IK_WIDTH(dims);
-//			Object e = values[i];
-//			postToNI(dataOffs, postLen, buffer, p2, prefix, prefixMask);
-//			//We use 'null' as parameter to indicate that we want 
-//			//to skip checking for splitNode or increment of entryCount
-//			NodeTreeV11.addEntry(ind, p2, buffer, e, null);
-//			dataOffs += postLenTotal;
-//		}
-
-		ba = Bits.arrayTrim(ba, calcArraySizeTotalBitsNt());
-	}
-
-	/**
-	 * 
-	 * @param bufSubCnt
-	 * @param bufPostCnt
-	 * @param dims
-	 * @param posToRemove
-	 * @param removeSub Remove sub or post?
-	 * @return Previous value if post was removed
-	 */
-	private Object ntDeconstruct(int dims, long[] posToRemove) {
-		//Migrate node to node-index representation
-		if (ind == null) {
-			throw new IllegalStateException();
-		}
-
-		int entryCountNew = ntGetSize() - 1;
-		decEntryCount();
-
-		Object oldValue = null;
-		int offsIndex = getBitPosIndex();
-		long[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits());
-		//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-		Bits.copyBitsLeft(ba, 0, bia2, 0, offsIndex);
-		int postLenTotal = dims*postLen;
-		//LHC mode
-		Object[] v2 = Refs.arrayCreate(entryCountNew);
-		int n=0;
-		PhIterator64<Object> it = ntIterator(dims);
-		int entryPosLHC = offsIndex;
-		while (it.hasNext()) {
-			NtEntry<Object> e = it.nextEntryReuse();
-			long[] pos = e.getKdKey();
-			if (BitsHD.isEq(pos, posToRemove)) {
-				//skip the item that should be deleted.
-				oldValue = e.value();
-				continue;
-			}
-			//write hc-key
-			BitsHD.writeArrayHD(bia2, entryPosLHC, IK_WIDTH(dims), pos);
-			entryPosLHC += IK_WIDTH(dims);
-			v2[n] = e.value();
-			if (e.value() instanceof Node) {
-				Node node = (Node) e.getValue();
-				infixFromNI(bia2, entryPosLHC, e.getKdKey(), node.getInfixLen());
-			} else {
-				postFromNI(bia2, entryPosLHC, e.getKdKey(), postLen);
-			}
-			entryPosLHC += postLenTotal;
-			n++;
-		}
-		ba = Bits.arrayReplace(ba, bia2);
-//		values = Refs.arrayReplace(values, v2);
-
-		NtNodePool.offer(ind);
-		ind = null;
-		return oldValue;
-	}
-
 
 	private static int N_GOOD = 0;
 	private static int N = 0;
 	
 	
-	boolean checkAndApplyInfixNt(int infixLen, long[] postFix, long[] valTemplate, 
+	//TODO remove 'apply' from name
+	boolean checkAndApplyInfixNt(int infixLen, long[] prefix, 
 			long[] rangeMin, long[] rangeMax) {
 		//first check if node-prefix allows sub-node to contain any useful values
 
@@ -566,9 +379,9 @@ public class Node {
 			N_GOOD++;
 			//Ensure that we never enter this method if the node cannot possibly contain a match.
 			long maskClean = (-1L) << postLen;
-			for (int dim = 0; dim < valTemplate.length; dim++) {
-				if ((valTemplate[dim] & maskClean) > rangeMax[dim] || 
-						(valTemplate[dim] | ~maskClean) < rangeMin[dim]) {
+			for (int dim = 0; dim < prefix.length; dim++) {
+				if ((prefix[dim] & maskClean) > rangeMax[dim] || 
+						(prefix[dim] | ~maskClean) < rangeMin[dim]) {
 					if (getPostLen() < 63) {
 						System.out.println("N-CAAI: " + ++N + " / " + N_GOOD);
 						throw new IllegalStateException();
@@ -579,10 +392,6 @@ public class Node {
 			}
 		}
 		
-		if (!hasSubInfixNI(postFix)) {
-			return true;
-		}
-
 		//assign infix
 		//Shift in two steps in case they add up to 64.
 		long maskClean = (-1L) << postLen;
@@ -591,13 +400,12 @@ public class Node {
 		//Mask for comparing the tempVal with the ranges, except for bit that have not been
 		//extracted yet.
 		long compMask = (-1L)<<(postLen - infixLen);
-		for (int dim = 0; dim < valTemplate.length; dim++) {
-			long in = (valTemplate[dim] & maskClean) | postFix[dim];
+		for (int dim = 0; dim < prefix.length; dim++) {
+			long in = prefix[dim];// TODO remove this? (valTemplate[dim] & maskClean) | postFix[dim];
 			in &= compMask;
-			if (in > rangeMax[dim] || in < (rangeMin[dim]&compMask)) {
+			if (in > rangeMax[dim] || in < (rangeMin[dim] & compMask)) {
 				return false;
 			}
-			valTemplate[dim] = in;
 		}
 
 		return true;
@@ -613,13 +421,10 @@ public class Node {
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	@SuppressWarnings("unchecked")
-	<T>  boolean checkAndGetEntryNt(long[] hcPos, Object value, PhEntry<T> result, 
-			long[] valTemplate, long[] rangeMin, long[] rangeMax) {
-		PhTreeHelperHD.applyHcPosHD(hcPos, postLen, valTemplate);
+	<T>  boolean checkAndGetEntryNt(long[] hcPos, Object value, PhEntry<T> result, long[] rangeMin, long[] rangeMax) {
 		if (value instanceof Node) {
 			Node sub = (Node) value;
-			if (!checkAndApplyInfixNt(sub.getInfixLen(), result.getKey(), valTemplate, 
-					rangeMin, rangeMax)) {
+			if (!checkAndApplyInfixNt(sub.getInfixLen(), result.getKey(), rangeMin, rangeMax)) {
 				return false;
 			}
 			result.setNodeInternal(sub);

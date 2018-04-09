@@ -1,6 +1,7 @@
 package ch.ethz.globis.phtree.v11hd2;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
@@ -373,5 +374,14 @@ public class BitsHD {
     	}
     	return false;
     }
+
+	public static String toString(Object o) {
+		if (o instanceof long[]) {
+			return Arrays.toString((long[]) o);
+		} else if (o instanceof double[]) {
+			return Arrays.toString((double[]) o);
+		}
+		return Objects.toString(o);
+	}
 	
 }

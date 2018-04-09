@@ -18,6 +18,8 @@ import java.util.Random;
 
 import org.junit.Test;
 
+import ch.ethz.globis.phtree.PhDistanceL;
+import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTree;
 import ch.ethz.globis.phtree.PhTree.PhIterator;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
@@ -402,6 +404,34 @@ public class TestNearestNeighbour {
 	}
 	
 
+	@Test
+	public void testQueryND64Random10() {
+		//final int DIM = 4;//5
+		//final int LOOP = 1;//10;
+		final int N = 1000;
+		final int NQ = 100;
+		final int MAXV = 10000;
+		for (int d = 2; d < 10; d++) {
+			int DIM = d;
+			final Random R = new Random(d);
+			PhTree<Object> ind = TestUtil.newTree(DIM);
+			PhKnnQuery<Object> q = ind.nearestNeighbour(10, PhDistanceL.THIS, null, new long[DIM]);
+			populate(ind, R, N, DIM, MAXV);
+			for (int i = 0; i < NQ; i++) {
+				long[] v = new long[DIM];
+				for (int j = 0; j < DIM; j++) {
+					v[j] = R.nextInt(MAXV);
+				}
+				ArrayList<PhEntry<Object>> exp = nearestNeighborK(ind, 10, v);
+				//List<PhEntry<Object>> nnList = toList(q.reset(10, null, v));
+				List<long[]> nnList = toList(q.reset(10, null, v));
+				
+				assertTrue("i=" + i + " d=" + d, !nnList.isEmpty());
+				check(v, exp, nnList);
+			}
+		}
+	}
+
 	
 	private long[] nearestNeighbor1(PhTree<?> tree, long[] q) {
 		double d = Double.MAX_VALUE;
@@ -433,6 +463,77 @@ public class TestNearestNeighbour {
 //		return best;
 //	}
 	
+	private void populate(PhTree<?> ind, Random R, int N, int DIM, int MAXV) {
+		for (int i = 0; i < N; i++) {
+			long[] vMax = new long[DIM];
+			for (int j = 0; j < DIM; j++) {
+				vMax[j] = R.nextInt(MAXV);
+			}
+			ind.put(vMax, null);
+		}
+	}
+	
+	private <T> void check(long[] v, List<PhEntry<T>> l1, List<long[]> l2) {
+		double distPrev = -1;
+		for (int e = 0; e < l2.size(); e++) {
+			double d = dist(v, l2.get(e));
+			if (distPrev > d) {
+				System.out.println("c1: " + distPrev + " " + l2.get(e-1).toString());
+				System.out.println("c2: " + d + " " + l2.get(e).toString());
+				fail();
+			}
+			distPrev = d;
+		}
+		for (int e = 0; e < l1.size(); e++) {
+			PhEntry<?> c1 = l1.get(e);
+			long[] c2 = l2.get(e);
+			check(v, c1.getKey(), c2);
+		}
+	}
+
+	private <T> ArrayList<PhEntry<T>> nearestNeighborK(PhTree<T> tree, int k, long[] q) {
+		double dMax = Double.MAX_VALUE;
+		ArrayList<PhEntry<T>> best = new ArrayList<>();
+		PhIterator<T> i = tree.queryExtent();
+		while (i.hasNext()) {
+			PhEntry<T> cand = i.nextEntry();
+			double dNew = dist(q, cand);
+			if (dNew < dMax || best.size() < k) {
+				if (best.isEmpty()) {
+					dMax = dNew;
+					best.add( cand );
+				} else {
+					int j = 0;
+					for ( ; j < best.size(); j++) {
+						double dJ = dist(q, best.get(j));
+						if (dJ > dNew) {
+							best.add(j, cand);
+							break;
+						}
+					}
+					if (j == best.size()) {
+						best.add(cand);
+					}
+					if (best.size() > k) {
+						best.remove(k); 
+					}
+					dMax = dist(q, best.get(best.size()-1)); 
+				}
+			}
+		}
+		return best;
+	}
+	
+	private double dist(long[] v1, PhEntry<?> e2) {
+		long[] key = e2.getKey();
+		double d = 0;
+		for (int i = 0; i < v1.length; i++) {
+			double dl = key[i] - v1[i];
+			d += dl*dl;
+		}
+		return Math.sqrt(d);
+	}
+
 	private void check(long[] v, long[] c1, long[] c2) {
 		for (int i = 0; i < c1.length; i++) {
 			if (c1[i] != c2[i]) {
@@ -475,15 +576,15 @@ public class TestNearestNeighbour {
 		}
 		fail("Not found: " + Arrays.toString(v));
 	}
-	
-	  private boolean contains(List<long[]> l, long ... v) {
-		    for (long[] vl: l) {
-		      if (Arrays.equals(vl, v)) {
-		        return true;
-		      }
-		    }
-		    return false;
-		  }
+
+	private boolean contains(List<long[]> l, long ... v) {
+		for (long[] vl: l) {
+			if (Arrays.equals(vl, v)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	private List<long[]> toList(PhKnnQuery<?> q) {
 		ArrayList<long[]> ret = new ArrayList<>();

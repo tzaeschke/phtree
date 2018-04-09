@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
+import ch.ethz.globis.phtree.v11hd2.BitsHD;
 
 /**
  * High-dimensional unsigned bitstrings (actually, simply unsigned bitstrings). 
@@ -149,13 +150,20 @@ public class BitsHD {
     	if (entryLen == 0) {
     		return;
     	}
-    	
-    	int subEntryLen = mod65x(entryLen);
-    	for (int i = 0; i < out.length; i++) {
-    		out[i] = BitsLong.readArray(ba, offsetBit, subEntryLen);
+
+    	int iStart = out.length - BitsHD.div64(entryLen-1) - 1;
+       	int subEntryLen = mod65x(entryLen);
+       	
+       	//first read a partionl chunk
+       	long mask = subEntryLen == 64 ? 0 : (-1L) << subEntryLen;
+		out[iStart] = (out[iStart] & mask) | (BitsLong.readArray(ba, offsetBit, subEntryLen) & ~mask);
+		//TODO make/use read64()/write64 functions?
+		offsetBit += subEntryLen;  
+		
+    	for (int i = iStart+1; i < out.length; i++) {
+    		out[i] = BitsLong.readArray(ba, offsetBit, 64);
     		//TODO make/use read64()/write64 functions?
-    		offsetBit += subEntryLen;  
-    		subEntryLen = 64;
+    		offsetBit += 64;  
     	}
     }
 

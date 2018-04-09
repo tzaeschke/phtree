@@ -10,7 +10,6 @@ import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.v11hd2.nt.NtIteratorMask;
 
 /**
@@ -52,7 +51,6 @@ public class NodeIteratorListReuse<T, R> {
 	private final int dims;
 	private final PhResultList<T,R> results;
 	private int maxResults;
-	private final long[] valTemplate;
 	private long[] rangeMin;
 	private long[] rangeMax;
 
@@ -119,18 +117,20 @@ public class NodeIteratorListReuse<T, R> {
 			results.phOffer(e);
 		}
 
-		private void checkAndRunSubnode(Node sub, PhEntry<T> e) {
+		private void checkAndRunSubnode(Node sub, PhEntry<T> e, long[] prefix) {
 			if (e != null) {
 				results.phReturnTemp(e);
 			}
-			if (results.phIsPrefixValid(valTemplate, sub.getPostLen()+1)) {
-				run(sub);
+			//Why check prefix again? Because this time, we do the actual distance-check.
+			//TODO Avoid 2nd check when list uses rectangle distance? Avoid rectangle=prefix check in niAllNextIterator()? 
+			if (results.phIsPrefixValid(prefix, sub.getPostLen()+1)) {
+				run(sub, prefix);
 			}
 		}
 
 
 		private void readValue(long[] pos, Object value, PhEntry<T> result) {
-			if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
+			if (!node.checkAndGetEntryNt(pos, value, result, rangeMin, rangeMax)) {
 				return;
 			}
 			
@@ -159,10 +159,8 @@ public class NodeIteratorListReuse<T, R> {
 				Object v = e.value();
 				if (v instanceof Node) {
 					Node nextSubNode = (Node) v; 
-					PhTreeHelperHD.applyHcPosHD(e.key(), node.getPostLen(), valTemplate);
-					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), e.getKdKey(),
-							valTemplate, rangeMin, rangeMax)) {
-						checkAndRunSubnode(nextSubNode, null);
+					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), e.getKdKey(), rangeMin, rangeMax)) {
+						checkAndRunSubnode(nextSubNode, null, e.getKdKey());
 					}
 				} else {
 					PhEntry<T> resultBuffer = results.phGetTempEntry();
@@ -179,14 +177,12 @@ public class NodeIteratorListReuse<T, R> {
 			BitsHD.set(currentPosBuf, maskLower); 
 			while (results.size() < maxResults) {
 				PhEntry<T> resultBuffer = results.phGetTempEntry();
-				Object v = node.ntGetEntry(currentPosBuf, resultBuffer.getKey(), valTemplate);
+				Object v = node.ntGetEntry(currentPosBuf, resultBuffer.getKey());
 				//sub-node?
 				if (v instanceof Node) {
 					Node sub = (Node) v;
-					PhTreeHelperHD.applyHcPosHD(currentPosBuf, node.getPostLen(), valTemplate);
-					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(), 
-							valTemplate, rangeMin, rangeMax)) {
-						checkAndRunSubnode(sub, resultBuffer);
+					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(), rangeMin, rangeMax)) {
+						checkAndRunSubnode(sub, resultBuffer, resultBuffer.getKey());
 					}
 				} else if (v != null) { 
 					//read and check post-fix
@@ -204,22 +200,28 @@ public class NodeIteratorListReuse<T, R> {
 	
 	NodeIteratorListReuse(int dims, PhResultList<T, R> results) {
 		this.dims = dims;
-		this.valTemplate = new long[dims];
 		this.results = results;
 		this.pool = new PhIteratorStack();
 	}
 
-	List<R> resetAndRun(Node node, long[] rangeMin, long[] rangeMax, int maxResults) {
+	List<R> resetAndRun(Node node, long[] rangeMin, long[] rangeMax, long[] prefix, int maxResults) {
 		results.clear();
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
 		this.maxResults = maxResults;
-		run(node);
+		run(node, prefix);
 		return results;
 	}
 	
-	void run(Node node) {
-		NodeIterator nIt = pool.prepare(valTemplate.length);
+	void run(Node node, long[] prefix) {
+		
+		//Hack: if prefix==null, we simply use rangeMin. This simplifies the case postLen=63 where 
+		//we are at the root node and prefix==null and where we anyway don't need any bits from prefix.
+		if (prefix == null) {
+			prefix = rangeMin;
+		}
+		
+		NodeIterator nIt = pool.prepare(prefix.length);
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -240,11 +242,11 @@ public class NodeIteratorListReuse<T, R> {
 		BitsHD.set0(lowerLimit);
 		BitsHD.set0(upperLimit);
 		int maskSlot = 0;
-		long mask1 = 1L << (BitsHD.mod65x(valTemplate.length) - 1);
+		long mask1 = 1L << (BitsHD.mod65x(prefix.length) - 1);
 		//to prevent problems with signed long when using 64 bit
 		if (maskHcBit >= 0) { //i.e. postLen < 63
-			for (int i = 0; i < valTemplate.length; i++) {
-				long nodeBisection = (valTemplate[i] | maskHcBit) & maskVT; 
+			for (int i = 0; i < prefix.length; i++) {
+				long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
 				if (rangeMin[i] >= nodeBisection) {
 					//==> set to 1 if lower value should not be queried 
 					lowerLimit[maskSlot] |= mask1;
@@ -265,7 +267,7 @@ public class NodeIteratorListReuse<T, R> {
 			//The hypercube assumes that a leading '0' indicates a lower value.
 			//Solution: We leave HC as it is.
 
-			for (int i = 0; i < valTemplate.length; i++) {
+			for (int i = 0; i < prefix.length; i++) {
 				if (rangeMin[i] < 0) {
 					//If minimum is positive, we don't need the search negative values 
 					//==> set upperLimit to 0, prevent searching values starting with '1'.

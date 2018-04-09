@@ -76,8 +76,6 @@ public final class NtIteratorFull<T> implements PhIterator64<T> {
 		//TODO do we need a new array here?
 		this.resultBuf1 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
 		this.resultBuf2 = new NtEntry<>(BitsHD.newArray(keyBitWidth), new long[keyBitWidth], null);
-		System.out.println("Result object 1: " + System.identityHashCode(resultBuf1));
-		System.out.println("Result object 2: " + System.identityHashCode(resultBuf2));
 		this.keyBitWidth = keyBitWidth;
 	}	
 		

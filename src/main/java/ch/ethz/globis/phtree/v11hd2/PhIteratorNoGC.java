@@ -40,13 +40,13 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 			return size == 0;
 		}
 
-		public NodeIteratorNoGC<T> prepareAndPush(Node node) {
+		public NodeIteratorNoGC<T> prepareAndPush(Node node, long[] prefix) {
 			NodeIteratorNoGC<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NodeIteratorNoGC<>(dims, valTemplate);
+				ni = new NodeIteratorNoGC<>(dims);
 				stack[size-1] = ni;
 			}
-			ni.init(rangeMin, rangeMax, node, checker);
+			ni.init(rangeMin, rangeMax, node, prefix, checker);
 			return ni;
 		}
 
@@ -94,7 +94,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 			return;
 		}
 		
-		stack.prepareAndPush(pht.getRoot());
+		stack.prepareAndPush(pht.getRoot(), null);
 		findNextElement();
 	}
 
@@ -104,7 +104,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 			NodeIteratorNoGC<T> p = stack.peek();
 			while (p.increment(result)) {
 				if (result.hasNodeInternal()) {
-					p = stack.prepareAndPush((Node) result.getNodeInternal());
+					p = stack.prepareAndPush((Node) result.getNodeInternal(), result.getKey());
 					continue;
 				} else {
 					resultFree = resultToReturn;

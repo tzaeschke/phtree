@@ -78,7 +78,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		this.results = new KnnResultList(dims);
 		this.iter = new NodeIteratorListReuse<>(dims, results);
 		this.niBuffer = new long[dims];
-		ni = new NodeIteratorFullNoGC<>(dims, niBuffer);
+		ni = new NodeIteratorFullNoGC<>(dims);
 	}
 
 	@Override
@@ -266,7 +266,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		results.maxDistance = maxDist;
 		checker.set(val, distance, maxDist);
 		distance.toMBB(maxDist, val, mbbMin, mbbMax);
-		iter.resetAndRun(pht.getRoot(), mbbMin, mbbMax, Integer.MAX_VALUE);
+		iter.resetAndRun(pht.getRoot(), mbbMin, mbbMax, null, Integer.MAX_VALUE);
 
 		if (results.size() < nMin) {
 			//too small, we need a bigger range

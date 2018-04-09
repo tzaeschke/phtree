@@ -218,6 +218,47 @@ public class TestNearestNeighbourF {
 		}
 	}
 
+
+	@Test
+	public void testQueryND64RandomDistFuncBug1() {
+		final int DIM = 3;//15;
+		final int LOOP = 100;
+		final int N = 3;//1000;
+		final int NQ = 1;//1000;
+		final int MAXV = 10000;
+		for (int d = 0; d < LOOP; d++) {
+			final Random R = new Random(60);
+			PhTreeF<Object> ind = newTreeF(DIM);
+			PhKnnQueryF<Object> q = ind.nearestNeighbour(1, new double[DIM]);
+			for (int i = 0; i < N; i++) {
+				double[] v = new double[DIM];
+				for (int j = 0; j < DIM; j++) {
+					v[j] = R.nextDouble()*MAXV;
+				}
+				ind.put(v, v);
+			}
+			for (int i = 0; i < NQ; i++) {
+				double[] v = new double[DIM];
+				for (int j = 0; j < DIM; j++) {
+					v[j] = R.nextDouble()*MAXV;
+				}
+				double[] exp = nearestNeighbor1(ind, v);
+//				System.out.println("d="+ d + "   i=" + i + "   minD=" + dist(v, exp));
+//				System.out.println("v="+ Arrays.toString(v));
+//				System.out.println("exp="+ Arrays.toString(exp));
+				List<double[]> nnList = toList(q.reset(1, PhDistanceF.THIS, v));
+				
+//				System.out.println(ind.toStringTree());
+//				System.out.println("v  =" + Arrays.toString(v));
+//				System.out.println("exp=" + Arrays.toString(exp));
+				assertTrue("i=" + i + " d=" + d, !nnList.isEmpty());
+				double[] nn = nnList.get(0);
+				check(v, exp, nn);
+			}
+		}
+	}
+
+	
 	@Test
 	public void testQueryND64RandomDistFunc_OnArray() {
 		final int DIM = 15;

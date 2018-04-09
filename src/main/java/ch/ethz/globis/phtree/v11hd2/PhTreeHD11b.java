@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.PhIterator64;
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhDistanceL;
@@ -28,9 +29,7 @@ import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v11hd2.nt.NtNodeIteratorFull;
 import ch.ethz.globis.phtree.v11hd2.nt.NodeTreeV11;
-import ch.ethz.globis.phtree.v11hd2.nt.NtIteratorFull;
 import ch.ethz.globis.phtree.v11hd2.nt.NtNode;
 
 /**
@@ -82,8 +81,6 @@ public class PhTreeHD11b<T> implements PhTree<T> {
 
 	//Enable HC incrementer / iteration
 	public static final boolean HCI_ENABLED = true; 
-	//Enable AHC mode in nodes
-	static final boolean AHC_ENABLED = true; 
 	
 	//This threshold is used to decide during query iteration whether the first value
 	//should be found by binary search or by full scan.
@@ -172,7 +169,6 @@ public class PhTreeHD11b<T> implements PhTree<T> {
 		stats.size += align8(12 + REF + REF + REF + 1 + 1 + 1 + 4);
 		//count children
 		int nChildren = node.getEntryCount();
-		stats.size += 16 + align8(Bits.arraySizeInByte(node.ba));
 		if (nChildren == 1 && (node != getRoot()) && nEntries.get() > 1) {
 			//This should not happen! Except for a root node if the tree has <2 entries.
 			System.err.println("WARNING: found lonely node...");
@@ -183,13 +179,6 @@ public class PhTreeHD11b<T> implements PhTree<T> {
 		}
 		if (dims<=31 && node.getEntryCount() > (1L<<dims)) {
 			System.err.println("WARNING: Over-populated node found: ec=" + node.getEntryCount());
-		}
-		//check space
-		int baS = node.calcArraySizeTotalBits();
-		baS = Bits.calcArraySize(baS);
-		if (baS < node.ba.length) {
-			System.err.println("Array too large: " + node.ba.length + " - " + baS + " = " + 
-					(node.ba.length - baS));
 		}
 		stats.nTotalChildren += nChildren;
 		
@@ -308,10 +297,8 @@ public class PhTreeHD11b<T> implements PhTree<T> {
 	@Override
 	public String toString() {
 		return this.getClass().getSimpleName() + 
-				" AHC/LHC=" + Node.AHC_LHC_BIAS +  
-				" AHC-on=" + AHC_ENABLED +  
 				" HCI-on=" + HCI_ENABLED +  
-				" NtLimit=" + Node.NT_THRESHOLD +  
+				" NtOnly" +  
 				" NtMaxDim=" + NtNode.MAX_DIM +  
 				" DEBUG=" + PhTreeHelperHD.DEBUG;
 	}
@@ -337,7 +324,7 @@ public class PhTreeHD11b<T> implements PhTree<T> {
 				toStringPlain(sb, (Node) o, key);
 			} else {
 				sb.append(Bits.toBinary(key, DEPTH_64));
-				sb.appendLn("  v=" + (o instanceof long[] ? Arrays.toString((long[]) o) : o));
+				sb.appendLn("  v=" + BitsHD.toString(o));
 			}
 		}
 	}
@@ -377,19 +364,20 @@ public class PhTreeHD11b<T> implements PhTree<T> {
 		PhIterator64<?> it = node.ntIterator(dims);
 		int i = 0;
 		while (it.hasNext()) {
-			Object o = it.next();
+			NtEntry<?> e = it.nextEntry();
+			Object o = e.getValue();
 			if (o == null) {
 				continue;
 			}
 			if (o instanceof Node) {
 				sb.appendLn(ind + "# " + i + "  +");
-				toStringTree(sb, currentDepth + 1, (Node) o, key, printValue);
+				toStringTree(sb, currentDepth + 1, (Node) o, e.getKdKey(), printValue);
 			}  else {
 				//post-fix
-				sb.append(ind + Bits.toBinary(key, DEPTH_64));
-				sb.append("  hcPos=" + i);
+				sb.append(ind + Bits.toBinary(e.getKdKey(), DEPTH_64));
+				sb.append("  hcPos(" + i + ")=" + Arrays.toString(e.getKey()));
 				if (printValue) {
-					sb.append("  v=" + (o instanceof long[] ? Arrays.toString((long[]) o) : o));
+					sb.append("  v=" + BitsHD.toString(o));
 				}
 				sb.appendLn("");
 			}
@@ -461,7 +449,7 @@ public class PhTreeHD11b<T> implements PhTree<T> {
 				() -> new PhEntry<T>(new long[dims], null));
 		
 		NodeIteratorListReuse<T, R> it = new NodeIteratorListReuse<>(dims, list);
-		return it.resetAndRun(getRoot(), min, max, maxResults);
+		return it.resetAndRun(getRoot(), min, max, null, maxResults);
 	}
 
 	@Override

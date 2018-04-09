@@ -33,7 +33,7 @@ public class Node {
 	/** Bias towards using AHC. AHC is used if (sizeLHC*AHC_LHC_BIAS) greater than (sizeAHC)  */
 	public static final double AHC_LHC_BIAS = 2.0; 
 	public static final int NT_THRESHOLD = 150; 
-
+	
 	private Object[] values;
 	
 	private int entryCnt = 0;
@@ -616,6 +616,10 @@ public class Node {
 	 */
 	private void writeEntry(int pin, long[] hcPos, long[] newKey, Object value) {
 		if (isNT()) {
+			if (value instanceof Node) {
+				int newSubInfixLen = postLen - ((Node)value).getPostLen() - 1;  
+				((Node)value).setInfixLen(newSubInfixLen);
+			}
 			ntPut(hcPos, newKey, value);
 			return;
 		}

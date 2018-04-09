@@ -6,9 +6,12 @@
  */
 package ch.ethz.globis.phtree.v11hd2;
 
+import java.util.Arrays;
+
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
+import ch.ethz.globis.phtree.util.BitTools;
 import ch.ethz.globis.phtree.v11hd2.nt.NtIteratorMask;
 
 
@@ -29,7 +32,7 @@ public class NodeIteratorNoGC<T> {
 	private long[] next;
 	private Node node;
 	private NtIteratorMask<Object> niIterator;
-	private final long[] valTemplate;
+	private final long[] prefix;
 	private final long[] maskLower;
 	private final long[] maskUpper;
 	private long[] rangeMin;
@@ -41,11 +44,10 @@ public class NodeIteratorNoGC<T> {
 	/**
 	 * 
 	 * @param dims dimensions
-	 * @param valTemplate A null indicates that no values are to be extracted.
 	 */
-	public NodeIteratorNoGC(int dims, long[] valTemplate) {
+	public NodeIteratorNoGC(int dims) {
 		this.dims = dims;
-		this.valTemplate = valTemplate;
+		this.prefix = new long[dims];
 		this.maskLower = BitsHD.newArray(dims);
 		this.maskUpper = BitsHD.newArray(dims);
 	}
@@ -60,9 +62,15 @@ public class NodeIteratorNoGC<T> {
 	 * @param upper
 	 * @param checker result verifier, can be null.
 	 */
-	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker) {
+	private void reinit(Node node, long[] rangeMin, long[] rangeMax, long[] prefix, PhFilter checker) {
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
+		if (prefix != null) {
+			//TODO optimize?
+			System.arraycopy(prefix, 0, this.prefix, 0, prefix.length);
+		} else {
+			Arrays.fill(this.prefix, 0);
+		}
 		next = START;
 		this.checker = checker;
 	
@@ -115,7 +123,7 @@ public class NodeIteratorNoGC<T> {
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	private boolean readValue(long[] pos, Object value, PhEntry<T> result) {
-		if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
+		if (!node.checkAndGetEntryNt(pos, value, result, rangeMin, rangeMax)) {
 			return false;
 		}
 		
@@ -171,7 +179,7 @@ public class NodeIteratorNoGC<T> {
 				}
 			}
 
-			Object v = node.ntGetEntry(currentPos, result.getKey(), valTemplate);
+			Object v = node.ntGetEntry(currentPos, result.getKey());
 			if (v == null) {
 				continue;
 			}
@@ -202,7 +210,7 @@ public class NodeIteratorNoGC<T> {
 	 * @param valTemplate
 	 * @param postLen
 	 */
-	private void calcLimits(long[] rangeMin, long[] rangeMax) {
+	private void calcLimits(long[] rangeMin, long[] rangeMax, long[] prefix) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -216,6 +224,13 @@ public class NodeIteratorNoGC<T> {
 		// ============ || ==================================================================
 		// query higher ||                                     NO               YES
 		//
+		
+		//Hack: if prefix==null, we simply use rangeMin. This simplifies the case postLen=63 where 
+		//we are at the root node and prefix==null and where we anyway don't need any bits from prefix.
+		if (prefix == null) {
+			prefix = rangeMin;
+		}
+		
 		int postLen = node.getPostLen();
 		long maskHcBit = 1L << postLen;
 		long maskVT = (-1L) << postLen;
@@ -224,11 +239,11 @@ public class NodeIteratorNoGC<T> {
 		BitsHD.set0(lowerLimit);
 		BitsHD.set0(upperLimit);
 		int maskSlot = 0;
-		long mask1 = 1L << (BitsHD.mod65x(valTemplate.length) - 1);
+		long mask1 = 1L << (BitsHD.mod65x(prefix.length) - 1);
 		//to prevent problems with signed long when using 64 bit
 		if (maskHcBit >= 0) { //i.e. postLen < 63
-			for (int i = 0; i < valTemplate.length; i++) {
-				long nodeBisection = (valTemplate[i] | maskHcBit) & maskVT; 
+			for (int i = 0; i < prefix.length; i++) {
+				long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
 				if (rangeMin[i] >= nodeBisection) {
 					//==> set to 1 if lower value should not be queried 
 					lowerLimit[maskSlot] |= mask1;
@@ -249,7 +264,7 @@ public class NodeIteratorNoGC<T> {
 			//The hypercube assumes that a leading '0' indicates a lower value.
 			//Solution: We leave HC as it is.
 
-			for (int i = 0; i < valTemplate.length; i++) {
+			for (int i = 0; i < prefix.length; i++) {
 				if (rangeMin[i] < 0) {
 					//If minimum is positive, we don't need the search negative values 
 					//==> set upperLimit to 0, prevent searching values starting with '1'.
@@ -271,7 +286,7 @@ public class NodeIteratorNoGC<T> {
 	}
 	
 	boolean adjustMinMax(long[] rangeMin, long[] rangeMax) {
-		calcLimits(rangeMin, rangeMax);
+		calcLimits(rangeMin, rangeMax, this.prefix);
 
 		if (BitsHD.isLessEq(this.maskUpper, next)) {
 			//we already fully traversed this node
@@ -302,17 +317,17 @@ public class NodeIteratorNoGC<T> {
 		return true;
 	}
 
-	void init(long[] rangeMin, long[] rangeMax, Node node, PhFilter checker) {
+	void init(long[] rangeMin, long[] rangeMax, Node node, long[] prefix, PhFilter checker) {
 		this.node = node; //for calcLimits
-		calcLimits(rangeMin, rangeMax);
-		reinit(node, rangeMin, rangeMax, checker);
+		calcLimits(rangeMin, rangeMax, prefix);
+		reinit(node, rangeMin, rangeMax, prefix, checker);
 	}
 
 	boolean verifyMinMax() {
 		long mask = (-1L) << node.getPostLen()+1;
-		for (int i = 0; i < valTemplate.length; i++) {
-			if ((valTemplate[i] | ~mask) < rangeMin[i] ||
-					(valTemplate[i] & mask) > rangeMax[i]) {
+		for (int i = 0; i < prefix.length; i++) {
+			if ((prefix[i] | ~mask) < rangeMin[i] ||
+					(prefix[i] & mask) > rangeMax[i]) {
 				return false;
 			}
 		}

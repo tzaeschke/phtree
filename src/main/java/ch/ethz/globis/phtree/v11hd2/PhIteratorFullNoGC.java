@@ -42,7 +42,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 		public NodeIteratorFullNoGC<T> prepareAndPush(Node node) {
 			NodeIteratorFullNoGC<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NodeIteratorFullNoGC<>(dims, valTemplate);
+				ni = new NodeIteratorFullNoGC<>(dims);
 				stack[size-1] = ni;
 			}
 			
