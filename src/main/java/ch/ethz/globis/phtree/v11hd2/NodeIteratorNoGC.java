@@ -11,7 +11,6 @@ import java.util.Arrays;
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.util.BitTools;
 import ch.ethz.globis.phtree.v11hd2.nt.NtIteratorMask;
 
 

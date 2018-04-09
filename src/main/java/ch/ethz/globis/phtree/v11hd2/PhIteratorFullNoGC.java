@@ -61,7 +61,6 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 
 	private final int dims;
 	private final PhIteratorStack stack;
-	private final long[] valTemplate;
 	private PhFilter checker;
 	private final PhTreeHD11b<T> pht;
 	
@@ -73,7 +72,6 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 		this.dims = pht.getDim();
 		this.checker = checker;
 		this.stack = new PhIteratorStack();
-		this.valTemplate = new long[dims];
 		this.pht = pht;
 		this.resultFree = new PhEntry<>(new long[dims], null);
 		this.resultToReturn = new PhEntry<>(new long[dims], null);

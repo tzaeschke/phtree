@@ -32,7 +32,7 @@ public class NtNodeIteratorMask<T> {
 	private int nFound = 0;
 	private int postEntryLenLHC;
 	//The valTemplate contains the known prefix
-	private final long[] prefix;
+	private long[] prefix;
 	private long maskLower;
 	private long maskUpper;
 	private final long[] globalMinMask;
@@ -57,8 +57,7 @@ public class NtNodeIteratorMask<T> {
 	 * @param prefix
 	 */
 	private void reinit(NtNode<T> node, long[] prefix) {
-		//this.prefix = prefix;
-		BitsHD.set(this.prefix, prefix); //TODO
+		this.prefix = prefix;
 		next = START;
 		nextSubNode = null;
 		currentOffsetKey = 0;
@@ -128,16 +127,11 @@ public class NtNodeIteratorMask<T> {
 		if (v instanceof NtNode) {
 			NtNode<T> sub = (NtNode<T>) v;
 			if (!checkPrefix((sub.getPostLen()+1)*NtNode.MAX_DIM)) {
-				//TODO remove
-//			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
-//			if (((prefix | globalMinMask) & globalMaxMask & mask) != (prefix & mask)) {
 				return false;
 			}
 			nextSubNode = sub;
 		} else {
 			if (!checkPrefix(0)) {
-				//TODO remove
-//			if (((prefix | globalMinMask) & globalMaxMask) != prefix) {
 				return false;
 			}
 			nextSubNode = null;
@@ -157,9 +151,6 @@ public class NtNodeIteratorMask<T> {
 			}
 		}
 		int i = prefix.length-slotsToIgnore-1;
-//		long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
-//		int bitsInLastSlotToIgnore = BitsHD.mod64(bitsToIgnore); 
-//		long mask = bitsInLastSlotToIgnore == 0 ? -1L : (-1L) << bitsInLastSlotToIgnore;
 		long mask = (-1L) << BitsHD.mod64(bitsToIgnore);
 		return ((prefix[i] | globalMinMask[i]) & globalMaxMask[i] & mask) == (prefix[i] & mask);
 	}
@@ -313,12 +304,16 @@ public class NtNodeIteratorMask<T> {
 
 	//TODO use maskLower/upper here?
 	boolean verifyMinMax(long[] globalMinMask, long[] globalMaxMask) {
-		long mask = (-1L) << node.getPostLen()+1;
-		if ((prefix | ~mask) < globalMinMask ||
-				(prefix & mask) > globalMaxMask) {
-			return false;
-		}
-		return true;
+		throw new UnsupportedOperationException();
+		
+		//This is not tested...
+		//Create mask only for first slot. Calculate which one the first slot is. Apply.
+//		long mask = (-1L) << node.getPostLen()+1;
+//		if ((prefix | ~mask) < globalMinMask ||
+//				(prefix & mask) > globalMaxMask) {
+//			return false;
+//		}
+//		return true;
 	}
 
 	public long[] getPrefix() {

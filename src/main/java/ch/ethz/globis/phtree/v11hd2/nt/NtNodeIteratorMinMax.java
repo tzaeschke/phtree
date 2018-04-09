@@ -32,7 +32,7 @@ public class NtNodeIteratorMinMax<T> {
 	private int nFound = 0;
 	private int postEntryLenLHC;
 	//The valTemplate contains the known prefix
-	private final long[] prefix;
+	private long[] prefix;
 	private long localMin;
 	private long localMax;
 	private final long[] globalMin;
@@ -41,8 +41,6 @@ public class NtNodeIteratorMinMax<T> {
 	/**
 	 */
 	public NtNodeIteratorMinMax(long[] globalMin, long[] globalMax) {
-		//TODO?!?!? Reuse valTemplate???
-		this.prefix = new long[globalMin.length];
 		this.globalMin = globalMin;
 		this.globalMax = globalMax;
 	}
@@ -56,7 +54,7 @@ public class NtNodeIteratorMinMax<T> {
 	 * @param prefix
 	 */
 	private void reinit(NtNode<T> node, long[] valTemplate) {
-		BitsHD.set(prefix, valTemplate); //TODO
+		this.prefix = valTemplate;
 		next = START;
 		nextSubNode = null;
 		currentOffsetKey = 0;
@@ -112,16 +110,12 @@ public class NtNodeIteratorMinMax<T> {
 		
 		if (v instanceof NtNode) {
 			NtNode<T> sub = (NtNode<T>) v;
-			//TODO clean up
 			if (!checkPrefix((sub.getPostLen()+1)*NtNode.MAX_DIM)) {
-//			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
-//			if (prefix < (globalMin & mask) || (prefix & mask) > globalMax) {
 				return false;
 			}
 			nextSubNode = sub;
 		} else {
 			if (!checkPrefix(0)) {
-			//if (prefix < globalMin || prefix > globalMax) {
 				return false;
 			}
 			nextSubNode = null;
@@ -142,9 +136,6 @@ public class NtNodeIteratorMinMax<T> {
 			}
 		}
 		int i = prefix.length-slotsToIgnore-1;
-//		long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
-//		int bitsInLastSlotToIgnore = BitsHD.mod64(bitsToIgnore); 
-//		long mask = bitsInLastSlotToIgnore == 0 ? -1L : (-1L) << bitsInLastSlotToIgnore;
 		long mask = (-1L) << BitsHD.mod64(bitsToIgnore);
 		return Long.compareUnsigned(prefix[i], (globalMin[i] & mask)) >= 0  
 				&& Long.compareUnsigned((prefix[i] & mask), globalMax[i]) <= 0;
@@ -222,36 +213,19 @@ public class NtNodeIteratorMinMax<T> {
 		//
 		int postLen = node.getPostLen();
 		if (isNegativeRoot) {
-			//TODO this doesn't really work. Is there a better way that also keeps the ordering?
-//			this.localMin = NtNode.pos2LocalPosNegative(globalMin, postLen);
-//			this.localMax = NtNode.pos2LocalPosNegative(globalMax, postLen);
 			this.localMin = 0;
 			this.localMax = ~((-1L) << NtNode.MAX_DIM);
 		} else {
 			if (compareWithPrefixEquals0(globalMin, prefix, postLen)) {
-				//TODO cleanup
-			//if ((globalMin ^ prefix) >> postLen == 0) {
 				this.localMin = NtNode.pos2LocalPos(globalMin, postLen);
 			} else {
 				this.localMin = 0;
 			}
 			if (compareWithPrefixEquals0(globalMax, prefix, postLen)) {
-//			if ((globalMax ^ prefix) >> postLen == 0) {
 				this.localMax = NtNode.pos2LocalPos(globalMax, postLen);
 			} else {
 				this.localMax = ~((-1L) << NtNode.MAX_DIM);
 			}
-		}
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		if (localMin > localMax) {
-			throw new IllegalStateException("localMin=" + localMin + " / " + localMax);
 		}
 		return true;
 	}

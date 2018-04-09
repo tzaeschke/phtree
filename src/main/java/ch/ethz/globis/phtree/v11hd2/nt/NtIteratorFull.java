@@ -45,7 +45,7 @@ public final class NtIteratorFull<T> implements PhIterator64<T> {
 		public NtNodeIteratorFull<T> prepareAndPush(NtNode<T> node, long[] currentPrefix) {
 			NtNodeIteratorFull<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NtNodeIteratorFull<>(keyBitWidth);
+				ni = new NtNodeIteratorFull<>();
 				stack[size-1] = ni;
 			}
 			ni.init(currentPrefix, node, isRootNegative && size==1);

@@ -31,9 +31,7 @@ public class NodeIteratorFullNoGC<T> {
 	private final int dims;
 	private int postLen;
 	private long[] next;
-	private Node node;
 	private NtIteratorMinMax<Object> ntIterator;
-	private long[] prefix;
 	private PhFilter checker;
 
 
@@ -59,7 +57,6 @@ public class NodeIteratorFullNoGC<T> {
 		next = null;
 		this.checker = checker;
 	
-		this.node = node;
 		this.postLen = node.getPostLen();
 		
 		
@@ -88,7 +85,7 @@ public class NodeIteratorFullNoGC<T> {
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	@SuppressWarnings("unchecked")
-	private boolean readValue(long[] pos, long[] kdKey, Object value, PhEntry<T> result) {
+	private boolean readValue(long[] kdKey, Object value, PhEntry<T> result) {
 		if (value instanceof Node) {
 			Node sub = (Node) value;
 			//TODO really? kdKey?
@@ -124,7 +121,7 @@ public class NodeIteratorFullNoGC<T> {
 			NtEntry<Object> e = ntIterator.nextEntryReuse();
 			//TODO can we simplify this? e.key()/getKdKey() should should contain the
 			//  complete value, or not? Why applyPos.. again (inside readValue)?
-			if (readValue(e.key(), e.getKdKey(), e.value(), result)) {
+			if (readValue(e.getKdKey(), e.value(), result)) {
 				next = e.key();
 				return;
 			}

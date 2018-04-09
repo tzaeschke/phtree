@@ -7,7 +7,6 @@
 package ch.ethz.globis.phtree.v11hd2.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeHdI.NtEntry;
-import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 /**
  * Iterator over a NodeTree.
@@ -32,14 +31,12 @@ public class NtNodeIteratorFull<T> {
 	private int nFound = 0;
 	private int postEntryLenLHC;
 	//The valTemplate contains the known prefix
-	private final long[] prefix;
+	private long[] prefix;
 	private final long maxPos;
 
 	/**
 	 */
-	public NtNodeIteratorFull(int keyBitWidth) {
-		//TODO?!?!? Reuse valTemplate???
-		this.prefix = BitsHD.newArray(keyBitWidth);
+	public NtNodeIteratorFull() {
 		this.maxPos = ~((-1L) << NtNode.MAX_DIM);
 	}
 	
@@ -52,7 +49,7 @@ public class NtNodeIteratorFull<T> {
 	 * @param prefix
 	 */
 	private void reinit(NtNode<T> node, long[] valTemplate) {
-		BitsHD.set(prefix, valTemplate); //TODO
+		this.prefix = valTemplate;
 		next = START;
 		nextSubNode = null;
 		currentOffsetKey = 0;

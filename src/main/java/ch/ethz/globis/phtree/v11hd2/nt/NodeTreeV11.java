@@ -322,7 +322,7 @@ public class NodeTreeV11<T> implements MaxKTreeHdI {
 					long localHcPos2 = currentNode.localReadKey(pin2);
 					Object val2 = currentNode.getValueByPIN(pin2);
 					
-					long[] postInfix2 = new long[hcPos.length];
+					long[] postInfix2 = new long[hcPos.length];  //TODO pool?
 					//get prefix
 					BitsHD.set(postInfix2, hcPos);
 					//read infix, postfix, ...
@@ -593,16 +593,19 @@ public class NodeTreeV11<T> implements MaxKTreeHdI {
 		return it;
 	}
 	
+	@SuppressWarnings("unused")
 	public PhIterator64<T> query(long min, long max) {
-		NtIteratorMinMax<T> it = new NtIteratorMinMax<>(getKeyBitWidth());
- 		it.reset(root, min, max);
-		return it;
+		throw new UnsupportedOperationException();
+//		NtIteratorMinMax<T> it = new NtIteratorMinMax<>(getKeyBitWidth());
+// 		it.reset(root, min, max);
+//		return it;
 	}
 	
 	public PhIterator64<T> iterator() {
-		NtIteratorMinMax<T> it = new NtIteratorMinMax<>(getKeyBitWidth());
-		it.reset(root, Long.MIN_VALUE, Long.MAX_VALUE);
-		return it;
+		throw new UnsupportedOperationException();
+//		NtIteratorMinMax<T> it = new NtIteratorMinMax<>(getKeyBitWidth());
+//		it.reset(root, Long.MIN_VALUE, Long.MAX_VALUE);
+//		return it;
 	}
 	
 	public boolean checkTree() {
