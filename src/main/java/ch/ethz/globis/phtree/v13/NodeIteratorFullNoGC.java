@@ -11,7 +11,6 @@ package ch.ethz.globis.phtree.v13;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.v13.nt.NtIteratorMinMax;
 
 
@@ -31,7 +30,6 @@ public class NodeIteratorFullNoGC<T> {
 	private final int dims;
 	private boolean isHC;
 	private boolean isNI;
-	private int postLenStored;
 	private long next = -1;
 	private Node node;
 	private int currentOffsetKey;
@@ -73,7 +71,6 @@ public class NodeIteratorFullNoGC<T> {
 		this.node = node;
 		this.isHC = node.isAHC();
 		this.isNI = node.isNT();
-		this.postLenStored = node.postLenStored();
 		nMaxEntries = node.getEntryCount();
 		
 		
@@ -126,27 +123,18 @@ public class NodeIteratorFullNoGC<T> {
 
 	@SuppressWarnings("unchecked")
 	private boolean readValue(long pos, long[] kdKey, Object value, PhEntry<T> result) {
-		node.applyHcPos(pos, valTemplate);
 		if (value instanceof Node) {
 			Node sub = (Node) value;
-			//TODO do this AFTER check -> use simple arrayCopy(kdKey)
-			node.getInfixOfSubNt(kdKey, valTemplate);
-			if (checker != null && !checker.isValid(sub.postLenStored()+1, valTemplate)) {
+			if (checker != null && !checker.isValid(sub.postLenStored()+1, kdKey)) {
 				return false;
 			}
+			System.arraycopy(kdKey, 0, valTemplate, 0, kdKey.length);
 			result.setNodeInternal(sub);
 		} else {
-			long[] resultKey = result.getKey();
-			//TODO remove this / could use 'stored' as well
-			final long mask = (~0L)<<(postLenStored + 1);
-			for (int i = 0; i < resultKey.length; i++) {
-				resultKey[i] = (valTemplate[i] & mask) | kdKey[i];
-			}
-
-			if (checker != null && !checker.isValid(resultKey)) {
+			if (checker != null && !checker.isValid(kdKey)) {
 				return false;
 			}
-
+			System.arraycopy(kdKey, 0, result.getKey(), 0, kdKey.length);
 			//ensure that 'node' is set to null
 			result.setValueInternal((T) value);
 		}

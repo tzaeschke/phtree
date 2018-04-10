@@ -12,7 +12,6 @@ import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.v13.nt.NtIteratorMask;
 
 /**
@@ -257,7 +256,6 @@ public class NodeIteratorListReuse<T, R> {
 				Object v = e.value();
 				if (v instanceof Node) {
 					Node nextSubNode = (Node) v; 
-					node.applyHcPos(e.key(), valTemplate);
 					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), e.getKdKey(),
 							valTemplate, rangeMin, rangeMax)) {
 						checkAndRunSubnode(nextSubNode, null);
@@ -281,7 +279,6 @@ public class NodeIteratorListReuse<T, R> {
 				//sub-node?
 				if (v instanceof Node) {
 					Node sub = (Node) v;
-					node.applyHcPos(currentPos, valTemplate);
 					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(), 
 							valTemplate, rangeMin, rangeMax)) {
 						checkAndRunSubnode(sub, resultBuffer);

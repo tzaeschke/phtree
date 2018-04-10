@@ -176,6 +176,7 @@ public class Node {
 	 * @return whether the infix length is > 0
 	 */
 	boolean getInfixOfSub(int pin, long hcPos, long[] outVal) {
+		applyHcPos(hcPos, outVal);
 		int offs = pinToOffsBitsData(pin, hcPos, outVal.length);
 		if (!hasSubInfix(offs, outVal.length)) {
 			return false;
@@ -188,19 +189,6 @@ public class Node {
 			offs += postLenStored();
 		}
 		return true;
-	}
-
-	@Deprecated
-	void getInfixOfSubNt(long[] infix, long[] outKey) {
-		if (!hasSubInfixNI(infix)) {
-			return;
-		}
-		//To cut of trailing bits
-		long mask = mask1100(postLenStored());
-		for (int i = 0; i < outKey.length; i++) {
-			//Replace val with infix (val may be !=0 from traversal)
-			outKey[i] = (mask & outKey[i]) | infix[i];
-		}
 	}
 
 	/**
@@ -528,7 +516,6 @@ public class Node {
 		long posInParent = PhTreeHelper.posInArray(key, parent.getPostLen());
 		int pinInParent = parent.getPosition(posInParent, dims);
 		if (val2 instanceof Node) {
-			applyHcPos(pos2, newPost);
 			getInfixOfSub(pin2, pos2, newPost);
 	
 			Node sub2 = (Node) val2;
@@ -594,7 +581,6 @@ public class Node {
 			return ntGetEntry(hcPos, postBuf, null);
 		}
 		
-		applyHcPos(hcPos, postBuf);
 		Object o = values[posInNode];
 		if (o instanceof Node) {
 			getInfixOfSub(posInNode, hcPos, postBuf);
@@ -635,7 +621,6 @@ public class Node {
 		if (o == null) {
 			return null;
 		}
-		applyHcPos(hcPos, subNodePrefix);
 		if (o instanceof Node) {
 			getInfixOfSub(posInNode, hcPos, subNodePrefix);
 		} else {
@@ -953,7 +938,6 @@ public class Node {
 			outKey[d] = Bits.readArray(ba2, startBit, postLenStored()) | (prefix[d] & mask);
 			startBit += postLenStored();
 		}
-		applyHcPos(hcPos, outKey);
 	}
 
 	void postFromNI(long[] ia, int startBit, long key[]) {
@@ -1141,9 +1125,8 @@ public class Node {
 			return null;
 		}
 		
-		applyHcPos(hcPos, inOutPrefix);
-
 		if (o instanceof Node) {
+			applyHcPos(hcPos, inOutPrefix);
 			return checkAndApplyInfix(((Node)o).getInfixLen(), pin, hcPos, 
 					inOutPrefix, rangeMin, rangeMax) ? o : null;
 		}
@@ -1307,8 +1290,9 @@ public class Node {
 		return true;
 	}
 
+	//TODO remove
 	@Deprecated
-	void applyHcPos(long hcPos, long[] valTemplate) {
+	private void applyHcPos(long hcPos, long[] valTemplate) {
 		PhTreeHelper.applyHcPos(hcPos, postLenClassic(), valTemplate);
 	}
 	
