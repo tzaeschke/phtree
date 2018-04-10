@@ -1194,7 +1194,7 @@ public class Node {
 
 		//assign infix
 		//Shift in two steps in case they add up to 64.
-		long maskClean = mask1100(postLenStored()-ONE);
+		long maskClean = mask1100(postLenStored());
 
 		//first, clean trailing bits
 		//Mask for comparing the tempVal with the ranges, except for bit that have not been
@@ -1315,15 +1315,9 @@ public class Node {
 	
 	private boolean checkAndGetPost(int pin, long hcPos, long[] inPrefix, long[] outKey, 
 			long[] rangeMin, long[] rangeMax) {
-		//TODO??
-		//TODO??
-		//TODO??
-		//TODO??
-		//TODO??
-		//TODO??
 		long[] ia = ba2;
 		int offs = pinToOffsBitsData(pin, hcPos, rangeMin.length);
-		final long mask = mask1100(postLenStored()-ONE);
+		final long mask = mask1100(postLenStored());
 		for (int i = 0; i < outKey.length; i++) {
 			long k = (inPrefix[i] & mask) | Bits.readArray(ia, offs, postLenStored());
 			if (k < rangeMin[i] || k > rangeMax[i]) {
