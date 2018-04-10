@@ -716,9 +716,11 @@ public class Node {
 		if (isNT()) {
 			throw new IllegalStateException();
 		}
-		if (subRequiresInfix) {
+		//TODO remove
+		applyHcPos(hcPos, infix);
+//		if (subRequiresInfix) {
 			replacePost(pin, hcPos, infix);
-		}
+//		}
 		int dims = infix.length;
 		int subInfoOffs = pinToOffsBitsData(pin, hcPos, dims) + dims*postLenStored() - 1;
 		writeSubInfixInfo(ba2, subInfoOffs, subRequiresInfix);
@@ -1190,12 +1192,12 @@ public class Node {
 			//TODO??
 			//TODO??
 			//TODO??
-			long in = (valTemplate[dim] & maskClean) | Bits.readArray(ba2, subOffs, postLenStored());
-			in &= compMask;
+			long inFull = (valTemplate[dim] & maskClean) | Bits.readArray(ba2, subOffs, postLenStored());
+			long in = inFull & compMask;
 			if (in > rangeMax[dim] || (in | ~compMask) < rangeMin[dim]) {
 				return false;
 			}
-			valTemplate[dim] = in;
+			valTemplate[dim] = inFull;
 			subOffs += postLenStored();
 		}
 
@@ -1243,12 +1245,12 @@ public class Node {
 		//TODO??
 		long compMask = mask1100(postLenStored()-ONE - infixLen);
 		for (int dim = 0; dim < valTemplate.length; dim++) {
-			long in = (valTemplate[dim] & maskClean) | postFix[dim];
-			in &= compMask;
+			long inFull = (valTemplate[dim] & maskClean) | postFix[dim];
+			long in = inFull & compMask;
 			if (in > rangeMax[dim] || in < (rangeMin[dim]&compMask)) {
 				return false;
 			}
-			valTemplate[dim] = in;
+			valTemplate[dim] = inFull;
 		}
 
 		return true;
@@ -1269,8 +1271,8 @@ public class Node {
 	@SuppressWarnings("unchecked")
 	<T>  boolean checkAndGetEntryNt(long hcPos, Object value, PhEntry<T> result, 
 			long[] valTemplate, long[] rangeMin, long[] rangeMax) {
-		applyHcPos(hcPos, valTemplate);
 		if (value instanceof Node) {
+			//applyHcPos(hcPos, valTemplate); //TODO not used anymore
 			Node sub = (Node) value;
 			if (!checkAndApplyInfixNt(sub.getInfixLen(), result.getKey(), valTemplate, 
 					rangeMin, rangeMax)) {
@@ -1471,7 +1473,7 @@ public class Node {
 	}
 
 	int infixLenClassic() {
-		return infixLenStored - 1;
+		return infixLenStored() - 1;
 	}
 
 	int infixLenStored() {
