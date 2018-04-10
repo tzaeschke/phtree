@@ -187,7 +187,7 @@ public class PhTree13<T> implements PhTree<T> {
 		stats.size += align8(12 + REF + REF + REF + 1 + 1 + 1 + 4);
 		//count children
 		int nChildren = node.getEntryCount();
-		stats.size += 16 + align8(Bits.arraySizeInByte(node.ba));
+		stats.size += 16 + align8(Bits.arraySizeInByte(node.ba2));
 		stats.size += node.values() != null ? 16 + align8(node.values().length * REF) : 0;
 		if (nChildren == 1 && (node != getRoot()) && nEntries.get() > 1) {
 			//This should not happen! Except for a root node if the tree has <2 entries.
@@ -203,9 +203,9 @@ public class PhTree13<T> implements PhTree<T> {
 		//check space
 		int baS = node.calcArraySizeTotalBits(node.getEntryCount(), dims);
 		baS = Bits.calcArraySize(baS);
-		if (baS < node.ba.length) {
-			System.err.println("Array too large: " + node.ba.length + " - " + baS + " = " + 
-					(node.ba.length - baS));
+		if (baS < node.ba2.length) {
+			System.err.println("Array too large: " + node.ba2.length + " - " + baS + " = " + 
+					(node.ba2.length - baS));
 		}
 		stats.nTotalChildren += nChildren;
 		

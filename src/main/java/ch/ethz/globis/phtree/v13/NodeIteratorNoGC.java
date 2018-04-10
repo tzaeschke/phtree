@@ -82,7 +82,7 @@ public class NodeIteratorNoGC<T> {
 			//Position of the current entry
 			currentOffsetKey = node.getBitPosIndex();
 			//length of post-fix WITH key
-			postEntryLenLHC = Node.IK_WIDTH(dims) + dims*node.getPostLen();
+			postEntryLenLHC = Node.IK_WIDTH(dims) + dims*node.postLenStored();
 		}
 
 		useHcIncrementer = false;
@@ -244,7 +244,7 @@ public class NodeIteratorNoGC<T> {
 			if (++nFound > nMaxEntry) {
 				return false;
 			}
-			long currentPos = Bits.readArray(node.ba, currentOffsetKey, Node.IK_WIDTH(dims));
+			long currentPos = Bits.readArray(node.ba2, currentOffsetKey, Node.IK_WIDTH(dims));
 			currentOffsetKey += postEntryLenLHC;
 			//check HC-pos
 			if (checkHcPos(currentPos)) {

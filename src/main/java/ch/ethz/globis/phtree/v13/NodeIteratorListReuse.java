@@ -221,12 +221,12 @@ public class NodeIteratorListReuse<T, R> {
 			//Position of the current entry
 			int currentOffsetKey = node.getBitPosIndex();
 			//length of post-fix WITH key
-			int postEntryLenLHC = Node.IK_WIDTH(dims) + dims*node.getPostLen();
+			int postEntryLenLHC = Node.IK_WIDTH(dims) + dims*node.postLenStored();
 			while (results.size() < maxResults) {
 				if (++nEntryFound > nMaxEntry) {
 					break;
 				}
-				long currentPos = Bits.readArray(node.ba, currentOffsetKey, Node.IK_WIDTH(dims));
+				long currentPos = Bits.readArray(node.ba2, currentOffsetKey, Node.IK_WIDTH(dims));
 				currentOffsetKey += postEntryLenLHC;
 				//check HC-pos
 				if (!checkHcPos(currentPos)) {
@@ -257,7 +257,7 @@ public class NodeIteratorListReuse<T, R> {
 				Object v = e.value();
 				if (v instanceof Node) {
 					Node nextSubNode = (Node) v; 
-					PhTreeHelper.applyHcPos(e.key(), node.getPostLen(), valTemplate);
+					node.applyHcPos(e.key(), valTemplate);
 					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), e.getKdKey(),
 							valTemplate, rangeMin, rangeMax)) {
 						checkAndRunSubnode(nextSubNode, null);
@@ -281,7 +281,7 @@ public class NodeIteratorListReuse<T, R> {
 				//sub-node?
 				if (v instanceof Node) {
 					Node sub = (Node) v;
-					PhTreeHelper.applyHcPos(currentPos, node.getPostLen(), valTemplate);
+					node.applyHcPos(currentPos, valTemplate);
 					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(), 
 							valTemplate, rangeMin, rangeMax)) {
 						checkAndRunSubnode(sub, resultBuffer);

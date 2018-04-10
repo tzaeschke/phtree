@@ -217,7 +217,7 @@ public class TestIndexQuerieSet extends TestSuper {
 	@Test
 	public void testQueryND64Random2() {
 		final int DIM = 8;
-		final int N = 100*1000;
+		final int N = 10;//100*1000;
 		final Random R = new Random(0);
 		long[][] data = new long[N][DIM];
 		

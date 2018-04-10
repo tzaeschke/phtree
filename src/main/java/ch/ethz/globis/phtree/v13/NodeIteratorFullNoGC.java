@@ -31,7 +31,7 @@ public class NodeIteratorFullNoGC<T> {
 	private final int dims;
 	private boolean isHC;
 	private boolean isNI;
-	private int postLen;
+	private int postLenStored;
 	private long next = -1;
 	private Node node;
 	private int currentOffsetKey;
@@ -73,7 +73,7 @@ public class NodeIteratorFullNoGC<T> {
 		this.node = node;
 		this.isHC = node.isAHC();
 		this.isNI = node.isNT();
-		this.postLen = node.getPostLen();
+		this.postLenStored = node.postLenStored();
 		nMaxEntries = node.getEntryCount();
 		
 		
@@ -85,7 +85,7 @@ public class NodeIteratorFullNoGC<T> {
 			ntIterator.reset(node.ind(), 0, Long.MAX_VALUE);
 		} else {
 			currentOffsetKey = node.getBitPosIndex();
-			postEntryLenLHC = Node.IK_WIDTH(dims)+dims*postLen;
+			postEntryLenLHC = Node.IK_WIDTH(dims)+dims*node.postLenStored();
 		}
 	}
 
@@ -126,17 +126,19 @@ public class NodeIteratorFullNoGC<T> {
 
 	@SuppressWarnings("unchecked")
 	private boolean readValue(long pos, long[] kdKey, Object value, PhEntry<T> result) {
-		PhTreeHelper.applyHcPos(pos, postLen, valTemplate);
+		node.applyHcPos(pos, valTemplate);
 		if (value instanceof Node) {
 			Node sub = (Node) value;
+			//TODO do this AFTER check -> use simple arrayCopy(kdKey)
 			node.getInfixOfSubNt(kdKey, valTemplate);
-			if (checker != null && !checker.isValid(sub.getPostLen()+1, valTemplate)) {
+			if (checker != null && !checker.isValid(sub.postLenStored()+1, valTemplate)) {
 				return false;
 			}
 			result.setNodeInternal(sub);
 		} else {
 			long[] resultKey = result.getKey();
-			final long mask = (~0L)<<postLen;
+			//TODO remove this / could use 'stored' as well
+			final long mask = (~0L)<<(postLenStored + 1);
 			for (int i = 0; i < resultKey.length; i++) {
 				resultKey[i] = (valTemplate[i] & mask) | kdKey[i];
 			}
@@ -184,7 +186,7 @@ public class NodeIteratorFullNoGC<T> {
 				next = FINISHED;
 				break;
 			}
-			currentPos = Bits.readArray(node.ba, currentOffsetKey, Node.IK_WIDTH(dims));
+			currentPos = Bits.readArray(node.ba2, currentOffsetKey, Node.IK_WIDTH(dims));
 			currentOffsetKey += postEntryLenLHC;
 			//check post-fix
 		} while (!readValue(nEntriesFound-1, currentPos, result));

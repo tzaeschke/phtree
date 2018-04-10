@@ -57,14 +57,19 @@ public class Node {
 	 * pCnt = postCount
 	 * sCnt = subCount
 	 */
-	long[] ba = null;
+	long[] ba2 = null;
 
 	// |   1st   |   2nd    |   3rd   |    4th   |
 	// | isSubHC | isPostHC | isSubNI | isPostNI |
 	private boolean isHC = false;
 
-	private byte postLen = 0;
-	private byte infixLen = 0; //prefix size
+	/**
+	 * postLenStored: Stored bits, including the hc address.
+	 * postLenClassic: The number of postFix bits
+	 * Rule: postLenClassic + 1 = postLenStored.  
+	 */
+	private byte postLenStored = 0;
+	private byte infixLenStored = 0; //prefix size
 
 	//Nested tree index
 	private NtNode<Object> ind = null;
@@ -93,16 +98,16 @@ public class Node {
             this.values = Refs.arrayClone(original.values);
         }
         this.entryCnt = original.entryCnt;
-        this.infixLen = original.infixLen;
+        this.infixLenStored = original.infixLenStored;
         this.isHC = original.isHC;
-        this.postLen = original.postLen;
-        this.infixLen = original.infixLen;
+        this.postLenStored = original.postLenStored;
+        this.infixLenStored = original.infixLenStored;
         if (original.ind != null) {
         	//copy NT tree
         	throw new UnsupportedOperationException();
         }
-        if (original.ba != null) {
-        	this.ba = Bits.arrayClone(original.ba);
+        if (original.ba2 != null) {
+        	this.ba2 = Bits.arrayClone(original.ba2);
         }
     }
 
@@ -110,20 +115,20 @@ public class Node {
 		return new Node();
 	}
 
-	private void initNode(int infixLen, int postLen, int dims) {
-		this.infixLen = (byte) infixLen;
-		this.postLen = (byte) postLen;
+	private void initNode(int infixLenClassic, int postLenClassic, int dims) {
+		this.infixLenStored = (byte) (infixLenClassic + 1);
+		this.postLenStored = (byte) (postLenClassic + 1);
 		this.entryCnt = 0;
 		this.ind = null;
 		this.isHC = false;
 		int size = calcArraySizeTotalBits(2, dims);
-		this.ba = Bits.arrayCreate(size);
+		this.ba2 = Bits.arrayCreate(size);
 		this.values = Refs.arrayCreate(2);
 	}
 
-	static Node createNode(int dims, int infixLen, int postLen) {
+	static Node createNode(int dims, int infixLenClassic, int postLenClassic) {
 		Node n = NodePool.getNode();
-		n.initNode(infixLen, postLen, dims);
+		n.initNode(infixLenClassic, postLenClassic, dims);
 		return n;
 	}
 
@@ -136,7 +141,7 @@ public class Node {
 	}
 	
 	void discardNode() {
-		Bits.arrayReplace(ba, null);
+		Bits.arrayReplace(ba2, null);
 		Refs.arrayReplace(values, null);
 		entryCnt = 0;
 		NodePool.offer(this);
@@ -148,12 +153,12 @@ public class Node {
 		//post-fixes
 		if (isAHC()) {
 			//hyper-cube
-			nBits += (INN_HC_WIDTH + dims * postLen) * (1 << dims);
+			nBits += (INN_HC_WIDTH + dims * postLenStored()) * (1 << dims);
 		} else if (isNT()) {
 			nBits += 0;
 		} else {
 			//hc-pos index
-			nBits += entryCount * (IK_WIDTH(dims) + dims * postLen);
+			nBits += entryCount * (IK_WIDTH(dims) + dims * postLenStored());
 		}
 		return nBits;
 	}
@@ -176,21 +181,22 @@ public class Node {
 			return false;
 		}
 		//To cut of trailing bits
-		long mask = (-1L) << postLen;
+		long mask = mask1100(postLenStored());
 		for (int i = 0; i < outVal.length; i++) {
 			//Replace val with infix (val may be !=0 from traversal)
-			outVal[i] = (mask & outVal[i]) | Bits.readArray(ba, offs, postLen);
-			offs += postLen;
+			outVal[i] = (mask & outVal[i]) | Bits.readArray(ba2, offs, postLenStored());
+			offs += postLenStored();
 		}
 		return true;
 	}
 
+	@Deprecated
 	void getInfixOfSubNt(long[] infix, long[] outKey) {
 		if (!hasSubInfixNI(infix)) {
 			return;
 		}
 		//To cut of trailing bits
-		long mask = (-1L) << postLen;
+		long mask = mask1100(postLenStored());
 		for (int i = 0; i < outKey.length; i++) {
 			//Replace val with infix (val may be !=0 from traversal)
 			outKey[i] = (mask & outKey[i]) | infix[i];
@@ -244,7 +250,7 @@ public class Node {
 			}
 			return v;
 		} else {
-			if (postLen > 0) {
+			if (postLenClassic() > 0) {
 				long mask = calcPostfixMask();
 				return insertSplit(keyToMatch, newValueToInsert, v, pin, hcPos, tree, offs, mask);
 			}
@@ -330,21 +336,21 @@ public class Node {
 	
 	private boolean readAndCheckKdKey(int offs, long[] keyToMatch, long mask) {
 		for (int i = 0; i < keyToMatch.length; i++) {
-			long k = Bits.readArray(ba, offs, postLen);
+			long k = Bits.readArray(ba2, offs, postLenStored());
 			if (((k ^ keyToMatch[i]) & mask) != 0) {
 				return false;
 			}
-			offs += postLen;
+			offs += postLenStored();
 		}
 		return true;
 	}
 
 	public long calcPostfixMask() {
-		return ~((-1L)<<postLen);
+		return ~((-1L)<<postLenClassic());
 	}
 	
 	public long calcInfixMask(int subPostLen) {
-		long mask = ~((-1L)<<(postLen-subPostLen-1));
+		long mask = ~((-1L)<<(postLenClassic()-subPostLen-1));
 		return mask << (subPostLen+1);
 	}
 	
@@ -408,7 +414,7 @@ public class Node {
     public Node createNode(long[] key1, Object val1, long[] key2, Object val2,
     		int mcb) {
         //determine length of infix
-        int newLocalInfLen = postLen - mcb;
+        int newLocalInfLen = postLenClassic() - mcb;
         int newPostLen = mcb-1;
         Node newNode = createNode(key1.length, newLocalInfLen, newPostLen);
 
@@ -453,13 +459,13 @@ public class Node {
 		//long mask = (1l<<node.getPostLen()) - 1l; // e.g. (0-->0), (1-->1), (8-->127=0x01111111)
      	//write all differences to diff, we just check diff afterwards
 		long diff = 0;
-		long[] ia = ba;
+		long[] ia = ba2;
 		int offs = bitOffs;
 		for (int i = 0; i < v1.length; i++) {
-			long k = Bits.readArray(ia, offs, postLen);
+			long k = Bits.readArray(ia, offs, postLenStored());
 			diff |= (v1[i] ^ k);
 			outV[i] = k;
-			offs += postLen;
+			offs += postLenStored();
 		}
     	return Long.SIZE-Long.numberOfLeadingZeros(diff & mask);
     }
@@ -512,7 +518,7 @@ public class Node {
 			//LHC: we have only pos=0 and pos=1
 			pin2 = (pinToDelete == 0) ? 1 : 0;
 			int offs = pinToOffsBitsLHC(pin2, getBitPosIndex(), dims);
-			pos2 = Bits.readArray(ba, offs, IK_WIDTH(dims));
+			pos2 = Bits.readArray(ba2, offs, IK_WIDTH(dims));
 			val2 = values[pin2];
 		}
 
@@ -522,7 +528,7 @@ public class Node {
 		long posInParent = PhTreeHelper.posInArray(key, parent.getPostLen());
 		int pinInParent = parent.getPosition(posInParent, dims);
 		if (val2 instanceof Node) {
-			PhTreeHelper.applyHcPos(pos2, getPostLen(), newPost);
+			applyHcPos(pos2, newPost);
 			getInfixOfSub(pin2, pos2, newPost);
 	
 			Node sub2 = (Node) val2;
@@ -588,17 +594,17 @@ public class Node {
 			return ntGetEntry(hcPos, postBuf, null);
 		}
 		
-		PhTreeHelper.applyHcPos(hcPos, postLen, postBuf);
+		applyHcPos(hcPos, postBuf);
 		Object o = values[posInNode];
 		if (o instanceof Node) {
 			getInfixOfSub(posInNode, hcPos, postBuf);
 		} else {
 			int offsetBit = pinToOffsBitsData(posInNode, hcPos, postBuf.length);
-			final long mask = (~0L)<<postLen;
+			final long mask = mask1100(postLenStored());
 			for (int i = 0; i < postBuf.length; i++) {
 				postBuf[i] &= mask;
-				postBuf[i] |= Bits.readArray(ba, offsetBit, postLen);
-				offsetBit += postLen;
+				postBuf[i] |= Bits.readArray(ba2, offsetBit, postLenStored());
+				offsetBit += postLenStored();
 			}
 		}
 		return o;
@@ -629,15 +635,15 @@ public class Node {
 		if (o == null) {
 			return null;
 		}
-		PhTreeHelper.applyHcPos(hcPos, postLen, subNodePrefix);
+		applyHcPos(hcPos, subNodePrefix);
 		if (o instanceof Node) {
 			getInfixOfSub(posInNode, hcPos, subNodePrefix);
 		} else {
 			int offsetBit = pinToOffsBitsData(posInNode, hcPos, subNodePrefix.length);
-			final long mask = (~0L)<<postLen;
+			final long mask = mask1100(postLenStored());
 			for (int i = 0; i < subNodePrefix.length; i++) {
-				outKey[i] = (subNodePrefix[i] & mask) | Bits.readArray(ba, offsetBit, postLen);
-				offsetBit += postLen;
+				outKey[i] = (subNodePrefix[i] & mask) | Bits.readArray(ba2, offsetBit, postLenStored());
+				offsetBit += postLenStored();
 			}
 		}
 		return o;
@@ -654,9 +660,9 @@ public class Node {
 	private boolean useAHC(int entryCount, int dims) {
 		//calc post mode.
 		//+1 bit for null/not-null flag
-		long sizeAHC = (dims * postLen + INN_HC_WIDTH + REF_BITS) * (1L << dims); 
+		long sizeAHC = (dims * postLenStored() + INN_HC_WIDTH + REF_BITS) * (1L << dims); 
 		//+DIM because every index entry needs DIM bits
-		long sizeLHC = (dims * postLen + IK_WIDTH(dims) + REF_BITS) * (long)entryCount;
+		long sizeLHC = (dims * postLenStored() + IK_WIDTH(dims) + REF_BITS) * (long)entryCount;
 		//Already 1.1 i.o. 1.0 has significant bad impact on perf.
 		return PhTree13.AHC_ENABLED && (dims<=31) && (sizeLHC*AHC_LHC_BIAS >= sizeAHC);
 	}
@@ -685,17 +691,18 @@ public class Node {
 		} else {
 			values[pin] = value;
 			offsKey = pinToOffsBitsLHC(pin, offsIndex, dims);
-			Bits.writeArray(ba, offsKey, IK_WIDTH(dims), hcPos);
+			Bits.writeArray(ba2, offsKey, IK_WIDTH(dims), hcPos);
 			offsKey += IK_WIDTH(dims);
 		}
 		if (value instanceof Node) {
-			int newSubInfixLen = postLen - ((Node)value).getPostLen() - 1;  
-			((Node)value).setInfixLen(newSubInfixLen);
-			writeSubInfix(pin, hcPos, newKey, newSubInfixLen);
-		} else if (postLen > 0) {
+			Node node = (Node) value;
+			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;  
+			node.setInfixLen(newSubInfixLen);
+			writeSubInfix(pin, hcPos, newKey, node.requiresInfix());
+		} else if (postLenStored() > 0) {
 			for (int i = 0; i < newKey.length; i++) {
-				Bits.writeArray(ba, offsKey, postLen, newKey[i]);
-				offsKey += postLen;
+				Bits.writeArray(ba2, offsKey, postLenStored(), newKey[i]);
+				offsKey += postLenStored();
 			}
 		}
 	}
@@ -703,8 +710,8 @@ public class Node {
 	private Object replacePost(int pin, long hcPos, long[] newKey) {
 		int offs = pinToOffsBitsData(pin, hcPos, newKey.length);
 		for (int i = 0; i < newKey.length; i++) {
-			Bits.writeArray(ba, offs, postLen, newKey[i]);
-			offs += postLen;
+			Bits.writeArray(ba2, offs, postLenStored(), newKey[i]);
+			offs += postLenStored();
 		}
 		return values[pin];
 	}
@@ -716,33 +723,32 @@ public class Node {
 		}
 		//TODO during insert we wounldn't need to rewrite the infix, only the infix-flag 
 		//     would need to be set...
-		writeSubInfix(posInNode, hcPos, infix, newSub.getInfixLen());
+		writeSubInfix(posInNode, hcPos, infix, newSub.requiresInfix());
 		values[posInNode] = newSub;
 	}
 	
-	void writeSubInfix(int pin, long hcPos, long[] infix, int subInfixLen) {
+	void writeSubInfix(int pin, long hcPos, long[] infix, boolean subRequiresInfix) {
 		if (isNT()) {
 			throw new IllegalStateException();
 		}
-		if (subInfixLen > 0) {
+		if (subRequiresInfix) {
 			replacePost(pin, hcPos, infix);
 		}
 		int dims = infix.length;
-		int subInfoOffs = pinToOffsBitsData(pin, hcPos, dims) + dims*postLen - 1;
-		writeSubInfixInfo(ba, subInfoOffs, subInfixLen);
+		int subInfoOffs = pinToOffsBitsData(pin, hcPos, dims) + dims*postLenStored() - 1;
+		writeSubInfixInfo(ba2, subInfoOffs, subRequiresInfix);
 	}
 	
-	private void writeSubInfixInfo(long[] ba, int subInfoOffs, int subInfixLen) {
+	private void writeSubInfixInfo(long[] ba, int subInfoOffs, boolean subRequiresInfix) {
 		//-> Should work for AHC and LHC with (offs+postLen-1)
 		
 		//The last bit of the infix encode whether we have 0 infix length
 		//length
-		boolean hasInfix = subInfixLen != 0;
-		Bits.setBit(ba, subInfoOffs, hasInfix);
+		Bits.setBit(ba, subInfoOffs, subRequiresInfix);
 	}
 	
 	private boolean hasSubInfix(int subInfoOffs, int dims) {
-		return Bits.getBit(ba, subInfoOffs + dims*postLen - 1);
+		return Bits.getBit(ba2, subInfoOffs + dims*postLenStored() - 1);
 	}
 	
 	boolean hasSubInfixNI(long[] infix) {
@@ -832,17 +838,17 @@ public class Node {
 		long[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(oldEntryCount+1, dims));
 		Object [] v2 = Refs.arrayCreate(1<<dims);
 		//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-		Bits.copyBitsLeft(ba, 0, bia2, 0, posOfIndex);
-		int postLenTotal = dims*postLen; 
+		Bits.copyBitsLeft(ba2, 0, bia2, 0, posOfIndex);
+		int postLenTotal = dims*postLenStored(); 
 		for (int i = 0; i < oldEntryCount; i++) {
 			int entryPosLHC = posOfIndex + i*(IK_WIDTH(dims)+postLenTotal);
-			int p2 = (int)Bits.readArray(ba, entryPosLHC, IK_WIDTH(dims));
-			Bits.copyBitsLeft(ba, entryPosLHC+IK_WIDTH(dims),
+			int p2 = (int)Bits.readArray(ba2, entryPosLHC, IK_WIDTH(dims));
+			Bits.copyBitsLeft(ba2, entryPosLHC+IK_WIDTH(dims),
 					bia2, posOfData + postLenTotal*p2, 
 					postLenTotal);
 			v2[p2] = values[i];
 		}
-		ba = Bits.arrayReplace(ba, bia2);
+		ba2 = Bits.arrayReplace(ba2, bia2);
 		values = Refs.arrayReplace(values, v2);
 	}
 	
@@ -855,8 +861,8 @@ public class Node {
 		int oldOffsIndex = getBitPosIndex();
 		int oldOffsData = oldOffsIndex + (1<<dims)*INN_HC_WIDTH;
 		//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-		Bits.copyBitsLeft(ba, 0, bia2, 0, oldOffsIndex);
-		int postLenTotal = dims*postLen;
+		Bits.copyBitsLeft(ba2, 0, bia2, 0, oldOffsIndex);
+		int postLenTotal = dims*postLenStored();
 		int n=0;
 		for (int i = 0; i < (1L<<dims); i++) {
 			if (i == hcPosToRemove) {
@@ -869,13 +875,13 @@ public class Node {
 				int entryPosLHC = oldOffsIndex + n*(IK_WIDTH(dims)+postLenTotal);
 				Bits.writeArray(bia2, entryPosLHC, IK_WIDTH(dims), i);
 				Bits.copyBitsLeft(
-						ba, oldOffsData + postLenTotal*i, 
+						ba2, oldOffsData + postLenTotal*i, 
 						bia2, entryPosLHC + IK_WIDTH(dims),
 						postLenTotal);
 				n++;
 			}
 		}
-		ba = Bits.arrayReplace(ba, bia2);
+		ba2 = Bits.arrayReplace(ba2, bia2);
 		values = Refs.arrayReplace(values, v2);
 		return oldEntry;
 	}
@@ -917,7 +923,7 @@ public class Node {
 			//hyper-cube
 			int offsPostKey = posToOffsBitsDataAHC(hcPos, offsIndex, dims);
 			for (int i = 0; i < key.length; i++) {
-				Bits.writeArray(ba, offsPostKey + postLen * i, postLen, key[i]);
+				Bits.writeArray(ba2, offsPostKey + postLenStored() * i, postLenStored(), key[i]);
 			}
 			values[(int) hcPos] = value;
 		} else {
@@ -925,46 +931,46 @@ public class Node {
 			pin = -(pin+1);
 
 			//resize array
-			ba = Bits.arrayEnsureSize(ba, calcArraySizeTotalBits(bufEntryCnt+1, dims));
-			long[] ia = ba;
+			ba2 = Bits.arrayEnsureSize(ba2, calcArraySizeTotalBits(bufEntryCnt+1, dims));
+			long[] ia = ba2;
 			int offs = pinToOffsBitsLHC(pin, offsIndex, dims);
-			Bits.insertBits(ia, offs, IK_WIDTH(dims) + dims*postLen);
+			Bits.insertBits(ia, offs, IK_WIDTH(dims) + dims*postLenStored);
 			//insert key
 			Bits.writeArray(ia, offs, IK_WIDTH(dims), hcPos);
 			//insert value:
 			offs += IK_WIDTH(dims);
 			for (int i = 0; i < key.length; i++) {
-				Bits.writeArray(ia, offs, postLen, key[i]);
-				offs += postLen;
+				Bits.writeArray(ia, offs, postLenStored(), key[i]);
+				offs += postLenStored();
 			}
 			values = Refs.insertSpaceAtPos(values, pin, bufEntryCnt+1);
 			values[pin] = value;
 		}
 	}
 
-	void postToNI(int startBit, int postLen, long[] outKey, long hcPos, long[] prefix, long mask) {
+	void postToNI(int startBit, long[] outKey, long hcPos, long[] prefix, long mask) {
 		for (int d = 0; d < outKey.length; d++) {
-			outKey[d] = Bits.readArray(ba, startBit, postLen) | (prefix[d] & mask);
-			startBit += postLen;
+			outKey[d] = Bits.readArray(ba2, startBit, postLenStored()) | (prefix[d] & mask);
+			startBit += postLenStored();
 		}
-		PhTreeHelper.applyHcPos(hcPos, postLen, outKey);
+		applyHcPos(hcPos, outKey);
 	}
 
-	void postFromNI(long[] ia, int startBit, long key[], int postLen) {
+	void postFromNI(long[] ia, int startBit, long key[]) {
 		//insert postifx
 		for (int d = 0; d < key.length; d++) {
-			Bits.writeArray(ia, startBit + postLen * d, postLen, key[d]);
+			Bits.writeArray(ia, startBit + postLenStored() * d, postLenStored(), key[d]);
 		}
 	}
 
-	void infixFromNI(long[] ba, int startBit, long[] key, int subInfixLen) {
+	void infixFromNI(long[] ba, int startBit, long[] key, boolean subRequiresInfix) {
 		//insert infix:
 		for (int i = 0; i < key.length; i++) {
-			Bits.writeArray(ba, startBit, postLen, key[i]);
-			startBit += postLen;
+			Bits.writeArray(ba, startBit, postLenStored(), key[i]);
+			startBit += postLenStored();
 		}
 		int subInfoOffs = startBit-1; 
-		writeSubInfixInfo(ba, subInfoOffs, subInfixLen);
+		writeSubInfixInfo(ba, subInfoOffs, subRequiresInfix);
 	}
 
 	/**
@@ -982,13 +988,13 @@ public class Node {
 		}
 		ind = createNiIndex(dims);
 
-		long prefixMask = (-1L) << postLen;
+		long prefixMask = mask1100(postLenStored());
 		
 		//read posts 
 		if (isAHC()) {
 			int oldOffsIndex = getBitPosIndex();
 			int oldPostBitsVal = posToOffsBitsDataAHC(0, oldOffsIndex, dims);
-			int postLenTotal = dims*postLen;
+			int postLenTotal = dims*postLenStored();
 			final long[] buffer = new long[dims];
 			for (int i = 0; i < (1L<<dims); i++) {
 				Object o = values[i];
@@ -996,7 +1002,7 @@ public class Node {
 					continue;
 				} 
 				int dataOffs = oldPostBitsVal + i*postLenTotal;
-				postToNI(dataOffs, postLen, buffer, i, prefix, prefixMask);
+				postToNI(dataOffs, buffer, i, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
 				NodeTreeV13.addEntry(ind, i, buffer, o, null);
@@ -1004,13 +1010,13 @@ public class Node {
 		} else {
 			int offsIndex = getBitPosIndex();
 			int dataOffs = pinToOffsBitsLHC(0, offsIndex, dims);
-			int postLenTotal = dims*postLen;
+			int postLenTotal = dims*postLenStored();
 			final long[] buffer = new long[dims];
 			for (int i = 0; i < bufEntryCnt; i++) {
-				long p2 = Bits.readArray(ba, dataOffs, IK_WIDTH(dims));
+				long p2 = Bits.readArray(ba2, dataOffs, IK_WIDTH(dims));
 				dataOffs += IK_WIDTH(dims);
 				Object e = values[i];
-				postToNI(dataOffs, postLen, buffer, p2, prefix, prefixMask);
+				postToNI(dataOffs, buffer, p2, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
 				NodeTreeV13.addEntry(ind, p2, buffer, e, null);
@@ -1019,7 +1025,7 @@ public class Node {
 		}
 
 		setAHC(false);
-		ba = Bits.arrayTrim(ba, calcArraySizeTotalBitsNt());
+		ba2 = Bits.arrayTrim(ba2, calcArraySizeTotalBitsNt());
 		values = Refs.arrayReplace(values, null); 
 	}
 
@@ -1050,8 +1056,8 @@ public class Node {
 		int offsIndex = getBitPosIndex();
 		long[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(entryCountNew, dims));
 		//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-		Bits.copyBitsLeft(ba, 0, bia2, 0, offsIndex);
-		int postLenTotal = dims*postLen;
+		Bits.copyBitsLeft(ba2, 0, bia2, 0, offsIndex);
+		int postLenTotal = dims*postLenStored();
 		if (shouldBeAHC) {
 			//HC mode
 			Object[] v2 = Refs.arrayCreate(1<<dims);
@@ -1067,17 +1073,17 @@ public class Node {
 					continue;
 				}
 				int p2 = (int) pos;
-				int offsBitData = startBitData + postLen * dims * p2;
+				int offsBitData = startBitData + postLenStored() * dims * p2;
 				if (e.value() instanceof Node) {
 					//subnode
 					Node node = (Node) e.value();
-					infixFromNI(bia2, offsBitData, e.getKdKey(), node.getInfixLen());
+					infixFromNI(bia2, offsBitData, e.getKdKey(), node.requiresInfix());
 				} else {
-					postFromNI(bia2, offsBitData, e.getKdKey(), postLen);
+					postFromNI(bia2, offsBitData, e.getKdKey());
 				}
 				v2[p2] = e.value();
 			}
-			ba = Bits.arrayReplace(ba, bia2);
+			ba2 = Bits.arrayReplace(ba2, bia2);
 			values = Refs.arrayReplace(values, v2);
 		} else {
 			//LHC mode
@@ -1099,14 +1105,14 @@ public class Node {
 				v2[n] = e.value();
 				if (e.value() instanceof Node) {
 					Node node = (Node) e.getValue();
-					infixFromNI(bia2, entryPosLHC, e.getKdKey(), node.getInfixLen());
+					infixFromNI(bia2, entryPosLHC, e.getKdKey(), node.requiresInfix());
 				} else {
-					postFromNI(bia2, entryPosLHC, e.getKdKey(), postLen);
+					postFromNI(bia2, entryPosLHC, e.getKdKey());
 				}
 				entryPosLHC += postLenTotal;
 				n++;
 			}
-			ba = Bits.arrayReplace(ba, bia2);
+			ba2 = Bits.arrayReplace(ba2, bia2);
 			values = Refs.arrayReplace(values, v2);
 		}			
 
@@ -1135,7 +1141,7 @@ public class Node {
 			return null;
 		}
 		
-		PhTreeHelper.applyHcPos(hcPos, postLen, inOutPrefix);
+		applyHcPos(hcPos, inOutPrefix);
 
 		if (o instanceof Node) {
 			return checkAndApplyInfix(((Node)o).getInfixLen(), pin, hcPos, 
@@ -1160,7 +1166,7 @@ public class Node {
 		if (PhTreeHelper.DEBUG) {
 			N_GOOD++;
 			//Ensure that we never enter this method if the node cannot possibly contain a match.
-			long maskClean = (-1L) << postLen;
+			long maskClean = mask1100(postLenClassic());
 			for (int dim = 0; dim < valTemplate.length; dim++) {
 				if ((valTemplate[dim]&maskClean) > rangeMax[dim] || 
 						(valTemplate[dim] | ~maskClean) < rangeMin[dim]) {
@@ -1188,20 +1194,26 @@ public class Node {
 
 		//assign infix
 		//Shift in two steps in case they add up to 64.
-		long maskClean = (-1L) << postLen;
+		long maskClean = mask1100(postLenStored()-ONE);
 
 		//first, clean trailing bits
 		//Mask for comparing the tempVal with the ranges, except for bit that have not been
 		//extracted yet.
-		long compMask = (-1L)<<(postLen - infixLen);
+		long compMask = mask1100(postLenStored()-ONE - infixLen);
 		for (int dim = 0; dim < valTemplate.length; dim++) {
-			long in = (valTemplate[dim] & maskClean) | Bits.readArray(ba, subOffs, postLen);
+			//TODO??
+			//TODO??
+			//TODO??
+			//TODO??
+			//TODO??
+			//TODO??
+			long in = (valTemplate[dim] & maskClean) | Bits.readArray(ba2, subOffs, postLenStored());
 			in &= compMask;
 			if (in > rangeMax[dim] || (in | ~compMask) < rangeMin[dim]) {
 				return false;
 			}
 			valTemplate[dim] = in;
-			subOffs += postLen;
+			subOffs += postLenStored();
 		}
 
 		return true;
@@ -1215,7 +1227,7 @@ public class Node {
 		if (PhTreeHelper.DEBUG) {
 			N_GOOD++;
 			//Ensure that we never enter this method if the node cannot possibly contain a match.
-			long maskClean = (-1L) << postLen;
+			long maskClean = mask1100(postLenClassic());
 			for (int dim = 0; dim < valTemplate.length; dim++) {
 				if ((valTemplate[dim] & maskClean) > rangeMax[dim] || 
 						(valTemplate[dim] | ~maskClean) < rangeMin[dim]) {
@@ -1235,12 +1247,18 @@ public class Node {
 
 		//assign infix
 		//Shift in two steps in case they add up to 64.
-		long maskClean = (-1L) << postLen;
+		long maskClean = mask1100(postLenStored());
 
 		//first, clean trailing bits
 		//Mask for comparing the tempVal with the ranges, except for bit that have not been
 		//extracted yet.
-		long compMask = (-1L)<<(postLen - infixLen);
+		//TODO??
+		//TODO??
+		//TODO??
+		//TODO??
+		//TODO??
+		//TODO??
+		long compMask = mask1100(postLenStored()-ONE - infixLen);
 		for (int dim = 0; dim < valTemplate.length; dim++) {
 			long in = (valTemplate[dim] & maskClean) | postFix[dim];
 			in &= compMask;
@@ -1253,6 +1271,9 @@ public class Node {
 		return true;
 	}
 
+	public static long mask1100(int zeroBits) {
+		return zeroBits == 64 ? 0 : ((-1L) << zeroBits);
+	}
 	
 	/**
 	 * Get post-fix.
@@ -1265,7 +1286,7 @@ public class Node {
 	@SuppressWarnings("unchecked")
 	<T>  boolean checkAndGetEntryNt(long hcPos, Object value, PhEntry<T> result, 
 			long[] valTemplate, long[] rangeMin, long[] rangeMax) {
-		PhTreeHelper.applyHcPos(hcPos, postLen, valTemplate);
+		applyHcPos(hcPos, valTemplate);
 		if (value instanceof Node) {
 			Node sub = (Node) value;
 			if (!checkAndApplyInfixNt(sub.getInfixLen(), result.getKey(), valTemplate, 
@@ -1286,22 +1307,42 @@ public class Node {
 		return true;
 	}
 
+	@Deprecated
+	void applyHcPos(long hcPos, long[] valTemplate) {
+		PhTreeHelper.applyHcPos(hcPos, postLenClassic(), valTemplate);
+	}
+	
+	
 	private boolean checkAndGetPost(int pin, long hcPos, long[] inPrefix, long[] outKey, 
 			long[] rangeMin, long[] rangeMax) {
-		long[] ia = ba;
+		//TODO??
+		//TODO??
+		//TODO??
+		//TODO??
+		//TODO??
+		//TODO??
+		long[] ia = ba2;
 		int offs = pinToOffsBitsData(pin, hcPos, rangeMin.length);
-		final long mask = (~0L)<<postLen;
+		final long mask = mask1100(postLenStored()-ONE);
 		for (int i = 0; i < outKey.length; i++) {
-			long k = (inPrefix[i] & mask) | Bits.readArray(ia, offs, postLen);
+			long k = (inPrefix[i] & mask) | Bits.readArray(ia, offs, postLenStored());
 			if (k < rangeMin[i] || k > rangeMax[i]) {
 				return false;
 			}
 			outKey[i] = k;
-			offs += postLen;
+			offs += postLenStored();
 		}
 		return true;
 	}
 	
+	//TODO??
+	//TODO??
+	//TODO??
+	//TODO??
+	//TODO??
+	//TODO??
+	@Deprecated
+	private static final int ONE = 1;
 
 	Object removeEntry(long hcPos, int posInNode, final int dims) {
 		final int bufEntryCnt = getEntryCount();
@@ -1333,9 +1374,9 @@ public class Node {
 			//linearized cube:
 			//remove key and value
 			int posBit = pinToOffsBitsLHC(posInNode, offsIndex, dims);
-			Bits.removeBits(ba, posBit, IK_WIDTH(dims) + dims*postLen);
+			Bits.removeBits(ba2, posBit, IK_WIDTH(dims) + dims*postLenStored());
 			//shrink array
-			ba = Bits.arrayTrim(ba, calcArraySizeTotalBits(bufEntryCnt-1, dims));
+			ba2 = Bits.arrayTrim(ba2, calcArraySizeTotalBits(bufEntryCnt-1, dims));
 			//values:
 			oldVal = values[posInNode]; 
 			values = Refs.removeSpaceAtPos(values, posInNode, bufEntryCnt-1);
@@ -1396,15 +1437,15 @@ public class Node {
 
 
 	private int posToOffsBitsDataAHC(long hcPos, int offsIndex, int dims) {
-		return offsIndex + INN_HC_WIDTH * (1<<dims) + postLen * dims * (int)hcPos;
+		return offsIndex + INN_HC_WIDTH * (1<<dims) + postLenStored() * dims * (int)hcPos;
 	}
 	
 	private int pinToOffsBitsDataLHC(int pin, int offsIndex, int dims) {
-		return offsIndex + (IK_WIDTH(dims) + postLen * dims) * pin + IK_WIDTH(dims);
+		return offsIndex + (IK_WIDTH(dims) + postLenStored() * dims) * pin + IK_WIDTH(dims);
 	}
 	
 	int pinToOffsBitsLHC(int pin, int offsIndex, int dims) {
-		return offsIndex + (IK_WIDTH(dims) + postLen * dims) * pin;
+		return offsIndex + (IK_WIDTH(dims) + postLenStored() * dims) * pin;
 	}
 	
 	int pinToOffsBitsData(int pin, long hcPos, int dims) {
@@ -1436,22 +1477,45 @@ public class Node {
 			} else {
 				//linearized cube
 				int offsInd = getBitPosIndex();
-				return Bits.binarySearch(ba, offsInd, getEntryCount(), hcPos, IK_WIDTH(dims), 
-						dims * postLen);
+				return Bits.binarySearch(ba2, offsInd, getEntryCount(), hcPos, IK_WIDTH(dims), 
+						dims * postLenStored());
 			}
 		}
 	}
 
+	@Deprecated
 	int getInfixLen() {
-		return infixLen;
+		return infixLenClassic();
+	}
+	
+	private boolean requiresInfix() {
+		return infixLenClassic() > 0;
 	}
 
+	int infixLenClassic() {
+		return infixLenStored - 1;
+	}
+
+	int infixLenStored() {
+		return infixLenStored;
+	}
+
+	@Deprecated
 	void setInfixLen(int newInfLen) {
-		infixLen = (byte) newInfLen;
+		infixLenStored = (byte) (newInfLen + 1);
 	}
 
+	@Deprecated
 	public int getPostLen() {
-		return postLen;
+		return postLenClassic();
+	}
+
+	public int postLenClassic() {
+		return postLenStored - 1;
+	}
+	
+	public int postLenStored() {
+		return postLenStored;
 	}
 	
 	NtNode<Object> ind() {
