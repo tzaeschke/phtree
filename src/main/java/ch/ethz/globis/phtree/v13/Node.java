@@ -238,7 +238,7 @@ public class Node {
 			}
 			return v;
 		} else {
-			if (postLenClassic() > 0) {
+			if (getPostLen() > 0) {
 				long mask = calcPostfixMask();
 				return insertSplit(keyToMatch, newValueToInsert, v, pin, hcPos, tree, offs, mask);
 			}
@@ -334,11 +334,11 @@ public class Node {
 	}
 
 	public long calcPostfixMask() {
-		return ~((-1L)<<postLenClassic());
+		return ~((-1L)<<getPostLen());
 	}
 	
 	public long calcInfixMask(int subPostLen) {
-		long mask = ~((-1L)<<(postLenClassic()-subPostLen-1));
+		long mask = ~((-1L)<<(getPostLen()-subPostLen-1));
 		return mask << (subPostLen+1);
 	}
 	
@@ -402,7 +402,7 @@ public class Node {
     public Node createNode(long[] key1, Object val1, long[] key2, Object val2,
     		int mcb) {
         //determine length of infix
-        int newLocalInfLen = postLenClassic() - mcb;
+        int newLocalInfLen = getPostLen() - mcb;
         int newPostLen = mcb-1;
         Node newNode = createNode(key1.length, newLocalInfLen, newPostLen);
 
@@ -1140,7 +1140,7 @@ public class Node {
 		if (PhTreeHelper.DEBUG) {
 			N_GOOD++;
 			//Ensure that we never enter this method if the node cannot possibly contain a match.
-			long maskClean = mask1100(postLenClassic());
+			long maskClean = mask1100(getPostLen());
 			for (int dim = 0; dim < valTemplate.length; dim++) {
 				if ((valTemplate[dim]&maskClean) > rangeMax[dim] || 
 						(valTemplate[dim] | ~maskClean) < rangeMin[dim]) {
@@ -1196,7 +1196,7 @@ public class Node {
 		if (PhTreeHelper.DEBUG) {
 			N_GOOD++;
 			//Ensure that we never enter this method if the node cannot possibly contain a match.
-			long maskClean = mask1100(postLenClassic());
+			long maskClean = mask1100(getPostLen());
 			for (int dim = 0; dim < valTemplate.length; dim++) {
 				if ((valTemplate[dim] & maskClean) > rangeMax[dim] || 
 						(valTemplate[dim] | ~maskClean) < rangeMin[dim]) {
@@ -1270,7 +1270,7 @@ public class Node {
 	}
 
 	private void applyHcPos(long hcPos, long[] valTemplate) {
-		PhTreeHelper.applyHcPos(hcPos, postLenClassic(), valTemplate);
+		PhTreeHelper.applyHcPos(hcPos, getPostLen(), valTemplate);
 	}
 	
 	
@@ -1430,37 +1430,26 @@ public class Node {
 		}
 	}
 
-	@Deprecated
 	int getInfixLen() {
-		return infixLenClassic();
+		return infixLenStored() - 1;
 	}
 	
 	private boolean requiresInfix() {
-		return infixLenClassic() > 0;
-	}
-
-	int infixLenClassic() {
-		return infixLenStored() - 1;
+		return getInfixLen() > 0;
 	}
 
 	int infixLenStored() {
 		return infixLenStored;
 	}
 
-	@Deprecated
 	void setInfixLen(int newInfLen) {
 		infixLenStored = (byte) (newInfLen + 1);
 	}
 
-	@Deprecated
 	public int getPostLen() {
-		return postLenClassic();
-	}
-
-	public int postLenClassic() {
 		return postLenStored - 1;
 	}
-	
+
 	public int postLenStored() {
 		return postLenStored;
 	}
