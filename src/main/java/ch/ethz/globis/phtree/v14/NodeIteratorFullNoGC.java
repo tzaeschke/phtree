@@ -6,12 +6,12 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
+package ch.ethz.globis.phtree.v14;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.v13.nt.NtIteratorMinMax;
+import ch.ethz.globis.phtree.v14.nt.NtIteratorMinMax;
 
 
 

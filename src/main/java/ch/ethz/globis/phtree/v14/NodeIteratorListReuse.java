@@ -6,13 +6,13 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
+package ch.ethz.globis.phtree.v14;
 
 import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.v13.nt.NtIteratorMask;
+import ch.ethz.globis.phtree.v14.nt.NtIteratorMask;
 
 /**
  * A NodeIterator that returns a list instead of an Iterator AND reuses the NodeIterator.
@@ -112,12 +112,12 @@ public class NodeIteratorListReuse<T, R> {
 				int logNChild = Long.SIZE - Long.numberOfLeadingZeros(nChild);
 				//the following will overflow for k=60
 				//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
-				useHcIncrementer = PhTree13.HCI_ENABLED && dims < 50 
+				useHcIncrementer = PhTree14.HCI_ENABLED && dims < 50 
 						&& (nChild > nPossibleMatch*(double)logNChild*2);
 				if (!useHcIncrementer) {
 					niIterator.reset(node.ind(), maskLower, maskUpper);
 				}
-			} else if (PhTree13.HCI_ENABLED){
+			} else if (PhTree14.HCI_ENABLED){
 				if (node.isAHC()) {
 					//nPossibleMatch < 2^k?
 					useHcIncrementer = nPossibleMatch < maxHcAddr;
@@ -176,7 +176,7 @@ public class NodeIteratorListReuse<T, R> {
 					readValue(pin, currentPos);
 				}
 				
-				currentPos = PhTree13.inc(currentPos, maskLower, maskUpper);
+				currentPos = PhTree14.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					break;
 				}
@@ -288,7 +288,7 @@ public class NodeIteratorListReuse<T, R> {
 					readValue(currentPos, v, resultBuffer);
 				}
 
-				currentPos = PhTree13.inc(currentPos, maskLower, maskUpper);
+				currentPos = PhTree14.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					break;
 				}

@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
+package ch.ethz.globis.phtree.v14;
 
 import static ch.ethz.globis.phtree.PhTreeHelper.align8;
 import static ch.ethz.globis.phtree.PhTreeHelper.debugCheck;
@@ -28,11 +28,13 @@ import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v13.nt.NodeTreeV13;
-import ch.ethz.globis.phtree.v13.nt.NtNode;
+import ch.ethz.globis.phtree.v14.nt.NodeTreeV14;
+import ch.ethz.globis.phtree.v14.nt.NtNode;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
+ * 
+ * Version 14: Removed NT (nested tree) and replaced it with hierarchical table.
  * 
  * Version 13: Based on Version 11. Some optimizations, for example store HC-Pos in postFix.
  * 
@@ -78,7 +80,7 @@ import ch.ethz.globis.phtree.v13.nt.NtNode;
  * @param <T> The value type of the tree 
  *
  */
-public class PhTree13<T> implements PhTree<T> {
+public class PhTree14<T> implements PhTree<T> {
 
 	//Enable HC incrementer / iteration
 	public static final boolean HCI_ENABLED = true; 
@@ -109,12 +111,12 @@ public class PhTree13<T> implements PhTree<T> {
         this.root = newRoot;
     }
 
-	public PhTree13(int dim) {
+	public PhTree14(int dim) {
 		dims = dim;
 		debugCheck();
 	}
 
-	public PhTree13(PhTreeConfig cnf) {
+	public PhTree14(PhTreeConfig cnf) {
 		dims = cnf.getDimActual();
 		debugCheck();
 		switch (cnf.getConcurrencyType()) {
@@ -168,7 +170,7 @@ public class PhTree13<T> implements PhTree<T> {
 			}
 		} else {
 			List<Object> entries = new ArrayList<>();
-			NodeTreeV13.getStats(node.ind(), stats, dims, entries);
+			NodeTreeV14.getStats(node.ind(), stats, dims, entries);
 			for (Object child: entries) {
 				if (child instanceof Node) {
 					getStats(currentDepth + 1, (Node) child, stats);
@@ -483,7 +485,7 @@ public class PhTree13<T> implements PhTree<T> {
 
 	@Override
 	public int getBitDepth() {
-		return PhTree13.DEPTH_64;
+		return PhTree14.DEPTH_64;
 	}
 
 	/**

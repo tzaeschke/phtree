@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
+package ch.ethz.globis.phtree.v14;
 
 import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 
@@ -16,11 +16,11 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
-import ch.ethz.globis.phtree.v13.nt.NodeTreeV13;
-import ch.ethz.globis.phtree.v13.nt.NtIteratorMask;
-import ch.ethz.globis.phtree.v13.nt.NtIteratorMinMax;
-import ch.ethz.globis.phtree.v13.nt.NtNode;
-import ch.ethz.globis.phtree.v13.nt.NtNodePool;
+import ch.ethz.globis.phtree.v14.nt.NodeTreeV14;
+import ch.ethz.globis.phtree.v14.nt.NtIteratorMask;
+import ch.ethz.globis.phtree.v14.nt.NtIteratorMinMax;
+import ch.ethz.globis.phtree.v14.nt.NtNode;
+import ch.ethz.globis.phtree.v14.nt.NtNodePool;
 
 
 /**
@@ -197,7 +197,7 @@ public class Node {
 	 * @param pos The position of the node when mapped to a vector.
 	 * @return The sub node or null.
 	 */
-	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree13<?> tree) {
+	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree14<?> tree) {
 		long hcPos = posInArray(keyToMatch, getPostLen());
 
 		if (isNT()) {
@@ -259,7 +259,7 @@ public class Node {
 	 * @return The sub node or null.
 	 */
 	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent,
-			long[] newKey, int[] insertRequired, PhTree13<?> tree) {
+			long[] newKey, int[] insertRequired, PhTree14<?> tree) {
 		
 		long hcPos = posInArray(keyToMatch, getPostLen());
 		
@@ -356,7 +356,7 @@ public class Node {
 	 * @return The value
 	 */
 	private Object insertSplit(long[] newKey, Object newValue, Object currentValue,
-			int pin, long hcPos, PhTree13<?> tree, int offs, long mask) {
+			int pin, long hcPos, PhTree14<?> tree, int offs, long mask) {
         //do the splitting
 
         //What does 'splitting' mean (we assume there is currently a sub-node, in case of a postfix
@@ -460,7 +460,7 @@ public class Node {
     
 	private Object deleteAndMergeIntoParent(int pinToDelete, long hcPos, long[] key, 
 			Node parent, long[] newKey, int[] insertRequired, Object valueToDelete, 
-			PhTree13<?> tree) {
+			PhTree14<?> tree) {
 		
 		int dims = key.length;
 
@@ -649,7 +649,7 @@ public class Node {
 		//+DIM because every index entry needs DIM bits
 		long sizeLHC = (dims * postLenStored() + IK_WIDTH(dims) + REF_BITS) * (long)entryCount;
 		//Already 1.1 i.o. 1.0 has significant bad impact on perf.
-		return PhTree13.AHC_ENABLED && (dims<=31) && (sizeLHC*AHC_LHC_BIAS >= sizeAHC);
+		return PhTree14.AHC_ENABLED && (dims<=31) && (sizeLHC*AHC_LHC_BIAS >= sizeAHC);
 	}
 
 	/**
@@ -754,7 +754,7 @@ public class Node {
 	Object ntReplaceEntry(long hcPos, long[] kdKey, Object value) {
 		//We use 'null' as parameter to indicate that we want replacement, rather than splitting,
 		//if the value exists.
-		return NodeTreeV13.addEntry(ind, hcPos, kdKey, value, null);
+		return NodeTreeV14.addEntry(ind, hcPos, kdKey, value, null);
 	}
 	
 	/**
@@ -771,7 +771,7 @@ public class Node {
 	 * @return
 	 */
 	Object ntPut(long hcPos, long[] kdKey, Object value) {
-		return NodeTreeV13.addEntry(ind, hcPos, kdKey, value, this);
+		return NodeTreeV14.addEntry(ind, hcPos, kdKey, value, this);
 	}
 	
 	/**
@@ -788,19 +788,19 @@ public class Node {
 	 * @return
 	 */
 	Object ntRemoveAnything(long hcPos, int dims) {
-    	return NodeTreeV13.removeEntry(ind, hcPos, dims, null, null, null, null);
+    	return NodeTreeV14.removeEntry(ind, hcPos, dims, null, null, null, null);
 	}
 
 	Object ntRemoveEntry(long hcPos, long[] key, long[] newKey, int[] insertRequired) {
-    	return NodeTreeV13.removeEntry(ind, hcPos, key.length, key, newKey, insertRequired, this);
+    	return NodeTreeV14.removeEntry(ind, hcPos, key.length, key, newKey, insertRequired, this);
 	}
 
 	Object ntGetEntry(long hcPos, long[] outKey, long[] valTemplate) {
-		return NodeTreeV13.getEntry(ind(), hcPos, outKey, null, null);
+		return NodeTreeV14.getEntry(ind(), hcPos, outKey, null, null);
 	}
 
 	Object ntGetEntryIfMatches(long hcPos, long[] keyToMatch) {
-		return NodeTreeV13.getEntry(ind(), hcPos, null, keyToMatch, this);
+		return NodeTreeV14.getEntry(ind(), hcPos, null, keyToMatch, this);
 	}
 
 	int ntGetSize() {
@@ -981,7 +981,7 @@ public class Node {
 				postToNI(dataOffs, buffer, i, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
-				NodeTreeV13.addEntry(ind, i, buffer, o, null);
+				NodeTreeV14.addEntry(ind, i, buffer, o, null);
 			}
 		} else {
 			int offsIndex = getBitPosIndex();
@@ -995,7 +995,7 @@ public class Node {
 				postToNI(dataOffs, buffer, p2, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
-				NodeTreeV13.addEntry(ind, p2, buffer, e, null);
+				NodeTreeV14.addEntry(ind, p2, buffer, e, null);
 				dataOffs += postLenTotal;
 			}
 		}
@@ -1469,7 +1469,7 @@ public class Node {
 	Object[] values() {
 		return values;
 	}
-	
+
 	long[] ba() {
 		return ba;
 	}

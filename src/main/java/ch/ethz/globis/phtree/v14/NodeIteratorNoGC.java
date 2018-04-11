@@ -6,12 +6,12 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
+package ch.ethz.globis.phtree.v14;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.v13.nt.NtIteratorMask;
+import ch.ethz.globis.phtree.v14.nt.NtIteratorMask;
 
 
 
@@ -112,12 +112,12 @@ public class NodeIteratorNoGC<T> {
 			//the following will overflow for k=60
 			boolean useHcIncrementer = (nChild > nPossibleMatch*(double)logNChild*2);
 			//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
-			if (useHcIncrementer && PhTree13.HCI_ENABLED && dims < 50) {
+			if (useHcIncrementer && PhTree14.HCI_ENABLED && dims < 50) {
 				useNiHcIncrementer = true;
 			} else {
 				useNiHcIncrementer = false;
 			}
-		} else if (PhTree13.HCI_ENABLED){
+		} else if (PhTree14.HCI_ENABLED){
 			if (isHC) {
 				//nPossibleMatch < 2^k?
 				//PAPER
@@ -152,7 +152,7 @@ public class NodeIteratorNoGC<T> {
 		if (o instanceof Node) {
 			Node sub = (Node) o;
 			//skip this for postLen>=63
-			if (checker != null && sub.getPostLen() < (PhTree13.DEPTH_64-1) &&
+			if (checker != null && sub.getPostLen() < (PhTree14.DEPTH_64-1) &&
 					!checker.isValid(sub.getPostLen()+1, valTemplate)) {
 				return false;
 			}
@@ -176,7 +176,7 @@ public class NodeIteratorNoGC<T> {
 		if (value instanceof Node) {
 			Node sub = (Node) value;
 			//skip this for postLen>=63
-			if (checker != null && sub.getPostLen() < (PhTree13.DEPTH_64-1) &&
+			if (checker != null && sub.getPostLen() < (PhTree14.DEPTH_64-1) &&
 					!checker.isValid(sub.getPostLen()+1, valTemplate)) {
 				return false;
 			}
@@ -195,7 +195,7 @@ public class NodeIteratorNoGC<T> {
 				//starting position
 				currentPos = maskLower;
 			} else {
-				currentPos = PhTree13.inc(currentPos, maskLower, maskUpper);
+				currentPos = PhTree14.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					return false;
 				}
@@ -289,7 +289,7 @@ public class NodeIteratorNoGC<T> {
 				//starting position
 				currentPos = maskLower;
 			} else {
-				currentPos = PhTree13.inc(currentPos, maskLower, maskUpper);
+				currentPos = PhTree14.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					break;
 				}
@@ -409,7 +409,7 @@ public class NodeIteratorNoGC<T> {
 				}
 			} else {
 				//LHC
-				if (this.next + PhTree13.LHC_BINARY_SEARCH_THRESHOLD < this.maskLower) {
+				if (this.next + PhTree14.LHC_BINARY_SEARCH_THRESHOLD < this.maskLower) {
 					int pin = node.getPosition(maskLower, dims);
 					//If we don't find it we use the next following entry, i.e. -(pin+1)
 					pin = pin >= 0 ? pin : -(pin+1); 
