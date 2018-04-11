@@ -52,6 +52,11 @@ public class Node {
 	 * | hcPos / kdKeyLHC      |
 	 * | pCnt*(DIM + DIM*pLen) |
 	 * 
+	 * NHC: (Nested hypercube)
+	 * | hcPos / kdKeyLHC      |
+	 *       [hcKey] [HT-Key]    [postfix/infix] 
+	 * | pCnt*(DIM + max(DIM, 32) + DIM*pLen) |
+	 * 
 	 * 
 	 * pLen = postLen
 	 * pCnt = postCount
@@ -73,6 +78,9 @@ public class Node {
 
 	//Nested tree index
 	private NtNode<Object> ind = null;
+	
+	//Hierarchical tree index: a hierarchy of long[]
+	private Object ht = null;
 
 	
 	/**
