@@ -176,9 +176,9 @@ public class Node {
 	 * @return whether the infix length is > 0
 	 */
 	boolean getInfixOfSub(int pin, long hcPos, long[] outVal) {
-		applyHcPos(hcPos, outVal);
 		int offs = pinToOffsBitsData(pin, hcPos, outVal.length);
 		if (!hasSubInfix(offs, outVal.length)) {
+			applyHcPos(hcPos, outVal);
 			return false;
 		}
 		//To cut of trailing bits
@@ -713,14 +713,8 @@ public class Node {
 	}
 	
 	void writeSubInfix(int pin, long hcPos, long[] infix, boolean subRequiresInfix) {
-		if (isNT()) {
-			throw new IllegalStateException();
-		}
-		//TODO remove
-		applyHcPos(hcPos, infix);
-//		if (subRequiresInfix) {
-			replacePost(pin, hcPos, infix);
-//		}
+		//We should write the 1-bit hcPos here, even with infix-len==0.
+		replacePost(pin, hcPos, infix);
 		int dims = infix.length;
 		int subInfoOffs = pinToOffsBitsData(pin, hcPos, dims) + dims*postLenStored() - 1;
 		writeSubInfixInfo(ba2, subInfoOffs, subRequiresInfix);
@@ -802,14 +796,10 @@ public class Node {
 	}
 
 	Object ntGetEntry(long hcPos, long[] outKey, long[] valTemplate) {
-		//TODO apply hcPos
-		//TODO apply valTemplate to outkey
 		return NodeTreeV13.getEntry(ind(), hcPos, outKey, null, null);
 	}
 
 	Object ntGetEntryIfMatches(long hcPos, long[] keyToMatch) {
-		//TODO apply hcPos
-		//TODO apply valTemplate to outkey
 		return NodeTreeV13.getEntry(ind(), hcPos, null, keyToMatch, this);
 	}
 
@@ -1128,7 +1118,6 @@ public class Node {
 		}
 		
 		if (o instanceof Node) {
-			applyHcPos(hcPos, inOutPrefix);
 			return checkAndApplyInfix(((Node)o).getInfixLen(), pin, hcPos, 
 					inOutPrefix, rangeMin, rangeMax) ? o : null;
 		}
@@ -1174,6 +1163,7 @@ public class Node {
 		//}
 		
 		if (!hasSubInfix(subOffs, dims)) {
+			applyHcPos(hcPos, valTemplate);
 			return true;
 		}
 
@@ -1184,14 +1174,8 @@ public class Node {
 		//first, clean trailing bits
 		//Mask for comparing the tempVal with the ranges, except for bit that have not been
 		//extracted yet.
-		long compMask = mask1100(postLenStored()-ONE - infixLen);
+		long compMask = mask1100(postLenStored() - infixLen);
 		for (int dim = 0; dim < valTemplate.length; dim++) {
-			//TODO??
-			//TODO??
-			//TODO??
-			//TODO??
-			//TODO??
-			//TODO??
 			long inFull = (valTemplate[dim] & maskClean) | Bits.readArray(ba2, subOffs, postLenStored());
 			long in = inFull & compMask;
 			if (in > rangeMax[dim] || (in | ~compMask) < rangeMin[dim]) {
@@ -1237,13 +1221,7 @@ public class Node {
 		//first, clean trailing bits
 		//Mask for comparing the tempVal with the ranges, except for bit that have not been
 		//extracted yet.
-		//TODO??
-		//TODO??
-		//TODO??
-		//TODO??
-		//TODO??
-		//TODO??
-		long compMask = mask1100(postLenStored()-ONE - infixLen);
+		long compMask = mask1100(postLenStored() - infixLen);
 		for (int dim = 0; dim < valTemplate.length; dim++) {
 			long inFull = (valTemplate[dim] & maskClean) | postFix[dim];
 			long in = inFull & compMask;
@@ -1272,7 +1250,6 @@ public class Node {
 	<T>  boolean checkAndGetEntryNt(long hcPos, Object value, PhEntry<T> result, 
 			long[] valTemplate, long[] rangeMin, long[] rangeMax) {
 		if (value instanceof Node) {
-			//applyHcPos(hcPos, valTemplate); //TODO not used anymore
 			Node sub = (Node) value;
 			if (!checkAndApplyInfixNt(sub.getInfixLen(), result.getKey(), valTemplate, 
 					rangeMin, rangeMax)) {
@@ -1292,8 +1269,6 @@ public class Node {
 		return true;
 	}
 
-	//TODO remove
-	@Deprecated
 	private void applyHcPos(long hcPos, long[] valTemplate) {
 		PhTreeHelper.applyHcPos(hcPos, postLenClassic(), valTemplate);
 	}
@@ -1314,15 +1289,7 @@ public class Node {
 		}
 		return true;
 	}
-	
-	//TODO??
-	//TODO??
-	//TODO??
-	//TODO??
-	//TODO??
-	//TODO??
-	@Deprecated
-	private static final int ONE = 1;
+
 
 	Object removeEntry(long hcPos, int posInNode, final int dims) {
 		final int bufEntryCnt = getEntryCount();
