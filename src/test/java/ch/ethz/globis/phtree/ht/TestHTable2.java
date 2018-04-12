@@ -20,35 +20,36 @@ public class TestHTable2 {
 	
 	@Test
 	public void testHTable() {
-		int N = 20000; //TODO 2000
+		int N = 1_000_000;
 		HTable2<Integer> ht = create();
 		
 		//populate
 		for (int i = 0; i < N; i++) {
-			System.out.println(i); //TODO
 			int pos = ht.append(i);
 			assertEquals(i, pos);
+			//if (i%1000 == 0) System.out.println("ins=" + i);
 		}
 		
 		//lookup
 		for (int i = 0; i < N; i++) {
-			System.out.println("lookup: " + i); //TODO
 			Integer x = ht.get(i);
 			assertEquals("i=" + i, i, (int) x);
+			//if (i%1000 == 0) System.out.println("lu=" + i);
 		}
 		
 		//replace some
 		for (int i = 0; i < N/2; i++) {
-			System.out.println("replace: " + i); //TODO
 			assertEquals(N - i - 1, (int) ht.replaceWithLast(i));
+			//if (i%1000 == 0) System.out.println("rep=" + i);
 		}
 		
 		//remove some
-		for (int i = 0; i < N/2; i++) {
-			System.out.println("remove: " + i); //TODO
+		for (int i = 0; i < N/2-1; i++) {
 			assertEquals(N/2 + i, (int) ht.replaceWithLast(0));
+			//if (i%1000 == 0) System.out.println("rem=" + i);
 		}
 		
+		assertEquals(null, ht.replaceWithLast(0));		
 	}
 	
 }
