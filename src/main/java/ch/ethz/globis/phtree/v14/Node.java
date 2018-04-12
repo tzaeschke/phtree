@@ -76,11 +76,9 @@ public class Node {
 	private byte postLenStored = 0;
 	private byte infixLenStored = 0; //prefix size
 
-	//Nested tree index
-	private NtNode<Object> ind = null;
-	
 	//Hierarchical tree index: a hierarchy of long[]
-	private Object ht = null;
+	//Nested tree index
+	private HTable2<Object> ind = null;
 
 	
 	/**
@@ -762,7 +760,7 @@ public class Node {
 	Object ntReplaceEntry(long hcPos, long[] kdKey, Object value) {
 		//We use 'null' as parameter to indicate that we want replacement, rather than splitting,
 		//if the value exists.
-		return NodeTreeV14.addEntry(ind, hcPos, kdKey, value, null);
+		return HTHandler.addEntry(ba, ind, hcPos, kdKey, value, null);
 	}
 	
 	/**
@@ -779,7 +777,7 @@ public class Node {
 	 * @return
 	 */
 	Object ntPut(long hcPos, long[] kdKey, Object value) {
-		return NodeTreeV14.addEntry(ind, hcPos, kdKey, value, this);
+		return HTHandler.addEntry(ba, ind, hcPos, kdKey, value, this);
 	}
 	
 	/**
@@ -796,19 +794,19 @@ public class Node {
 	 * @return
 	 */
 	Object ntRemoveAnything(long hcPos, int dims) {
-    	return NodeTreeV14.removeEntry(ind, hcPos, dims, null, null, null, null);
+    	return HTHandler.removeEntry(ba, ind, hcPos, dims, null, null, null, null);
 	}
 
 	Object ntRemoveEntry(long hcPos, long[] key, long[] newKey, int[] insertRequired) {
-    	return NodeTreeV14.removeEntry(ind, hcPos, key.length, key, newKey, insertRequired, this);
+    	return HTHandler.removeEntry(ba, ind, hcPos, key.length, key, newKey, insertRequired, this);
 	}
 
 	Object ntGetEntry(long hcPos, long[] outKey, long[] valTemplate) {
-		return NodeTreeV14.getEntry(ind(), hcPos, outKey, null, null);
+		return HTHandler.getEntry(ba, ind(), hcPos, outKey, null, null);
 	}
 
 	Object ntGetEntryIfMatches(long hcPos, long[] keyToMatch) {
-		return NodeTreeV14.getEntry(ind(), hcPos, null, keyToMatch, this);
+		return HTHandler.getEntry(ba, ind(), hcPos, null, keyToMatch, this);
 	}
 
 	int ntGetSize() {
@@ -961,8 +959,8 @@ public class Node {
 	 * WARNING: This is overloaded in subclasses of Node.
 	 * @return Index.
 	 */
-	NtNode<Object> createNiIndex(int dims) {
-		return NtNode.createRoot(dims);
+	HTable2<Object> createNiIndex(int dims) {
+		return new HTable2<>();
 	}
 	
 	private void ntBuild(int bufEntryCnt, int dims, long[] prefix) {
@@ -989,7 +987,7 @@ public class Node {
 				postToNI(dataOffs, buffer, i, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
-				NodeTreeV14.addEntry(ind, i, buffer, o, null);
+				HTHandler.addEntry(ba, ind, i, buffer, o, null);
 			}
 		} else {
 			int offsIndex = getBitPosIndex();
@@ -1003,7 +1001,7 @@ public class Node {
 				postToNI(dataOffs, buffer, p2, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
-				NodeTreeV14.addEntry(ind, p2, buffer, e, null);
+				HTHandler.addEntry(ba, ind, p2, buffer, e, null);
 				dataOffs += postLenTotal;
 			}
 		}
@@ -1480,6 +1478,14 @@ public class Node {
 
 	long[] ba() {
 		return ba;
+	}
+
+	public void setValues(Object[] values) {
+		this.values = values;
+	}
+
+	public void setBa(long[] ba) {
+		this.ba = ba;
 	}
 
 }
