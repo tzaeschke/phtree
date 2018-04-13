@@ -18,7 +18,7 @@
  * 
  * See the README and COPYING files for further information. 
  */
-package ch.ethz.globis.phtree.v14.bst;
+package ch.ethz.globis.phtree.v14.bst.copy;
 
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
@@ -115,7 +115,8 @@ public class BSTreeIterator {
 		while (!currentPage.isLeaf) {
 			//the following is only for the initial search.
 			//The stored key[i] is the min-key of the according page[i+1}
-			int pos2 = currentPage.binarySearch(currentPos, currentPage.getNKeys(), minKey);
+			int pos2 = currentPage.binarySearch(
+					currentPos, currentPage.getNKeys(), minKey, Long.MIN_VALUE);
 	    	if (currentPage.getNKeys() == -1) {
 				return false;
 	    	}
@@ -173,7 +174,8 @@ public class BSTreeIterator {
 		}
 
 		//find very first element. 
-		currentPos = (short) currentPage.binarySearch(currentPos, currentPage.getNKeys(), minKey);
+		currentPos = (short) currentPage.binarySearch(currentPos, currentPage.getNKeys(), 
+				minKey, Long.MIN_VALUE);
 		if (currentPos < 0) {
 			currentPos = (short) -(currentPos+1);
 		}
@@ -187,7 +189,8 @@ public class BSTreeIterator {
 				return;
 			}
 			//okay, try again.
-			currentPos = (short) currentPage.binarySearch(currentPos, currentPage.getNKeys(), minKey);
+			currentPos = (short) currentPage.binarySearch(currentPos, currentPage.getNKeys(), 
+					minKey, Long.MIN_VALUE);
 			if (currentPos < 0) {
 				currentPos = (short) -(currentPos+1);
 			}

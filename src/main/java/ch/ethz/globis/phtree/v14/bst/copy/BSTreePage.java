@@ -18,7 +18,7 @@
  * 
  * See the README and COPYING files for further information. 
  */
-package ch.ethz.globis.phtree.v14.bst;
+package ch.ethz.globis.phtree.v14.bst.copy;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -72,7 +72,18 @@ class BSTreePage {
 	 * @param key
 	 * @return Page for that key
 	 */
-	public BSTreePage locatePageForKey(long key, boolean allowCreate) {
+	public final BSTreePage locatePageForKeyUnique(long key, boolean allowCreate) {
+		return locatePageForKey(key, -1, allowCreate);
+	}
+	
+	/**
+	 * Locate the (first) page that could contain the given key.
+	 * In the inner pages, the keys are the minimum values of the sub-page. The value is
+	 * the according minimum value of the first key of the sub-page.
+	 * @param key
+	 * @return Page for that key
+	 */
+	public BSTreePage locatePageForKey(long key, long value, boolean allowCreate) {
 		if (isLeaf) {
 			return this;
 		}
@@ -81,7 +92,7 @@ class BSTreePage {
 		}
 
 		//The stored value[i] is the min-values of the according page[i+1} 
-        int pos = binarySearch(0, nEntries, key);
+        int pos = binarySearch(0, nEntries, key, value);
         if (pos >= 0) {
             //pos of matching key
             pos++;
@@ -90,18 +101,18 @@ class BSTreePage {
         }
         //read page before that value
         BSTreePage page = (BSTreePage) readOrCreatePage(pos, allowCreate);
-        return page.locatePageForKey(key, allowCreate);
+        return page.locatePageForKey(key, value, allowCreate);
 	}
 	
 	public LLEntry getValueFromLeafUnique(long oid) {
 		if (!isLeaf) {
 			throw new IllegalStateException("Leaf inconsistency.");
 		}
-		int pos = binarySearch(0, nEntries, oid);
+		int pos = binarySearchUnique(0, nEntries, oid);
 		if (pos >= 0) {
             return new LLEntry( oid, values[pos]);
 		}
-		//If the value could is not on this page, it does not exist.
+		//Even if non-unique, if the value could is not on this page, it does not exist.
 		return null;
 	}
 
@@ -121,7 +132,14 @@ class BSTreePage {
 	 * @param toIndex Exclusive, search stops at (toIndex-1).
 	 * @param value For non-unique trees, the value is taken into account as well.
 	 */
-	int binarySearch(int fromIndex, int toIndex, long key) {
+	int binarySearch(int fromIndex, int toIndex, long key, long value) {
+		if (ind.isUnique()) {
+			return binarySearchUnique(fromIndex, toIndex, key);
+		}
+		return binarySearchNonUnique(fromIndex, toIndex, key, value);
+	}
+	
+	private int binarySearchUnique(int fromIndex, int toIndex, long key) {
 		int low = fromIndex;
 		int high = toIndex - 1;
 
@@ -140,6 +158,36 @@ class BSTreePage {
 		return -(low + 1);  // key not found.
 	}
 
+	/**
+	 * This effectively implements a binary search of a double-long array (128bit values).
+	 */
+	private int binarySearchNonUnique(int fromIndex, int toIndex, long key1, long key2) {
+		int low = fromIndex;
+		int high = toIndex - 1;
+
+		while (low <= high) {
+			int mid = (low + high) >>> 1;
+			long midVal1 = keys[mid];
+			long midVal2 = values[mid];
+
+        	if (midVal1 < key1) {
+        		low = mid + 1;
+        	} else if (midVal1 > key1) {
+        		high = mid - 1;
+        	} else {
+            	if (midVal2 < key2) {
+            		low = mid + 1;
+            	} else if (midVal2 > key2) {
+            		high = mid - 1;
+            	} else {
+            		return mid; // key found
+            	}
+        	}
+		}
+		return -(low + 1);  // key not found.
+	}
+
+	
     /**
      * Overwrite the entry at 'key'.
      * @param key
@@ -151,10 +199,9 @@ class BSTreePage {
 		}
 
 		//in any case, check whether the key(+value) already exists
-        int pos = binarySearch(0, nEntries, key);
+        int pos = binarySearch(0, nEntries, key, value);
         //key found? -> pos >=0
         if (pos >= 0) {
-        	//TODO why check this?
         	//check if values changes
             if (value != values[pos]) {
                 values[pos] = value;
@@ -199,6 +246,24 @@ class BSTreePage {
 			}
 			
 			int nEntriesToKeep = (nEntries + newP.nEntries) >> 1;
+			if (isNew) {
+				if (ind.isUnique()) {
+					//This is an optimization for indices that add increasing unique numbers 
+					//such as OIDs. For these, it increases the average fill-size.
+					//find split point such that pages can be completely full
+					int pos2 = binarySearch(0, nEntries, keys[0] + ind.maxLeafN, value);
+					if (pos2 < 0) {
+						pos2 = -(pos2+1);
+					}
+					if (pos2 > nEntriesToKeep) {
+						nEntriesToKeep = pos2;
+					}
+				} else {
+					//non-unique: we assume ascending keys.
+					//If they are not ascending, merging with subsequent page sorts it out.
+					nEntriesToKeep = (int) (ind.maxLeafN * 0.9);
+				}
+			}
 			int nEntriesToCopy = nEntries - nEntriesToKeep;
 			if (isNew) {
 				//works only if new page follows current page
@@ -223,37 +288,56 @@ class BSTreePage {
 			newP.nEntries = (short) (nEntriesToCopy + newP.nEntries);
 			//New page and min key
 			if (isNew || !isPrev) {
-				if (newP.keys[0] > key) {
-					put(key, value);
+				if (ind.isUnique()) {
+					if (newP.keys[0] > key) {
+						put(key, value);
+					} else {
+						newP.put(key, value);
+					}
 				} else {
-					newP.put(key, value);
+					//why doesn't this work??? Because addSubPage needs the new keys already in the 
+					//page
+	//				parent.addSubPage(newP, newP.keys[0], newP.values[0]);
+	//				locatePageForKey(key, value, false).put(key, value);
+					if (newP.keys[0] > key || (newP.keys[0]==key && newP.values[0] > value)) {
+						put(key, value);
+					} else {
+						newP.put(key, value);
+					}
 				}
 			} else {
-				if (keys[0] > key) {
-					newP.put(key, value);
+				if (ind.isUnique()) {
+					if (keys[0] > key) {
+						newP.put(key, value);
+					} else {
+						put(key, value);
+					}
 				} else {
-					put(key, value);
+					if (keys[0] > key || (keys[0]==key && values[0] > value)) {
+						newP.put(key, value);
+					} else {
+						put(key, value);
+					}
 				}
 			}
 			if (isNew) {
-				parent.addSubPage(newP, newP.keys[0]);
+				parent.addSubPage(newP, newP.keys[0], newP.values[0]);
 			} else {
 				//TODO probably not necessary
-				newP.parent.updateKey(newP, newP.keys[0]);
+				newP.parent.updateKey(newP, newP.keys[0], newP.values[0]);
 			}
-			parent.updateKey(this, keys[0]);
+			parent.updateKey(this, keys[0], values[0]);
 		}
 	}
 
-	@Deprecated //TODO provide posInParent.
-	void updateKey(BSTreePage indexPage, long key) {
+	void updateKey(BSTreePage indexPage, long key, long value) {
 		//TODO do we need this whole key update business????
 		//-> surely not at the moment, where we only merge with pages that have the same 
 		//   immediate parent...
 		if (isLeaf) {
 			throw new IllegalStateException("Tree inconsistency");
 		}
-		int start = binarySearch(0, nEntries, key);
+		int start = binarySearch(0, nEntries, key, value);
 		if (start < 0) {
 			start = -(start+1);
 		}
@@ -262,11 +346,13 @@ class BSTreePage {
 			if (subPages[i] == indexPage) {
 				if (i > 0) {
 					keys[i-1] = key;
+					if (!ind.isUnique()) {
+						values[i-1] = value;
+					}
 				} else {
 					//parent page could be affected
 					if (parent != null) {
-						//TODO this recurses all parents!!!??? 
-						parent.updateKey(this, key);
+						parent.updateKey(this, key, value);
 					}
 				}
 				return;
@@ -280,17 +366,22 @@ class BSTreePage {
 		
 	}
 	
-	void addSubPage(BSTreePage newP, long minKey) {
+	void addSubPage(BSTreePage newP, long minKey, long minValue) {
 		if (isLeaf) {
 			throw new IllegalStateException("Tree inconsistency");
 		}
 		
 		if (nEntries < ind.maxInnerN) {
 			//add page here
+			//TODO Should we store non-unique values more efficiently? Instead of always storing
+			//     the key as well? -> Additional page type for values only? The local value only
+			//     being a reference to the value page (inlc offs)? How would efficient insertion
+			//     work (shifting values and references to value pages???) ?
+			
 			
 			//For now, we assume a unique index.
-            int i = binarySearch(0, nEntries, minKey);
-            //If the key has a perfect match then something went wrong. This should
+            int i = binarySearch(0, nEntries, minKey, minValue);
+            //If the key (+val) has a perfect match then something went wrong. This should
             //never happen so we don't need to check whether (i < 0).
         	i = -(i+1);
             
@@ -299,6 +390,7 @@ class BSTreePage {
 				System.arraycopy(subPages, i+1, subPages, i+2, nEntries-i);
 				if (!ind.isUnique()) {
 					System.arraycopy(values, i, values, i+1, nEntries-i);
+					values[i] = minValue;
 				}
 				keys[i] = minKey;
 				subPages[i+1] = newP;
@@ -316,26 +408,25 @@ class BSTreePage {
 					long oldKey = subPages[0].getMinKey();
 					if (!ind.isUnique()) {
 						System.arraycopy(values, 0, values, 1, nEntries);
-//						long oldValue = subPages[0].getMinKeyValue();
-//						if ((minKey > oldKey) || (minKey==oldKey && minValue > oldValue)) {
-//							ii = 1;
-//							keys[0] = minKey;
-//							values[0] = minValue;
-//						} else {
-//							ii = 0;
-//							keys[0] = oldKey;
-//							values[0] = oldValue;
-//						}
-					}
-//					} else {
-					if ( minKey > oldKey ) {
-						ii = 1;
-						keys[0] = minKey;
+						long oldValue = subPages[0].getMinKeyValue();
+						if ((minKey > oldKey) || (minKey==oldKey && minValue > oldValue)) {
+							ii = 1;
+							keys[0] = minKey;
+							values[0] = minValue;
+						} else {
+							ii = 0;
+							keys[0] = oldKey;
+							values[0] = oldValue;
+						}
 					} else {
-						ii = 0;
-						keys[0] = oldKey;
+						if ( minKey > oldKey ) {
+							ii = 1;
+							keys[0] = minKey;
+						} else {
+							ii = 0;
+							keys[0] = oldKey;
+						}
 					}
-//					}
 					System.arraycopy(subPages, ii, subPages, ii+1, nEntries-ii+1);
 				}
 				subPages[ii] = newP;
@@ -365,18 +456,32 @@ class BSTreePage {
 				ind.updateRoot(newRoot);
 			}
 
-			parent.addSubPage(newInner, keys[ind.minInnerN]);
+			if (ind.isUnique()) {
+				parent.addSubPage(newInner, keys[ind.minInnerN], -1);
+			} else {
+				parent.addSubPage(newInner, keys[ind.minInnerN], values[ind.minInnerN]);
+			}
 
 			nEntries = (short) (ind.minInnerN);
 			//finally add the leaf to the according page
 			BSTreePage newHome;
 			long newInnerMinKey = newInner.getMinKey();
-			if (minKey < newInnerMinKey) {
-				newHome = this;
+			if (ind.isUnique()) {
+				if (minKey < newInnerMinKey) {
+					newHome = this;
+				} else {
+					newHome = newInner;
+				}
 			} else {
-				newHome = newInner;
+				long newInnerMinValue = newInner.getMinKeyValue();
+				if (minKey < newInnerMinKey || 
+						(minKey == newInnerMinKey && minValue < newInnerMinValue)) {
+					newHome = this;
+				} else {
+					newHome = newInner;
+				}
 			}
-			newHome.addSubPage(newP, minKey);
+			newHome.addSubPage(newP, minKey, minValue);
 			return;
 		}
 	}
@@ -396,6 +501,7 @@ class BSTreePage {
 	}
 	
 	public void print(String indent) {
+//		System.out.println("Java page ID: " + this);  //TODO
 		if (isLeaf) {
 			System.out.println(indent + "Leaf page: nK=" + nEntries + " keys=" + 
 					Arrays.toString(keys));
@@ -444,11 +550,18 @@ class BSTreePage {
 	 * @param key
 	 * @return the previous value
 	 */
-	protected long remove(long oid) {
-        int i = binarySearch(0, nEntries, oid);
+	protected long remove(long key) {
+		if (!ind.isUnique()) {
+			throw new IllegalStateException();
+		}
+		return remove(key, 0);
+	}
+	
+	protected long remove(long oid, long value) {
+        int i = binarySearch(0, nEntries, oid, value);
         if (i < 0) {
         	//key not found
-        	throw new NoSuchElementException("Key not found: " + oid);
+        	throw new NoSuchElementException("Key not found: " + oid + "/" + value);
         }
         
         // first remove the element
@@ -458,7 +571,7 @@ class BSTreePage {
         nEntries--;
         if (nEntries == 0) {
         	BSTree.statNLeaves--;
-        	parent.removeLeafPage(this, oid);
+        	parent.removeLeafPage(this, oid, value);
         } else if (nEntries < (ind.maxLeafN >> 1) && (nEntries % 8 == 0)) {
         	//The second term prevents frequent reading of previous and following pages.
         	//TODO Should we instead check for nEntries==MAx>>1 then == (MAX>>2) then <= (MAX>>3)?
@@ -476,7 +589,7 @@ class BSTreePage {
         			System.arraycopy(values, 0, prevPage.values, prevPage.nEntries, nEntries);
         			prevPage.nEntries += nEntries;
         			BSTree.statNLeaves--;
-        			parent.removeLeafPage(this, keys[0]);
+        			parent.removeLeafPage(this, keys[0], values[0]);
         		}
         	}
         }
@@ -484,8 +597,8 @@ class BSTreePage {
 	}
 
 
-	protected void removeLeafPage(BSTreePage indexPage, long key) {
-		int start = binarySearch(0, nEntries, key);
+	protected void removeLeafPage(BSTreePage indexPage, long key, long value) {
+		int start = binarySearch(0, nEntries, key, value);
 		if (start < 0) {
 			start = -(start+1);
 		}
@@ -521,7 +634,7 @@ class BSTreePage {
 							}
 							prev.nEntries += nEntries + 1;  //for the additional key
 							prev.assignThisAsRootToLeaves();
-							parent.removeLeafPage(this, key);
+							parent.removeLeafPage(this, key, value);
 						}
 						return;
 					}
@@ -529,13 +642,13 @@ class BSTreePage {
 					if (nEntries == 0) {
 						//only one element left, no merging occurred -> move sub-page up to parent
 						BSTreePage child = readPage(0);
-						parent.replaceChildPage(this, key, child);
+						parent.replaceChildPage(this, key, value, child);
 						BSTree.statNInner--;
 					}
 				} else {
 					// nEntries == 0
 					if (parent != null) {
-						parent.removeLeafPage(this, key);
+						parent.removeLeafPage(this, key, value);
 						BSTree.statNInner--;
 					}
 					// else : No root and this is a leaf page... -> we do nothing.
@@ -581,8 +694,8 @@ class BSTreePage {
 	 * Replacing sub-pages occurs when the sub-page shrinks down to a single sub-sub-page, in which
 	 * case we pull up the sub-sub-page to the local page, replacing the sub-page.
 	 */
-	protected void replaceChildPage(BSTreePage indexPage, long key, BSTreePage subChild) {
-		int start = binarySearch(0, nEntries, key);
+	protected void replaceChildPage(BSTreePage indexPage, long key, long value, BSTreePage subChild) {
+		int start = binarySearch(0, nEntries, key, value);
 		if (start < 0) {
 			start = -(start+1);
 		}

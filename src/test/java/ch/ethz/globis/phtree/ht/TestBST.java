@@ -21,7 +21,7 @@ public class TestBST {
 	
 	@Test
 	public void testBSTree() {
-		int N = 1_000_000;
+		int N = 10_000_000;
 		BSTree<Integer> ht = create();
 		
 		//populate

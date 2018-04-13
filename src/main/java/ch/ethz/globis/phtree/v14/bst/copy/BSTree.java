@@ -18,7 +18,7 @@
  * 
  * See the README and COPYING files for further information. 
  */
-package ch.ethz.globis.phtree.v14.bst;
+package ch.ethz.globis.phtree.v14.bst.copy;
 
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
@@ -48,7 +48,7 @@ public class BSTree<T> {
 	}
 
 	public final void insertLong(long key, long value) {
-		BSTreePage page = getRoot().locatePageForKey(key, true);
+		BSTreePage page = getRoot().locatePageForKeyUnique(key, true);
 		page.put(key, value);
 	}
 
@@ -58,7 +58,7 @@ public class BSTree<T> {
 	 * @throws NoSuchElementException if key is not found
 	 */
 	public long removeLong(long key) {
-		BSTreePage page = getRoot().locatePageForKey(key, false);
+		BSTreePage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
 			throw new NoSuchElementException("Key not found: " + key);
 		}
@@ -71,7 +71,7 @@ public class BSTree<T> {
 	 * @return the previous value
 	 */
 	public long removeLongNoFail(long key, long failValue) {
-		BSTreePage page = getRoot().locatePageForKey(key, false);
+		BSTreePage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
 			return failValue;
 		}
@@ -80,7 +80,7 @@ public class BSTree<T> {
 
 	
 	public LLEntry findValue(long key) {
-		BSTreePage page = getRoot().locatePageForKey(key, false);
+		BSTreePage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
 			return null;
 		}
