@@ -21,63 +21,41 @@
 package ch.ethz.globis.phtree.v14.bst;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import ch.ethz.globis.phtree.v14.bst.LongLongIndex.LLEntryIterator;
-
 /**
- * Some thoughts on Iterators:
- * 
- * JDO has a usecase like this:
- * Iterator iter = extent.iterator();
- * while (iter.hasNext()) {
- * 	   pm.deletePersistent(iter.next());
- * }
- * 
- * That means:
- * The iterator needs to support deletion without introducing duplicates and without skipping 
- * objects. It needs to be a perfect iterator.
- * 
- * According to the spec 2.2., the extent should contain whatever existed a the time of the 
- * execution of the query or creation of the iterator (JDO 2.2).
- * 
- * So:
- * - Different sessions should use COW to create locally valid 'copies' of the traversed index.
- * - Within the same session, iterators should support deletion as described above.
- * 
- * To support the deletion locally, there are several option:
- * - one could use COW as well, which would mean that bidirectional iterators would not work,
- *   because the iterator iterates over copies of the original list. 
- *   Basically the above example would work, but deletions ahead of the iterator would not
- *   be recognized (desirable?). TODO Check spec.
- * - Alternative: Update iterator with callbacks from index modification.
- *   This would mean ahead-of-iterator modifications would be recognized (desirable?)
- *   
- *    
- *    
- *    
- * Version 2.0:
- * Iterator stores currentElement and immediately moves to next element. For unique indices
- * this has the advantage, that the will never be buffer pages created, because the index
- * is invalidated, as soon as it is created.
  * 
  * @author Tilmann Zaeschke
  *
  */
-class LLIterator extends AbstractPageIterator<LongLongIndex.LLEntry> 
-implements LLEntryIterator, Iterator<LongLongIndex.LLEntry> {
+class LLIterator {
 
 	static class IteratorPos {
 		IteratorPos(LLIndexPage page, short pos) {
 			this.page = page;
 			this.pos = pos;
 		}
-		//This is for the iterator, do _not_ use WeakRefs here.
 		LLIndexPage page;
 		short pos;
 	}
 
+	public static class LLEntry {
+		private final long key;
+		private final long value;
+		public LLEntry(long k, long v) {
+			key = k;
+			value = v;
+		}
+		public long getKey() {
+			return key;
+		}
+		public long getValue() {
+			return value;
+		}
+	}
+
+	protected final PagedUniqueLongLong ind;
+	private final int modCount;
 	private LLIndexPage currentPage = null;
 	private short currentPos = 0;
 	private final long minKey;
@@ -87,8 +65,9 @@ implements LLEntryIterator, Iterator<LongLongIndex.LLEntry> {
 	private long nextValue;
 	private boolean hasValue = false;
 	
-	public LLIterator(AbstractPagedIndex ind, long minKey, long maxKey) {
-		super(ind);
+	public LLIterator(PagedUniqueLongLong ind, long minKey, long maxKey) {
+		this.ind = ind;
+		this.modCount = ind.getModCount();
 		this.minKey = minKey;
 		this.maxKey = maxKey;
 		this.currentPage = (LLIndexPage) ind.getRoot();
@@ -96,13 +75,7 @@ implements LLEntryIterator, Iterator<LongLongIndex.LLEntry> {
 		findFirstPosInPage();
 	}
 
-	@Override
-	public boolean hasNext() {
-		return hasNextULL();
-	}
-	/**
-	 * Dirty trick to avoid delays from finding the correct method.
-	 */
+
 	public boolean hasNextULL() {
         checkValidity();
 		return hasValue;
@@ -132,7 +105,7 @@ implements LLEntryIterator, Iterator<LongLongIndex.LLEntry> {
 
 			//read last page
 			stack.add(new IteratorPos(currentPage, currentPos));
-			currentPage = (LLIndexPage) findPage(currentPage, currentPos);
+			currentPage = findPage(currentPage, currentPos);
 			currentPos = 0;
 		}
 	}
@@ -154,7 +127,7 @@ implements LLEntryIterator, Iterator<LongLongIndex.LLEntry> {
 		    }
 	    	currentPos = (short)pos2;
 
-	    	LLIndexPage newPage = (LLIndexPage) findPage(currentPage, currentPos);
+	    	LLIndexPage newPage = findPage(currentPage, currentPos);
 			//are we on the correct branch?
 	    	//We are searching with LONG_MIN value. If the key[] matches exactly, then the
 	    	//selected page may not actually contain any valid elements.
@@ -231,20 +204,15 @@ implements LLEntryIterator, Iterator<LongLongIndex.LLEntry> {
 	}
 	
 	
-	@Override
-	public LongLongIndex.LLEntry next() {
-		return nextULL();
-	}
-	
 	/**
 	 * Dirty trick to avoid delays from finding the correct method.
 	 */
-	public LongLongIndex.LLEntry nextULL() {
+	public LLEntry nextULL() {
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();
 		}
 
-        LongLongIndex.LLEntry e = new LongLongIndex.LLEntry(nextKey, nextValue);
+        LLEntry e = new LLEntry(nextKey, nextValue);
 		if (currentPage == null) {
 			hasValue = false;
 		} else {
@@ -268,15 +236,20 @@ implements LLEntryIterator, Iterator<LongLongIndex.LLEntry> {
 		return ret;
 	}
 
-
-	@Override
-	public void remove() {
-		//As defined in the JDO 2.2. spec:
-		throw new UnsupportedOperationException();
-	}
 	
 	private void close() {
 		
 	}
+
 	
+	
+	
+	protected final LLIndexPage findPage(LLIndexPage currentPage, short pagePos) {
+		return currentPage.readCachedPage(pagePos);
+	}
+
+	protected void checkValidity() {
+		ind.checkValidity(modCount);
+	}
+
 }

@@ -20,29 +20,38 @@
  */
 package ch.ethz.globis.phtree.v14.bst;
 
+import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
+
+import ch.ethz.globis.phtree.v14.bst.LLIterator.LLEntry;
 
 
 /**
  * @author Tilmann Zaeschke
  */
-public class PagedUniqueLongLong extends AbstractPagedIndex implements LongLongIndex.LongLongUIndex {
+public class PagedUniqueLongLong {
 	
+	protected final int maxLeafN = 10;
+	/** Max number of keys in inner page (there can be max+1 page-refs) */
+	protected final int maxInnerN = 10;
+	protected final int minLeafN = maxLeafN >> 1;
+	protected final int minInnerN = maxInnerN >> 1;
+	protected static int statNLeaves = 0;
+	protected static int statNInner = 0;
+	private int modCount = 0;
+
 	private transient LLIndexPage root;
 	
-	public PagedUniqueLongLong(int keySize, int valSize) {
-		super(keySize, valSize);
+	public PagedUniqueLongLong() {
 		//bootstrap index
 		root = createPage(null, false);
 	}
 
-	@Override
 	public final void insertLong(long key, long value) {
 		LLIndexPage page = getRoot().locatePageForKeyUnique(key, true);
 		page.put(key, value);
 	}
 
-	@Override
 	public final boolean insertLongIfNotSet(long key, long value) {
 		LLIndexPage page = getRoot().locatePageForKeyUnique(key, true);
 		if (page.binarySearch(0, page.getNKeys(), key, value) >= 0) {
@@ -57,7 +66,6 @@ public class PagedUniqueLongLong extends AbstractPagedIndex implements LongLongI
 	 * @return the previous value
 	 * @throws NoSuchElementException if key is not found
 	 */
-	@Override
 	public long removeLong(long key) {
 		LLIndexPage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
@@ -71,7 +79,6 @@ public class PagedUniqueLongLong extends AbstractPagedIndex implements LongLongI
 	 * @param failValue The value to return in case the key has no entry.
 	 * @return the previous value
 	 */
-	@Override
 	public long removeLongNoFail(long key, long failValue) {
 		LLIndexPage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
@@ -80,13 +87,8 @@ public class PagedUniqueLongLong extends AbstractPagedIndex implements LongLongI
 		return page.remove(key);
 	}
 
-	@Override
-	public long removeLong(long key, long value) {
-		return removeLong(key);
-	}
-
-	@Override
-	public LongLongIndex.LLEntry findValue(long key) {
+	
+	public LLEntry findValue(long key) {
 		LLIndexPage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
 			return null;
@@ -94,67 +96,64 @@ public class PagedUniqueLongLong extends AbstractPagedIndex implements LongLongI
 		return page.getValueFromLeafUnique(key);
 	}
 
-	@Override
-	LLIndexPage createPage(AbstractIndexPage parent, boolean isLeaf) {
+	LLIndexPage createPage(LLIndexPage parent, boolean isLeaf) {
 		return new LLIndexPage(this, (LLIndexPage) parent, isLeaf);
 	}
 
-	@Override
 	protected final LLIndexPage getRoot() {
 		return root;
 	}
 
-	@Override
-	public LLEntryIterator iterator(long min, long max) {
+	public LLIterator iterator(long min, long max) {
 		return new LLIterator(this, min, max);
 	}
 
-	@Override
-	protected void updateRoot(AbstractIndexPage newRoot) {
-		root = (LLIndexPage) newRoot;
+	protected void updateRoot(LLIndexPage newRoot) {
+		root = newRoot;
 	}
 	
-	@Override
 	public void print() {
 		root.print("");
 	}
 
-	@Override
 	public long getMaxKey() {
 		return root.getMax();
 	}
 
-	@Override
 	public long getMinKey() {
 		return root.getMinKey();
 	}
 
-	@Override
 	public long size() {
 		throw new UnsupportedOperationException();
 	}
 
-	@Override
-	public LLEntryIterator iterator() {
+	public LLIterator iterator() {
 		return iterator(Long.MIN_VALUE, Long.MAX_VALUE);
 	}
-
-	/**
-	 * This is used in zoodb-server-btree tests.
-	 * @return maxLeafN
-	 */
-	@Override
-	public int getMaxLeafN() {
-		return maxLeafN;
+	
+	final void notifyPageUpdate() {
+		modCount++;
+	}
+	
+	public void clear() {
+		getRoot().clear();
+		BTPool.reportFreePage(getRoot());
+		PagedUniqueLongLong.statNInner = 0;
+		PagedUniqueLongLong.statNLeaves = 0;
+	}
+	
+	public void checkValidity(int modCount) {
+		if (this.modCount != modCount) {
+			throw new ConcurrentModificationException();
+		}
 	}
 
-	/**
-	 * This is used in zoodb-server-btree tests.
-	 * @return maxInnerN
-	 */
-	@Override
-	public int getMaxInnerN() {
-		return maxInnerN;
+	protected int getModCount() {
+		return modCount;
 	}
 
+	public boolean isUnique() {
+		return true;
+	}
 }

@@ -23,17 +23,22 @@ package ch.ethz.globis.phtree.v14.bst;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
-class LLIndexPage extends AbstractIndexPage {
+import ch.ethz.globis.phtree.v14.bst.LLIterator.LLEntry;
+
+class LLIndexPage {
 	
 	private LLIndexPage parent;
 	private final long[] keys;
 	private final long[] values;
 	/** number of keys. There are nEntries+1 subPages in any leaf page. */
 	private short nEntries;
+
+	protected final PagedUniqueLongLong ind;
+	final transient boolean isLeaf;
+	final LLIndexPage[] subPages;
 	
 	
-	public LLIndexPage(AbstractPagedIndex ind, LLIndexPage parent, boolean isLeaf) {
-		super(ind, isLeaf);
+	public LLIndexPage(PagedUniqueLongLong ind, LLIndexPage parent, boolean isLeaf) {
 		this.parent = parent;
 		if (isLeaf) {
 			nEntries = 0;
@@ -48,24 +53,18 @@ class LLIndexPage extends AbstractIndexPage {
 				values = new long[ind.maxInnerN];
 			}
 		}
+		
+		this.ind = ind;
+		if (!isLeaf) {	
+			subPages = new LLIndexPage[ind.maxInnerN + 1];
+			PagedUniqueLongLong.statNInner++;
+		} else {
+			subPages = null;
+			PagedUniqueLongLong.statNLeaves++;
+		}
+		this.isLeaf = isLeaf;
 	}
 
-	public LLIndexPage(LLIndexPage p) {
-		super(p);
-		keys = p.keys.clone();
-		nEntries = p.nEntries;
-		parent = p.parent;
-		if (isLeaf) {
-			values = p.values.clone();
-		} else {
-			if (ind.isUnique()) {
-				values = null;
-			} else {
-				values = p.values.clone();
-			}
-		}
-	}
-	
 
 	/**
 	 * Locate the (first) page that could contain the given key.
@@ -106,13 +105,13 @@ class LLIndexPage extends AbstractIndexPage {
         return page.locatePageForKey(key, value, allowCreate);
 	}
 	
-	public LongLongIndex.LLEntry getValueFromLeafUnique(long oid) {
+	public LLEntry getValueFromLeafUnique(long oid) {
 		if (!isLeaf) {
 			throw new IllegalStateException("Leaf inconsistency.");
 		}
 		int pos = binarySearchUnique(0, nEntries, oid);
 		if (pos >= 0) {
-            return new LongLongIndex.LLEntry( oid, values[pos]);
+            return new LLEntry( oid, values[pos]);
 		}
 		//Even if non-unique, if the value could is not on this page, it does not exist.
 		return null;
@@ -390,7 +389,6 @@ class LLIndexPage extends AbstractIndexPage {
 			if (i > 0) {
 				System.arraycopy(keys, i, keys, i+1, nEntries-i);
 				System.arraycopy(subPages, i+1, subPages, i+2, nEntries-i);
-				System.arraycopy(subPageIds, i+1, subPageIds, i+2, nEntries-i);
 				if (!ind.isUnique()) {
 					System.arraycopy(values, i, values, i+1, nEntries-i);
 					values[i] = minValue;
@@ -398,7 +396,6 @@ class LLIndexPage extends AbstractIndexPage {
 				keys[i] = minKey;
 				subPages[i+1] = newP;
 				newP.setParent( this );
-				subPageIds[i+1] = newP.pageId();
 				nEntries++;
 			} else {
 				//decide whether before or after first page (both will end up before the current
@@ -432,11 +429,9 @@ class LLIndexPage extends AbstractIndexPage {
 						}
 					}
 					System.arraycopy(subPages, ii, subPages, ii+1, nEntries-ii+1);
-					System.arraycopy(subPageIds, ii, subPageIds, ii+1, nEntries-ii+1);
 				}
 				subPages[ii] = newP;
 				newP.setParent( this );
-				subPageIds[ii] = newP.pageId();
 				nEntries++;
 			}
 			return;
@@ -450,13 +445,12 @@ class LLIndexPage extends AbstractIndexPage {
 				System.arraycopy(values, ind.minInnerN+1, newInner.values, 0, nEntries-ind.minInnerN-1);
 			}
 			System.arraycopy(subPages, ind.minInnerN+1, newInner.subPages, 0, nEntries-ind.minInnerN);
-			System.arraycopy(subPageIds, ind.minInnerN+1, newInner.subPageIds, 0, nEntries-ind.minInnerN);
 			newInner.nEntries = (short) (nEntries-ind.minInnerN-1);
 			newInner.assignThisAsRootToLeaves();
 
 			if (parent == null) {
 				//create a parent
-				LLIndexPage newRoot = (LLIndexPage) ind.createPage(null, false);
+				LLIndexPage newRoot = ind.createPage(null, false);
 				newRoot.subPages[0] = this;
 				newRoot.nEntries = 0;  // 0: indicates one leaf / zero keys
 				this.setParent( newRoot );
@@ -493,7 +487,6 @@ class LLIndexPage extends AbstractIndexPage {
 		}
 	}
 	
-	@Override
 	long getMinKey() {
 		if (isLeaf) {
 			return keys[0];
@@ -501,7 +494,6 @@ class LLIndexPage extends AbstractIndexPage {
 		return readPage(0).getMinKey();
 	}
 	
-	@Override
 	long getMinKeyValue() {
 		if (isLeaf) {
 			return values[0];
@@ -509,18 +501,15 @@ class LLIndexPage extends AbstractIndexPage {
 		return readPage(0).getMinKeyValue();
 	}
 	
-	@Override
 	public void print(String indent) {
 //		System.out.println("Java page ID: " + this);  //TODO
 		if (isLeaf) {
-			System.out.println(indent + "Leaf page(id=" + pageId() + "): nK=" + nEntries + " keys=" + 
+			System.out.println(indent + "Leaf page: nK=" + nEntries + " keys=" + 
 					Arrays.toString(keys));
 			System.out.println(indent + "                         " + Arrays.toString(values));
 		} else {
-			System.out.println(indent + "Inner page(id=" + pageId() + "): nK=" + nEntries + " keys=" + 
+			System.out.println(indent + "Inner page: nK=" + nEntries + " keys=" + 
 					Arrays.toString(keys));
-			System.out.println(indent + "                " + nEntries + " page=" + 
-					Arrays.toString(subPageIds));
 			if (!ind.isUnique()) {
 				System.out.println(indent + "              " + nEntries + " values=" + 
 						Arrays.toString(values));
@@ -533,23 +522,20 @@ class LLIndexPage extends AbstractIndexPage {
 					System.out.print(indent + "i=" + i + ": ");
 					subPages[i].print(indent + "  ");
 				}
-				else System.out.println("Page not loaded: " + subPageIds[i]);
 			}
 			System.out.println(']');
 		}
 	}
 
-	@Override
 	public void printLocal() {
 		System.out.println("PrintLocal() for " + this);
 		if (isLeaf) {
-			System.out.println("Leaf page(id=" + pageId() + "): nK=" + nEntries + " oids=" + 
+			System.out.println("Leaf page: nK=" + nEntries + " oids=" + 
 					Arrays.toString(keys));
 			System.out.println("                         " + Arrays.toString(values));
 		} else {
-			System.out.println("Inner page(id=" + pageId() + "): nK=" + nEntries + " oids=" + 
+			System.out.println("Inner page: nK=" + nEntries + " oids=" + 
 					Arrays.toString(keys));
-			System.out.println("                      " + Arrays.toString(subPageIds));
 			if (!ind.isUnique()) {
 				System.out.println("                      " + Arrays.toString(values));
 			}
@@ -557,7 +543,6 @@ class LLIndexPage extends AbstractIndexPage {
 		}
 	}
 
-	@Override
 	protected short getNKeys() {
 		return nEntries;
 	}
@@ -586,7 +571,7 @@ class LLIndexPage extends AbstractIndexPage {
         System.arraycopy(values, i+1, values, i, nEntries-i-1);
         nEntries--;
         if (nEntries == 0) {
-        	ind.statNLeaves--;
+        	PagedUniqueLongLong.statNLeaves--;
         	parent.removeLeafPage(this, oid, value);
         } else if (nEntries < (ind.maxLeafN >> 1) && (nEntries % 8 == 0)) {
         	//The second term prevents frequent reading of previous and following pages.
@@ -604,7 +589,7 @@ class LLIndexPage extends AbstractIndexPage {
         			System.arraycopy(keys, 0, prevPage.keys, prevPage.nEntries, nEntries);
         			System.arraycopy(values, 0, prevPage.values, prevPage.nEntries, nEntries);
         			prevPage.nEntries += nEntries;
-        			ind.statNLeaves--;
+        			PagedUniqueLongLong.statNLeaves--;
         			parent.removeLeafPage(this, keys[0], values[0]);
         		}
         	}
@@ -642,7 +627,6 @@ class LLIndexPage extends AbstractIndexPage {
 								System.arraycopy(values, 0, prev.values, prev.nEntries+1, nEntries);
 							}
 							System.arraycopy(subPages, 0, prev.subPages, prev.nEntries+1, nEntries+1);
-							System.arraycopy(subPageIds, 0, prev.subPageIds, prev.nEntries+1, nEntries+1);
 							//find key for the first appended page -> go up or go down????? Up!
 							int pos = parent.getPagePosition(this)-1;
 							prev.keys[prev.nEntries] = parent.keys[pos]; 
@@ -658,18 +642,17 @@ class LLIndexPage extends AbstractIndexPage {
 					
 					if (nEntries == 0) {
 						//only one element left, no merging occurred -> move sub-page up to parent
-						AbstractIndexPage child = readPage(0);
+						LLIndexPage child = readPage(0);
 						parent.replaceChildPage(this, key, value, child);
-						ind.statNInner--;
+						PagedUniqueLongLong.statNInner--;
 					}
 				} else {
 					// nEntries == 0
 					if (parent != null) {
 						parent.removeLeafPage(this, key, value);
-						ind.statNInner--;
+						PagedUniqueLongLong.statNInner--;
 					}
 					// else : No root and this is a leaf page... -> we do nothing.
-					subPageIds[0] = 0;
 					subPages[0] = null;
 					nEntries--;  //down to -1 which indicates an empty root page
 				}
@@ -692,8 +675,6 @@ class LLIndexPage extends AbstractIndexPage {
 	
 	private void arraysRemoveChild(int pos) {
 		System.arraycopy(subPages, pos+1, subPages, pos, nEntries-pos);
-		System.arraycopy(subPageIds, pos+1, subPageIds, pos, nEntries-pos);
-		subPageIds[nEntries] = 0;
 		subPages[nEntries] = null;
 	}
 	
@@ -714,8 +695,7 @@ class LLIndexPage extends AbstractIndexPage {
 	 * Replacing sub-pages occurs when the sub-page shrinks down to a single sub-sub-page, in which
 	 * case we pull up the sub-sub-page to the local page, replacing the sub-page.
 	 */
-	protected void replaceChildPage(LLIndexPage indexPage, long key, long value, 
-			AbstractIndexPage subChild) {
+	protected void replaceChildPage(LLIndexPage indexPage, long key, long value, LLIndexPage subChild) {
 		int start = binarySearch(0, nEntries, key, value);
 		if (start < 0) {
 			start = -(start+1);
@@ -724,7 +704,6 @@ class LLIndexPage extends AbstractIndexPage {
 			if (subPages[i] == indexPage) {
 				//remove page from FSM.
 				BTPool.reportFreePage(indexPage);
-				subPageIds[i] = subChild.pageId();
 				subPages[i] = subChild;
 				if (i>0) {
 					keys[i-1] = subChild.getMinKey();
@@ -743,14 +722,12 @@ class LLIndexPage extends AbstractIndexPage {
 		throw new IllegalStateException("Sub-page not found.");
 	}
 
-	@Override
 	LLIndexPage getParent() {
 		return parent;
 	}
 	
-	@Override
-	void setParent(AbstractIndexPage parent) {
-		this.parent = (LLIndexPage) parent;
+	void setParent(LLIndexPage parent) {
+		this.parent = parent;
 	}
 	
 	public long getMax() {
@@ -768,13 +745,7 @@ class LLIndexPage extends AbstractIndexPage {
 		return max;
 	}
 
-	@Override
-	protected AbstractIndexPage newInstance() {
-		return new LLIndexPage(this);
-	}
 
-
-	@Override
 	protected void incrementNEntries() {
 		nEntries++;
 	}
@@ -787,8 +758,182 @@ class LLIndexPage extends AbstractIndexPage {
 		return values;
 	}
 
-	@Override
 	final void setNEntries(int n) {
 		nEntries = (short) n;
 	}
+	
+	
+	protected final LLIndexPage readPage(int pos) {
+		return readOrCreatePage(pos, false);
+	}
+	
+	
+	protected final LLIndexPage readOrCreatePage(int pos, boolean allowCreate) {
+		LLIndexPage page = subPages[pos];
+		if (page != null) {
+			//page is in memory
+			return page;
+		}
+
+		if (!allowCreate) {
+			return null;
+		}
+		//create new page
+		page = ind.createPage(this, true);
+		incrementNEntries();
+		return page;
+		
+	}
+	
+	final LLIndexPage readCachedPage(short pos) {
+		LLIndexPage page = subPages[pos];
+		if (page != null) {
+			//page is in memory
+			return page;
+		}
+		
+		return readPage(pos);
+	}
+
+	/**
+	 * Returns only INNER pages.
+	 * TODO for now this ignores leafPages on a previous inner node. It returns only leaf pages
+	 * from the current node.
+	 * @param indexPage
+	 * @return The previous leaf page or null, if the given page is the first page.
+	 */
+	final protected LLIndexPage getPrevInnerPage(LLIndexPage indexPage) {
+		int pos = getPagePosition(indexPage);
+		if (pos > 0) {
+			LLIndexPage page = getPageByPos(pos-1);
+			if (page.isLeaf) {
+				return null;
+			}
+			return page;
+		}
+		if (getParent() == null) {
+			return null;
+		}
+		//TODO we really should return the last leaf page of the previous inner page.
+		//But if they get merged, then we have to shift minimal values, which is
+		//complicated. For now we ignore this case, hoping that it doesn't matter much.
+		return null;
+	}
+
+	/**
+	 * Returns only LEAF pages.
+	 * TODO for now this ignores leafPages on a previous inner node. It returns only leaf pages
+	 * from the current node.
+	 * @param indexPage
+	 * @return The previous leaf page or null, if the given page is the first page.
+	 */
+	final protected LLIndexPage getPrevLeafPage(LLIndexPage indexPage) {
+		int pos = getPagePosition(indexPage);
+		if (pos > 0) {
+			LLIndexPage page = getPageByPos(pos-1);
+			return page.getLastLeafPage();
+		}
+		if (getParent() == null) {
+			return null;
+		}
+		//TODO we really should return the last leaf page of the previous inner page.
+		//But if they get merged, then we have to shift minimal values, which is
+		//complicated. For now we ignore this case, hoping that it doesn't matter much.
+		return null;
+	}
+
+	/**
+	 * Returns only LEAF pages.
+	 * TODO for now this ignores leafPages on other inner nodes. It returns only leaf pages
+	 * from the current node.
+	 * @param indexPage
+	 * @return The previous next page or null, if the given page is the first page.
+	 */
+	final protected LLIndexPage getNextLeafPage(LLIndexPage indexPage) {
+		int pos = getPagePosition(indexPage);
+		if (pos < getNKeys()) {
+			LLIndexPage page = getPageByPos(pos+1);
+			return page.getFirstLeafPage();
+		}
+		if (getParent() == null) {
+			return null;
+		}
+		//TODO we really should return the last leaf page of the previous inner page.
+		//But if they get merged, then we have to shift minimal values, which is
+		//complicated. For now we ignore this case, hoping that it doesn't matter much.
+		return null;
+	}
+
+	/**
+	 * 
+	 * @return The first leaf page of this branch.
+	 */
+	private LLIndexPage getFirstLeafPage() {
+		if (isLeaf) {
+			return this;
+		}
+		return readPage(0).getFirstLeafPage();
+	}
+
+	/**
+	 * 
+	 * @return The last leaf page of this branch.
+	 */
+	private LLIndexPage getLastLeafPage() {
+		if (isLeaf) {
+			return this;
+		}
+		return readPage(getNKeys()).getLastLeafPage();
+	}
+
+	/**
+	 * Returns (and loads, if necessary) the page at the specified position.
+	 */
+	protected LLIndexPage getPageByPos(int pos) {
+		return subPages[pos];
+	}
+
+	/**
+	 * This method will fail if called on the first page in the tree. However this should not
+	 * happen, because when called, we already have a reference to a previous page.
+	 * @param oidIndexPage
+	 * @return The position of the given page in the subPage-array with 0 <= pos <= nEntries.
+	 */
+	int getPagePosition(LLIndexPage indexPage) {
+		//We know that the element exists, so we iterate to list.length instead of nEntires 
+		//(which is not available in this context at the moment.
+		for (int i = 0; i < subPages.length; i++) {
+			if (subPages[i] == indexPage) {
+				return i;
+			}
+		}
+		throw new IllegalStateException("Leaf page not found in parent page.");
+	}
+	
+	protected void assignThisAsRootToLeaves() {
+		for (int i = 0; i <= getNKeys(); i++) {
+			//leaves may be null if they are not loaded!
+			if (subPages[i] != null) {
+				subPages[i].setParent(this);
+			}
+		}
+	}
+	
+	final void clear() {
+		if (!isLeaf) {
+			for (int i = 0; i < getNKeys()+1; i++) {
+				LLIndexPage p = readPage(i);
+				p.clear();
+				//0-IDs are automatically ignored.
+				BTPool.reportFreePage(p);
+			}
+		}
+		if (subPages != null) {
+			for (int i = 0; i < subPages.length; i++) {
+				subPages[i] = null;
+			}
+		}
+		setNEntries(-1);
+	}
+
 }
