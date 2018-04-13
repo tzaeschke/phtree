@@ -55,11 +55,27 @@ public class HTHandler {
 		Bits.writeArray(ia, offs, IK_WIDTH(dims), hcPos);
 		//insert value:
 		offs += IK_WIDTH(dims); 
-		lsdflsadjlf;jsl;djfl;sajdl;jsf;l
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+/*		lsdflsadjlf;jsl;djfl;sajdl;jsf;l
 		for (int i = 0; i < key.length; i++) {
 			Bits.writeArray(ia, offs, postLenStored(), key[i]);
 			offs += postLenStored();
 		}
+		*/
 		node.setValues( Refs.insertSpaceAtPos(node.values(), pin, bufEntryCnt+1) );
 		node.values()[pin] = value;
 	}

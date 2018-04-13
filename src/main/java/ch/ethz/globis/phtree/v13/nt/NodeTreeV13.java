@@ -647,9 +647,9 @@ public class NodeTreeV13<T> implements MaxKTreeI {
 		}
 		
 		//check space
-		int baS = node.calcArraySizeTotalBits(node.getEntryCount(), dims);
+		int baS = node.calcArraySizeTotalBits(node.getEntryCount(), NtNode.MAX_DIM);
 		baS = Bits.calcArraySize(baS);
-		if (baS < node.ba.length) {
+		if (baS != node.ba.length) {
 			System.err.println("Array too large in NT(" + ++WARNINGS + "): " + 
 					node.ba.length + " - " + baS + " = " + (node.ba.length - baS));
 		}

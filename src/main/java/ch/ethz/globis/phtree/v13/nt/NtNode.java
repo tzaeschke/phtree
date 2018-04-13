@@ -28,7 +28,7 @@ public class NtNode<T> {
 	 * 
 	 * WARNING using MAX_DIM bigger than 15 will fail because entryCnt is of type 'short'! 
 	 */
-	public static final int MAX_DIM = 6;
+	public static final int MAX_DIM = 8;
 	private static final long MAX_DIM_MASK = ~((-1L) << MAX_DIM);
 	
 	//size of references in bytes

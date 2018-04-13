@@ -1098,9 +1098,14 @@ public class Node {
 			values = Refs.arrayReplace(values, v2);
 		}			
 
-		NtNodePool.offer(ind);
-		ind = null;
-		return oldValue;
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		throw new UnsupportedOperationException();
+//		NtNodePool.offer(ind);
+//		ind = null;
+//		return oldValue;
 	}
 
 
@@ -1461,15 +1466,30 @@ public class Node {
 	}
 	
 	NtNode<Object> ind() {
-		return ind;
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		throw new UnsupportedOperationException();
+//		return ind;
 	}
 
     PhIterator64<Object> ntIterator(int dims) {
-        return new NtIteratorMinMax<>(dims).reset(ind, Long.MIN_VALUE, Long.MAX_VALUE);
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		throw new UnsupportedOperationException();
+//      return new NtIteratorMinMax<>(dims).reset(ind, Long.MIN_VALUE, Long.MAX_VALUE);
     }
 
     NtIteratorMask<Object> ntIteratorWithMask(int dims, long maskLower, long maskUpper) {
-		return new NtIteratorMask<>(dims).reset(ind, maskLower, maskUpper);
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		throw new UnsupportedOperationException();
+//	return new NtIteratorMask<>(dims).reset(ind, maskLower, maskUpper);
 	}
 
 	Object[] values() {
