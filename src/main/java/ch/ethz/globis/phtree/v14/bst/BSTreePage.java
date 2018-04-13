@@ -23,22 +23,22 @@ package ch.ethz.globis.phtree.v14.bst;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
-import ch.ethz.globis.phtree.v14.bst.LLIterator.LLEntry;
+import ch.ethz.globis.phtree.v14.bst.BSTreeIterator.LLEntry;
 
-class LLIndexPage {
+class BSTreePage {
 	
-	private LLIndexPage parent;
+	private BSTreePage parent;
 	private final long[] keys;
 	private final long[] values;
 	/** number of keys. There are nEntries+1 subPages in any leaf page. */
 	private short nEntries;
 
-	protected final PagedUniqueLongLong ind;
+	protected final BSTree ind;
 	final transient boolean isLeaf;
-	final LLIndexPage[] subPages;
+	final BSTreePage[] subPages;
 	
 	
-	public LLIndexPage(PagedUniqueLongLong ind, LLIndexPage parent, boolean isLeaf) {
+	public BSTreePage(BSTree ind, BSTreePage parent, boolean isLeaf) {
 		this.parent = parent;
 		if (isLeaf) {
 			nEntries = 0;
@@ -56,11 +56,11 @@ class LLIndexPage {
 		
 		this.ind = ind;
 		if (!isLeaf) {	
-			subPages = new LLIndexPage[ind.maxInnerN + 1];
-			PagedUniqueLongLong.statNInner++;
+			subPages = new BSTreePage[ind.maxInnerN + 1];
+			BSTree.statNInner++;
 		} else {
 			subPages = null;
-			PagedUniqueLongLong.statNLeaves++;
+			BSTree.statNLeaves++;
 		}
 		this.isLeaf = isLeaf;
 	}
@@ -72,7 +72,7 @@ class LLIndexPage {
 	 * @param key
 	 * @return Page for that key
 	 */
-	public final LLIndexPage locatePageForKeyUnique(long key, boolean allowCreate) {
+	public final BSTreePage locatePageForKeyUnique(long key, boolean allowCreate) {
 		return locatePageForKey(key, -1, allowCreate);
 	}
 	
@@ -83,7 +83,7 @@ class LLIndexPage {
 	 * @param key
 	 * @return Page for that key
 	 */
-	public LLIndexPage locatePageForKey(long key, long value, boolean allowCreate) {
+	public BSTreePage locatePageForKey(long key, long value, boolean allowCreate) {
 		if (isLeaf) {
 			return this;
 		}
@@ -99,9 +99,8 @@ class LLIndexPage {
         } else {
             pos = -(pos+1);
         }
-        //TODO use weak refs
         //read page before that value
-        LLIndexPage page = (LLIndexPage) readOrCreatePage(pos, allowCreate);
+        BSTreePage page = (BSTreePage) readOrCreatePage(pos, allowCreate);
         return page.locatePageForKey(key, value, allowCreate);
 	}
 	
@@ -223,25 +222,25 @@ class LLIndexPage {
             return;
 		} else {
 			//treat page overflow
-			LLIndexPage newP;
+			BSTreePage newP;
 			boolean isNew = false;
 			boolean isPrev = false;
 			//use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
 			//loops, see iterator tests)
-			LLIndexPage next = (LLIndexPage) parent.getNextLeafPage(this);
+			BSTreePage next = (BSTreePage) parent.getNextLeafPage(this);
 			if (next != null && next.nEntries < ind.maxLeafN-1) {
 				//merge
 				newP = next;
 				isPrev = false;
 			} else {
 				//Merging with prev is not make a big difference, maybe we should remove it...
-				LLIndexPage prev = (LLIndexPage) parent.getPrevLeafPage(this);
+				BSTreePage prev = (BSTreePage) parent.getPrevLeafPage(this);
 				if (prev != null && prev.nEntries < ind.maxLeafN-1) {
 					//merge
 					newP = prev;
 					isPrev = true;
 				} else {
-					newP = new LLIndexPage(ind, parent, true);
+					newP = new BSTreePage(ind, parent, true);
 					isNew = true;
 				}
 			}
@@ -331,7 +330,7 @@ class LLIndexPage {
 		}
 	}
 
-	void updateKey(LLIndexPage indexPage, long key, long value) {
+	void updateKey(BSTreePage indexPage, long key, long value) {
 		//TODO do we need this whole key update business????
 		//-> surely not at the moment, where we only merge with pages that have the same 
 		//   immediate parent...
@@ -367,7 +366,7 @@ class LLIndexPage {
 		
 	}
 	
-	void addSubPage(LLIndexPage newP, long minKey, long minValue) {
+	void addSubPage(BSTreePage newP, long minKey, long minValue) {
 		if (isLeaf) {
 			throw new IllegalStateException("Tree inconsistency");
 		}
@@ -437,7 +436,7 @@ class LLIndexPage {
 			return;
 		} else {
 			//treat page overflow
-			LLIndexPage newInner = (LLIndexPage) ind.createPage(parent, false);
+			BSTreePage newInner = (BSTreePage) ind.createPage(parent, false);
 			
 			//TODO use optimized fill ration for unique values, just like for leaves?.
 			System.arraycopy(keys, ind.minInnerN+1, newInner.keys, 0, nEntries-ind.minInnerN-1);
@@ -450,7 +449,7 @@ class LLIndexPage {
 
 			if (parent == null) {
 				//create a parent
-				LLIndexPage newRoot = ind.createPage(null, false);
+				BSTreePage newRoot = ind.createPage(null, false);
 				newRoot.subPages[0] = this;
 				newRoot.nEntries = 0;  // 0: indicates one leaf / zero keys
 				this.setParent( newRoot );
@@ -465,7 +464,7 @@ class LLIndexPage {
 
 			nEntries = (short) (ind.minInnerN);
 			//finally add the leaf to the according page
-			LLIndexPage newHome;
+			BSTreePage newHome;
 			long newInnerMinKey = newInner.getMinKey();
 			if (ind.isUnique()) {
 				if (minKey < newInnerMinKey) {
@@ -571,14 +570,14 @@ class LLIndexPage {
         System.arraycopy(values, i+1, values, i, nEntries-i-1);
         nEntries--;
         if (nEntries == 0) {
-        	PagedUniqueLongLong.statNLeaves--;
+        	BSTree.statNLeaves--;
         	parent.removeLeafPage(this, oid, value);
         } else if (nEntries < (ind.maxLeafN >> 1) && (nEntries % 8 == 0)) {
         	//The second term prevents frequent reading of previous and following pages.
         	//TODO Should we instead check for nEntries==MAx>>1 then == (MAX>>2) then <= (MAX>>3)?
 
         	//now attempt merging this page
-        	LLIndexPage prevPage = (LLIndexPage) parent.getPrevLeafPage(this);
+        	BSTreePage prevPage = (BSTreePage) parent.getPrevLeafPage(this);
         	if (prevPage != null) {
          		//We merge only if they all fit on a single page. This means we may read
         		//the previous page unnecessarily, but we avoid writing it as long as 
@@ -589,7 +588,7 @@ class LLIndexPage {
         			System.arraycopy(keys, 0, prevPage.keys, prevPage.nEntries, nEntries);
         			System.arraycopy(values, 0, prevPage.values, prevPage.nEntries, nEntries);
         			prevPage.nEntries += nEntries;
-        			PagedUniqueLongLong.statNLeaves--;
+        			BSTree.statNLeaves--;
         			parent.removeLeafPage(this, keys[0], values[0]);
         		}
         	}
@@ -598,7 +597,7 @@ class LLIndexPage {
 	}
 
 
-	protected void removeLeafPage(LLIndexPage indexPage, long key, long value) {
+	protected void removeLeafPage(BSTreePage indexPage, long key, long value) {
 		int start = binarySearch(0, nEntries, key, value);
 		if (start < 0) {
 			start = -(start+1);
@@ -618,7 +617,7 @@ class LLIndexPage {
 					if (parent == null) {
 						return;
 					}
-					LLIndexPage prev = (LLIndexPage) parent.getPrevInnerPage(this);
+					BSTreePage prev = (BSTreePage) parent.getPrevInnerPage(this);
 					if (prev != null && !prev.isLeaf) {
 						//TODO this is only good for merging inside the same root.
 						if ((nEntries % 2 == 0) && (prev.nEntries + nEntries < ind.maxInnerN)) {
@@ -642,15 +641,15 @@ class LLIndexPage {
 					
 					if (nEntries == 0) {
 						//only one element left, no merging occurred -> move sub-page up to parent
-						LLIndexPage child = readPage(0);
+						BSTreePage child = readPage(0);
 						parent.replaceChildPage(this, key, value, child);
-						PagedUniqueLongLong.statNInner--;
+						BSTree.statNInner--;
 					}
 				} else {
 					// nEntries == 0
 					if (parent != null) {
 						parent.removeLeafPage(this, key, value);
-						PagedUniqueLongLong.statNInner--;
+						BSTree.statNInner--;
 					}
 					// else : No root and this is a leaf page... -> we do nothing.
 					subPages[0] = null;
@@ -695,7 +694,7 @@ class LLIndexPage {
 	 * Replacing sub-pages occurs when the sub-page shrinks down to a single sub-sub-page, in which
 	 * case we pull up the sub-sub-page to the local page, replacing the sub-page.
 	 */
-	protected void replaceChildPage(LLIndexPage indexPage, long key, long value, LLIndexPage subChild) {
+	protected void replaceChildPage(BSTreePage indexPage, long key, long value, BSTreePage subChild) {
 		int start = binarySearch(0, nEntries, key, value);
 		if (start < 0) {
 			start = -(start+1);
@@ -722,11 +721,11 @@ class LLIndexPage {
 		throw new IllegalStateException("Sub-page not found.");
 	}
 
-	LLIndexPage getParent() {
+	BSTreePage getParent() {
 		return parent;
 	}
 	
-	void setParent(LLIndexPage parent) {
+	void setParent(BSTreePage parent) {
 		this.parent = parent;
 	}
 	
@@ -741,7 +740,7 @@ class LLIndexPage {
 		if (nEntries == -1) {
 			return Long.MIN_VALUE;
 		}
-		long max = ((LLIndexPage)getPageByPos(nEntries)).getMax();
+		long max = ((BSTreePage)getPageByPos(nEntries)).getMax();
 		return max;
 	}
 
@@ -763,13 +762,13 @@ class LLIndexPage {
 	}
 	
 	
-	protected final LLIndexPage readPage(int pos) {
-		return readOrCreatePage(pos, false);
+	protected final BSTreePage readPage(int pos) {
+		return subPages[pos];
 	}
 	
 	
-	protected final LLIndexPage readOrCreatePage(int pos, boolean allowCreate) {
-		LLIndexPage page = subPages[pos];
+	protected final BSTreePage readOrCreatePage(int pos, boolean allowCreate) {
+		BSTreePage page = subPages[pos];
 		if (page != null) {
 			//page is in memory
 			return page;
@@ -781,18 +780,9 @@ class LLIndexPage {
 		//create new page
 		page = ind.createPage(this, true);
 		incrementNEntries();
+		subPages[pos] = page;
 		return page;
 		
-	}
-	
-	final LLIndexPage readCachedPage(short pos) {
-		LLIndexPage page = subPages[pos];
-		if (page != null) {
-			//page is in memory
-			return page;
-		}
-		
-		return readPage(pos);
 	}
 
 	/**
@@ -802,10 +792,10 @@ class LLIndexPage {
 	 * @param indexPage
 	 * @return The previous leaf page or null, if the given page is the first page.
 	 */
-	final protected LLIndexPage getPrevInnerPage(LLIndexPage indexPage) {
+	final protected BSTreePage getPrevInnerPage(BSTreePage indexPage) {
 		int pos = getPagePosition(indexPage);
 		if (pos > 0) {
-			LLIndexPage page = getPageByPos(pos-1);
+			BSTreePage page = getPageByPos(pos-1);
 			if (page.isLeaf) {
 				return null;
 			}
@@ -827,10 +817,10 @@ class LLIndexPage {
 	 * @param indexPage
 	 * @return The previous leaf page or null, if the given page is the first page.
 	 */
-	final protected LLIndexPage getPrevLeafPage(LLIndexPage indexPage) {
+	final protected BSTreePage getPrevLeafPage(BSTreePage indexPage) {
 		int pos = getPagePosition(indexPage);
 		if (pos > 0) {
-			LLIndexPage page = getPageByPos(pos-1);
+			BSTreePage page = getPageByPos(pos-1);
 			return page.getLastLeafPage();
 		}
 		if (getParent() == null) {
@@ -849,10 +839,10 @@ class LLIndexPage {
 	 * @param indexPage
 	 * @return The previous next page or null, if the given page is the first page.
 	 */
-	final protected LLIndexPage getNextLeafPage(LLIndexPage indexPage) {
+	final protected BSTreePage getNextLeafPage(BSTreePage indexPage) {
 		int pos = getPagePosition(indexPage);
 		if (pos < getNKeys()) {
-			LLIndexPage page = getPageByPos(pos+1);
+			BSTreePage page = getPageByPos(pos+1);
 			return page.getFirstLeafPage();
 		}
 		if (getParent() == null) {
@@ -868,7 +858,7 @@ class LLIndexPage {
 	 * 
 	 * @return The first leaf page of this branch.
 	 */
-	private LLIndexPage getFirstLeafPage() {
+	private BSTreePage getFirstLeafPage() {
 		if (isLeaf) {
 			return this;
 		}
@@ -879,7 +869,7 @@ class LLIndexPage {
 	 * 
 	 * @return The last leaf page of this branch.
 	 */
-	private LLIndexPage getLastLeafPage() {
+	private BSTreePage getLastLeafPage() {
 		if (isLeaf) {
 			return this;
 		}
@@ -889,7 +879,7 @@ class LLIndexPage {
 	/**
 	 * Returns (and loads, if necessary) the page at the specified position.
 	 */
-	protected LLIndexPage getPageByPos(int pos) {
+	protected BSTreePage getPageByPos(int pos) {
 		return subPages[pos];
 	}
 
@@ -899,7 +889,7 @@ class LLIndexPage {
 	 * @param oidIndexPage
 	 * @return The position of the given page in the subPage-array with 0 <= pos <= nEntries.
 	 */
-	int getPagePosition(LLIndexPage indexPage) {
+	int getPagePosition(BSTreePage indexPage) {
 		//We know that the element exists, so we iterate to list.length instead of nEntires 
 		//(which is not available in this context at the moment.
 		for (int i = 0; i < subPages.length; i++) {
@@ -922,7 +912,7 @@ class LLIndexPage {
 	final void clear() {
 		if (!isLeaf) {
 			for (int i = 0; i < getNKeys()+1; i++) {
-				LLIndexPage p = readPage(i);
+				BSTreePage p = readPage(i);
 				p.clear();
 				//0-IDs are automatically ignored.
 				BTPool.reportFreePage(p);

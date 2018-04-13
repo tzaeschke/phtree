@@ -28,14 +28,14 @@ import java.util.NoSuchElementException;
  * @author Tilmann Zaeschke
  *
  */
-class LLIterator {
+public class BSTreeIterator {
 
 	static class IteratorPos {
-		IteratorPos(LLIndexPage page, short pos) {
+		IteratorPos(BSTreePage page, short pos) {
 			this.page = page;
 			this.pos = pos;
 		}
-		LLIndexPage page;
+		BSTreePage page;
 		short pos;
 	}
 
@@ -54,9 +54,9 @@ class LLIterator {
 		}
 	}
 
-	protected final PagedUniqueLongLong ind;
+	protected final BSTree ind;
 	private final int modCount;
-	private LLIndexPage currentPage = null;
+	private BSTreePage currentPage = null;
 	private short currentPos = 0;
 	private final long minKey;
 	private final long maxKey;
@@ -65,12 +65,12 @@ class LLIterator {
 	private long nextValue;
 	private boolean hasValue = false;
 	
-	public LLIterator(PagedUniqueLongLong ind, long minKey, long maxKey) {
+	public BSTreeIterator(BSTree ind, long minKey, long maxKey) {
 		this.ind = ind;
 		this.modCount = ind.getModCount();
 		this.minKey = minKey;
 		this.maxKey = maxKey;
-		this.currentPage = (LLIndexPage) ind.getRoot();
+		this.currentPage = (BSTreePage) ind.getRoot();
 
 		findFirstPosInPage();
 	}
@@ -127,7 +127,7 @@ class LLIterator {
 		    }
 	    	currentPos = (short)pos2;
 
-	    	LLIndexPage newPage = findPage(currentPage, currentPos);
+	    	BSTreePage newPage = findPage(currentPage, currentPos);
 			//are we on the correct branch?
 	    	//We are searching with LONG_MIN value. If the key[] matches exactly, then the
 	    	//selected page may not actually contain any valid elements.
@@ -244,8 +244,8 @@ class LLIterator {
 	
 	
 	
-	protected final LLIndexPage findPage(LLIndexPage currentPage, short pagePos) {
-		return currentPage.readCachedPage(pagePos);
+	protected final BSTreePage findPage(BSTreePage currentPage, short pagePos) {
+		return currentPage.readPage(pagePos);
 	}
 
 	protected void checkValidity() {

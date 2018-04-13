@@ -23,42 +23,33 @@ package ch.ethz.globis.phtree.v14.bst;
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 
-import ch.ethz.globis.phtree.v14.bst.LLIterator.LLEntry;
+import ch.ethz.globis.phtree.v14.bst.BSTreeIterator.LLEntry;
 
 
 /**
  * @author Tilmann Zaeschke
  */
-public class PagedUniqueLongLong {
+public class BSTree<T> {
 	
-	protected final int maxLeafN = 10;
+	protected final int maxLeafN = 10;//340;
 	/** Max number of keys in inner page (there can be max+1 page-refs) */
-	protected final int maxInnerN = 10;
-	protected final int minLeafN = maxLeafN >> 1;
-	protected final int minInnerN = maxInnerN >> 1;
+	protected final int maxInnerN = 11;//509;
+	protected final int minLeafN = maxLeafN >> 1;  //254
+	protected final int minInnerN = maxInnerN >> 1;  //170
 	protected static int statNLeaves = 0;
 	protected static int statNInner = 0;
 	private int modCount = 0;
 
-	private transient LLIndexPage root;
+	private transient BSTreePage root;
 	
-	public PagedUniqueLongLong() {
+	public BSTree() {
 		//bootstrap index
 		root = createPage(null, false);
 	}
 
 	public final void insertLong(long key, long value) {
-		LLIndexPage page = getRoot().locatePageForKeyUnique(key, true);
+		BSTreePage page = getRoot().locatePageForKeyUnique(key, true);
 		page.put(key, value);
-	}
-
-	public final boolean insertLongIfNotSet(long key, long value) {
-		LLIndexPage page = getRoot().locatePageForKeyUnique(key, true);
-		if (page.binarySearch(0, page.getNKeys(), key, value) >= 0) {
-			return false;
-		}
-		page.put(key, value);
-		return true;
 	}
 
 	/**
@@ -67,7 +58,7 @@ public class PagedUniqueLongLong {
 	 * @throws NoSuchElementException if key is not found
 	 */
 	public long removeLong(long key) {
-		LLIndexPage page = getRoot().locatePageForKeyUnique(key, false);
+		BSTreePage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
 			throw new NoSuchElementException("Key not found: " + key);
 		}
@@ -80,7 +71,7 @@ public class PagedUniqueLongLong {
 	 * @return the previous value
 	 */
 	public long removeLongNoFail(long key, long failValue) {
-		LLIndexPage page = getRoot().locatePageForKeyUnique(key, false);
+		BSTreePage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
 			return failValue;
 		}
@@ -89,26 +80,26 @@ public class PagedUniqueLongLong {
 
 	
 	public LLEntry findValue(long key) {
-		LLIndexPage page = getRoot().locatePageForKeyUnique(key, false);
+		BSTreePage page = getRoot().locatePageForKeyUnique(key, false);
 		if (page == null) {
 			return null;
 		}
 		return page.getValueFromLeafUnique(key);
 	}
 
-	LLIndexPage createPage(LLIndexPage parent, boolean isLeaf) {
-		return new LLIndexPage(this, (LLIndexPage) parent, isLeaf);
+	BSTreePage createPage(BSTreePage parent, boolean isLeaf) {
+		return new BSTreePage(this, (BSTreePage) parent, isLeaf);
 	}
 
-	protected final LLIndexPage getRoot() {
+	protected final BSTreePage getRoot() {
 		return root;
 	}
 
-	public LLIterator iterator(long min, long max) {
-		return new LLIterator(this, min, max);
+	public BSTreeIterator iterator(long min, long max) {
+		return new BSTreeIterator(this, min, max);
 	}
 
-	protected void updateRoot(LLIndexPage newRoot) {
+	protected void updateRoot(BSTreePage newRoot) {
 		root = newRoot;
 	}
 	
@@ -128,7 +119,7 @@ public class PagedUniqueLongLong {
 		throw new UnsupportedOperationException();
 	}
 
-	public LLIterator iterator() {
+	public BSTreeIterator iterator() {
 		return iterator(Long.MIN_VALUE, Long.MAX_VALUE);
 	}
 	
@@ -139,8 +130,8 @@ public class PagedUniqueLongLong {
 	public void clear() {
 		getRoot().clear();
 		BTPool.reportFreePage(getRoot());
-		PagedUniqueLongLong.statNInner = 0;
-		PagedUniqueLongLong.statNLeaves = 0;
+		BSTree.statNInner = 0;
+		BSTree.statNLeaves = 0;
 	}
 	
 	public void checkValidity(int modCount) {
