@@ -47,7 +47,7 @@ public class BSTree<T> {
 		root = createPage(null, false);
 	}
 
-	public final void insertLong(long key, long value) {
+	public final void put(long key, long value) {
 		BSTreePage page = getRoot().locatePageForKey(key, true);
 		page.put(key, value);
 	}
@@ -57,7 +57,7 @@ public class BSTree<T> {
 	 * @return the previous value
 	 * @throws NoSuchElementException if key is not found
 	 */
-	public long removeLong(long key) {
+	public long remove(long key) {
 		BSTreePage page = getRoot().locatePageForKey(key, false);
 		if (page == null) {
 			throw new NoSuchElementException("Key not found: " + key);
@@ -79,7 +79,7 @@ public class BSTree<T> {
 	}
 
 	
-	public LLEntry findValue(long key) {
+	public LLEntry get(long key) {
 		BSTreePage page = getRoot().locatePageForKey(key, false);
 		if (page == null) {
 			return null;

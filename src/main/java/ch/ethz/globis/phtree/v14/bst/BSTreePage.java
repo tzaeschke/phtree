@@ -89,7 +89,7 @@ class BSTreePage {
             pos = -(pos+1);
         }
         //read page before that value
-        BSTreePage page = (BSTreePage) readOrCreatePage(pos, allowCreate);
+        BSTreePage page = readOrCreatePage(pos, allowCreate);
         return page.locatePageForKey(key, allowCreate);
 	}
 	
