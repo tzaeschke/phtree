@@ -33,9 +33,9 @@ class BSTreePage {
 	/** number of keys. There are nEntries+1 subPages in any leaf page. */
 	private short nEntries;
 
-	protected final BSTree ind;
-	final transient boolean isLeaf;
-	final BSTreePage[] subPages;
+	private final BSTree ind;
+	private final boolean isLeaf;
+	private BSTreePage[] subPages;
 	
 	
 	public BSTreePage(BSTree ind, BSTreePage parent, boolean isLeaf) {
@@ -47,11 +47,7 @@ class BSTreePage {
 		} else {
 			nEntries = -1;
 			keys = new long[ind.maxInnerN];
-			if (ind.isUnique()) {
-				values = null;
-			} else {
-				values = new long[ind.maxInnerN];
-			}
+			values = null;
 		}
 		
 		this.ind = ind;
@@ -93,6 +89,81 @@ class BSTreePage {
         return page.locatePageForKey(key, allowCreate);
 	}
 	
+	public BSTreePage findSubPage(long key) {
+//		if (nEntries == -1) {
+//			return null;
+//		}
+		//The stored value[i] is the min-values of the according page[i+1} 
+        int pos = binarySearch(0, nEntries, key);
+        if (pos >= 0) {
+            //pos of matching key
+            pos++;
+        } else {
+            pos = -(pos+1);
+        }
+        //read page before that value
+        return subPages[pos];
+	}
+	
+	/**
+	 * 
+	 * @param key the lookup key
+	 * @return the page
+	 */
+	public BSTreePage findOrCreateSubPage(long key, long value) {
+		//The stored value[i] is the min-values of the according page[i+1} 
+        int pos = binarySearch(0, nEntries, key);
+        if (pos >= 0) {
+            //pos of matching key
+            pos++;
+        } else {
+            pos = -(pos+1);
+        }
+        //read page before that value
+        //parentPosStack[0] = pos;//++parentPosStack[0]] = pos;
+        BSTreePage page = readPage(pos);
+        if (page == null) {
+        	page = createLeafPage(pos);
+        }
+        if (page.isLeaf()) {
+    		BSTreePage newPage = page.put(key, value, pos-1);
+    		if (newPage != null) {
+    			page.addSubPage(newPage, newPage.getMinKey());
+    		}
+    		return null;
+        }
+        return page;
+	}
+	
+	public BSTreePage findOrCreatePageForPut(long key, long value, int[] parentPosStack) {
+		//The stored value[i] is the min-values of the according page[i+1} 
+        int pos = binarySearch(0, nEntries, key);
+        if (pos >= 0) {
+            //pos of matching key
+            pos++;
+        } else {
+            pos = -(pos+1);
+        }
+        //read page before that value
+        //parentPosStack[0] = pos;//++parentPosStack[0]] = pos;
+        BSTreePage page = readPage(pos);
+        if (page == null) {
+        	page = createLeafPage(pos);
+        }
+        
+        //recurse
+        if (page.isLeaf()) {
+			BSTreePage newPage = page.put(key, value, pos-1);
+			if (newPage != null) {
+				page.addSubPage(newPage, newPage.getMinKey());
+			}
+        } else {
+        	
+        }
+
+        return page; //createLeafPage(pos);
+	}
+	
 	public LLEntry getValueFromLeafUnique(long oid) {
 		if (!isLeaf) {
 			throw new IllegalStateException("Leaf inconsistency.");
@@ -105,15 +176,6 @@ class BSTreePage {
 		return null;
 	}
 
-
-    /**
-     * Add an entry at 'key'/'value'. If the PAIR already exists, nothing happens.
-     * @param key
-     * @param value
-     */
-	public void insert(long key, long value) {
-		put(key, value); 
-	}
 
 	/**
 	 * Binary search.
@@ -145,7 +207,7 @@ class BSTreePage {
      * @param key
      * @param value
      */
-	public final void put(long key, long value) {
+	public final BSTreePage put(long key, long value, int posInParent) {
 		if (!isLeaf) {
 			throw new IllegalStateException("Tree inconsistency.");
 		}
@@ -159,94 +221,150 @@ class BSTreePage {
             if (value != values[pos]) {
                 values[pos] = value;
             }
-            return;
+            return null;
         } 
 
         if (nEntries < ind.maxLeafN) {
-            //okay so we add it locally
-            pos = -(pos+1);
-            if (pos < nEntries) {
-                System.arraycopy(keys, pos, keys, pos+1, nEntries-pos);
-                System.arraycopy(values, pos, values, pos+1, nEntries-pos);
-            }
-            keys[pos] = key;
-            values[pos] = value;
-            nEntries++;
-            return;
-		} else {
-			//treat page overflow
-			BSTreePage newP;
-			boolean isNew = false;
-			boolean isPrev = false;
-			//use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
-			//loops, see iterator tests)
-			BSTreePage next = (BSTreePage) parent.getNextLeafPage(this);
-			if (next != null && next.nEntries < ind.maxLeafN-1) {
-				//merge
-				newP = next;
-				isPrev = false;
-			} else {
-				//Merging with prev is not make a big difference, maybe we should remove it...
-				BSTreePage prev = (BSTreePage) parent.getPrevLeafPage(this);
-				if (prev != null && prev.nEntries < ind.maxLeafN-1) {
-					//merge
-					newP = prev;
-					isPrev = true;
-				} else {
-					newP = new BSTreePage(ind, parent, true);
-					isNew = true;
-				}
-			}
-			
-			int nEntriesToKeep = (nEntries + newP.nEntries) >> 1;
-			int nEntriesToCopy = nEntries - nEntriesToKeep;
-			if (isNew) {
-				//works only if new page follows current page
-				System.arraycopy(keys, nEntriesToKeep, newP.keys, 0, nEntriesToCopy);
-				System.arraycopy(values, nEntriesToKeep, newP.values, 0, nEntriesToCopy);
-			} else if (isPrev) {
-				//copy element to previous page
-				System.arraycopy(keys, 0, newP.keys, newP.nEntries, nEntriesToCopy);
-				System.arraycopy(values, 0, newP.values, newP.nEntries, nEntriesToCopy);
-				//move element forward to beginning of page
-				System.arraycopy(keys, nEntriesToCopy, keys, 0, nEntries-nEntriesToCopy);
-				System.arraycopy(values, nEntriesToCopy, values, 0, nEntries-nEntriesToCopy);
-			} else {
-				//make space on next page
-				System.arraycopy(newP.keys, 0, newP.keys, nEntriesToCopy, newP.nEntries);
-				System.arraycopy(newP.values, 0, newP.values, nEntriesToCopy, newP.nEntries);
-				//insert element in next page
-				System.arraycopy(keys, nEntriesToKeep, newP.keys, 0, nEntriesToCopy);
-				System.arraycopy(values, nEntriesToKeep, newP.values, 0, nEntriesToCopy);
-			}
-			nEntries = (short) nEntriesToKeep;
-			newP.nEntries = (short) (nEntriesToCopy + newP.nEntries);
-			//New page and min key
-			if (isNew || !isPrev) {
-				if (newP.keys[0] > key) {
-					put(key, value);
-				} else {
-					newP.put(key, value);
-				}
-			} else {
-				if (keys[0] > key) {
-					newP.put(key, value);
-				} else {
-					put(key, value);
-				}
-			}
-			if (isNew) {
-				parent.addSubPage(newP, newP.keys[0]);
-			} else {
-				//TODO probably not necessary
-				newP.parent.updateKey(newP, newP.keys[0]);
-			}
-			parent.updateKey(this, keys[0]);
-		}
+        	//okay so we add it locally
+        	pos = -(pos+1);
+        	if (pos < nEntries) {
+        		System.arraycopy(keys, pos, keys, pos+1, nEntries-pos);
+        		System.arraycopy(values, pos, values, pos+1, nEntries-pos);
+        	}
+        	keys[pos] = key;
+        	values[pos] = value;
+        	nEntries++;
+        	return null;
+        } 
+
+        //treat page overflow
+        BSTreePage newP;
+        boolean isNew = false;
+        boolean isPrev = false;
+        //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
+        //loops, see iterator tests)
+        BSTreePage next = (BSTreePage) parent.getNextLeafPage(this);
+        if (next != null && next.nEntries < ind.maxLeafN-1) {
+        	//merge
+        	newP = next;
+        	isPrev = false;
+        } else {
+        	//Merging with prev is not make a big difference, maybe we should remove it...
+        	BSTreePage prev = (BSTreePage) parent.getPrevLeafPage(this);
+        	if (prev != null && prev.nEntries < ind.maxLeafN-1) {
+        		//merge
+        		newP = prev;
+        		isPrev = true;
+        	} else {
+        		newP = new BSTreePage(ind, parent, true);
+        		isNew = true;
+        	}
+        }
+
+        //TODO during bulkloading, keep 95% or so in old page. 100%?
+        int nEntriesToKeep = (nEntries + newP.nEntries) >> 1;
+       	int nEntriesToCopy = nEntries - nEntriesToKeep;
+       	if (isNew) {
+       		//works only if new page follows current page
+       		System.arraycopy(keys, nEntriesToKeep, newP.keys, 0, nEntriesToCopy);
+       		System.arraycopy(values, nEntriesToKeep, newP.values, 0, nEntriesToCopy);
+       	} else if (isPrev) {
+       		//copy element to previous page
+       		System.arraycopy(keys, 0, newP.keys, newP.nEntries, nEntriesToCopy);
+       		System.arraycopy(values, 0, newP.values, newP.nEntries, nEntriesToCopy);
+       		//move element forward to beginning of page
+       		System.arraycopy(keys, nEntriesToCopy, keys, 0, nEntries-nEntriesToCopy);
+       		System.arraycopy(values, nEntriesToCopy, values, 0, nEntries-nEntriesToCopy);
+       	} else {
+       		//make space on next page
+       		System.arraycopy(newP.keys, 0, newP.keys, nEntriesToCopy, newP.nEntries);
+       		System.arraycopy(newP.values, 0, newP.values, nEntriesToCopy, newP.nEntries);
+       		//insert element in next page
+       		System.arraycopy(keys, nEntriesToKeep, newP.keys, 0, nEntriesToCopy);
+       		System.arraycopy(values, nEntriesToKeep, newP.values, 0, nEntriesToCopy);
+       	}
+       	nEntries = (short) nEntriesToKeep;
+       	newP.nEntries = (short) (nEntriesToCopy + newP.nEntries);
+       	//New page and min key
+       	if (isNew || !isPrev) {
+       		if (newP.keys[0] > key) {
+       			//posInParent=-2, because we won't need it there
+       			put(key, value, -2);
+       		} else {
+       			newP.put(key, value, -2);
+       		}
+       	} else {
+       		if (keys[0] > key) {
+       			newP.put(key, value, -2);
+       		} else {
+       			put(key, value, -2);
+       		}
+       	}
+       	//posInParent has not changed!
+       	parent.updateKey(this, keys[0], posInParent);
+       	if (isNew) {
+       		return parent.addSubPage(newP, newP.keys[0]);
+       	}
+       	return null;
 	}
 
 	@Deprecated //TODO provide posInParent.
-	void updateKey(BSTreePage indexPage, long key) {
+	private void updateKey2(BSTreePage indexPage, long key, int keyPos) {
+		//TODO do we need this whole key update business????
+		//-> surely not at the moment, where we only merge with pages that have the same 
+		//   immediate parent...
+		if (isLeaf) {
+			throw new IllegalStateException("Tree inconsistency");
+		}
+		
+		//TODO simplify
+		long keyOld = keys[keyPos];
+		if (keyOld == key) {
+			//nothing changes
+			return;
+		}
+//		keys[keyPos] = key;
+		
+
+		if (keyPos != 0) {
+			keys[keyPos] = key;
+		} else {
+			//parent page could be affected
+			if (parent != null) {
+				//TODO this recurses all parents!!!??? 
+				parent.updateKey(this, key, -1);
+			}
+		}
+		return;
+
+//		if (i > 0) {
+//			keys[i-1] = key;
+//		} else {
+//			//parent page could be affected
+//			if (parent != null) {
+//				//TODO this recurses all parents!!!??? 
+//				parent.updateKey(this, key);
+//			}
+//		}
+//		return;
+//		
+//		throw new IllegalStateException("leaf page not found.");
+		
+	}
+	
+	@Deprecated //TODO provide posInParent.
+	void updateKey(BSTreePage indexPage, long key, int keyPos) {
+		//TODO why does this fail?
+		//TODO why does this fail?
+		//TODO why does this fail?
+		//TODO why does this fail?
+		//TODO why does this fail?
+		//TODO why does this fail?
+//		if (keyPos >=0) {
+//			updateKey2(indexPage, key, keyPos);
+//			return;
+//		}
+		
 		//TODO do we need this whole key update business????
 		//-> surely not at the moment, where we only merge with pages that have the same 
 		//   immediate parent...
@@ -260,27 +378,27 @@ class BSTreePage {
 		
 		for (int i = start; i <= nEntries; i++) {
 			if (subPages[i] == indexPage) {
+				if (i-1 != keyPos && keyPos != -1) {
+					throw new IllegalStateException("" + i + " / " + keyPos);
+				}
+				
 				if (i > 0) {
 					keys[i-1] = key;
 				} else {
 					//parent page could be affected
 					if (parent != null) {
 						//TODO this recurses all parents!!!??? 
-						parent.updateKey(this, key);
+						parent.updateKey(this, key, -1);
 					}
 				}
 				return;
 			}
 		}
-//		System.out.println("this:" + parent);
-//		this.printLocal();
-//		System.out.println("leaf: " + indexPage);
-//		indexPage.printLocal();
 		throw new IllegalStateException("leaf page not found.");
 		
 	}
 	
-	void addSubPage(BSTreePage newP, long minKey) {
+	BSTreePage addSubPage(BSTreePage newP, long minKey) {
 		if (isLeaf) {
 			throw new IllegalStateException("Tree inconsistency");
 		}
@@ -297,9 +415,6 @@ class BSTreePage {
 			if (i > 0) {
 				System.arraycopy(keys, i, keys, i+1, nEntries-i);
 				System.arraycopy(subPages, i+1, subPages, i+2, nEntries-i);
-				if (!ind.isUnique()) {
-					System.arraycopy(values, i, values, i+1, nEntries-i);
-				}
 				keys[i] = minKey;
 				subPages[i+1] = newP;
 				newP.setParent( this );
@@ -314,20 +429,6 @@ class BSTreePage {
 				} else {
 					System.arraycopy(keys, 0, keys, 1, nEntries);
 					long oldKey = subPages[0].getMinKey();
-					if (!ind.isUnique()) {
-						System.arraycopy(values, 0, values, 1, nEntries);
-//						long oldValue = subPages[0].getMinKeyValue();
-//						if ((minKey > oldKey) || (minKey==oldKey && minValue > oldValue)) {
-//							ii = 1;
-//							keys[0] = minKey;
-//							values[0] = minValue;
-//						} else {
-//							ii = 0;
-//							keys[0] = oldKey;
-//							values[0] = oldValue;
-//						}
-					}
-//					} else {
 					if ( minKey > oldKey ) {
 						ii = 1;
 						keys[0] = minKey;
@@ -335,23 +436,19 @@ class BSTreePage {
 						ii = 0;
 						keys[0] = oldKey;
 					}
-//					}
 					System.arraycopy(subPages, ii, subPages, ii+1, nEntries-ii+1);
 				}
 				subPages[ii] = newP;
 				newP.setParent( this );
 				nEntries++;
 			}
-			return;
+			return null;
 		} else {
 			//treat page overflow
 			BSTreePage newInner = (BSTreePage) ind.createPage(parent, false);
 			
 			//TODO use optimized fill ration for unique values, just like for leaves?.
 			System.arraycopy(keys, ind.minInnerN+1, newInner.keys, 0, nEntries-ind.minInnerN-1);
-			if (!ind.isUnique()) {
-				System.arraycopy(values, ind.minInnerN+1, newInner.values, 0, nEntries-ind.minInnerN-1);
-			}
 			System.arraycopy(subPages, ind.minInnerN+1, newInner.subPages, 0, nEntries-ind.minInnerN);
 			newInner.nEntries = (short) (nEntries-ind.minInnerN-1);
 			newInner.assignThisAsRootToLeaves();
@@ -377,8 +474,107 @@ class BSTreePage {
 				newHome = newInner;
 			}
 			newHome.addSubPage(newP, minKey);
-			return;
+			//TODO
+			//TODO
+			//TODO
+			//TODO
+			//TODO
+			//TODO
+			return null;
 		}
+	}
+	
+	BSTreePage addSubPageAtPos(BSTreePage newP, long minKey, int pos) {
+		if (isLeaf) {
+			throw new IllegalStateException("Tree inconsistency");
+		}
+		
+		if (nEntries < ind.maxInnerN) {
+			//add page here
+			
+			//For now, we assume a unique index.
+            int i = binarySearch(0, nEntries, minKey);
+            if (i != pos) {
+            	//TODO
+            	//TODO
+            	//TODO
+            	//TODO
+            	throw new IllegalStateException("" + i + " / " + pos);
+            }
+            //If the key has a perfect match then something went wrong. This should
+            //never happen so we don't need to check whether (i < 0).
+        	i = -(i+1);
+            
+			if (i > 0) {
+				System.arraycopy(keys, i, keys, i+1, nEntries-i);
+				System.arraycopy(subPages, i+1, subPages, i+2, nEntries-i);
+				keys[i] = minKey;
+				subPages[i+1] = newP;
+				newP.setParent( this );
+				nEntries++;
+			} else {
+				//decide whether before or after first page (both will end up before the current
+				//first key).
+				int ii;
+				if (nEntries < 0) {
+					//can happen for empty root page
+					ii = 0;
+				} else {
+					System.arraycopy(keys, 0, keys, 1, nEntries);
+					long oldKey = subPages[0].getMinKey();
+					if ( minKey > oldKey ) {
+						ii = 1;
+						keys[0] = minKey;
+					} else {
+						ii = 0;
+						keys[0] = oldKey;
+					}
+					System.arraycopy(subPages, ii, subPages, ii+1, nEntries-ii+1);
+				}
+				subPages[ii] = newP;
+				newP.setParent( this );
+				nEntries++;
+			}
+			return null;
+		} 
+
+		//treat page overflow
+		BSTreePage newInner = (BSTreePage) ind.createPage(parent, false);
+
+		//TODO use optimized fill ration for unique values, just like for leaves?.
+		System.arraycopy(keys, ind.minInnerN+1, newInner.keys, 0, nEntries-ind.minInnerN-1);
+		System.arraycopy(subPages, ind.minInnerN+1, newInner.subPages, 0, nEntries-ind.minInnerN);
+		newInner.nEntries = (short) (nEntries-ind.minInnerN-1);
+		newInner.assignThisAsRootToLeaves();
+
+		if (parent == null) {
+			//create a parent
+			BSTreePage newRoot = ind.createPage(null, false);
+			newRoot.subPages[0] = this;
+			newRoot.nEntries = 0;  // 0: indicates one leaf / zero keys
+			this.setParent( newRoot );
+			ind.updateRoot(newRoot);
+		}
+
+		parent.addSubPage(newInner, keys[ind.minInnerN]);
+
+		nEntries = (short) (ind.minInnerN);
+		//finally add the leaf to the according page
+		BSTreePage newHome;
+		long newInnerMinKey = newInner.getMinKey();
+		if (minKey < newInnerMinKey) {
+			newHome = this;
+		} else {
+			newHome = newInner;
+		}
+		newHome.addSubPage(newP, minKey);
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		return null;
 	}
 	
 	long getMinKey() {
@@ -386,13 +582,6 @@ class BSTreePage {
 			return keys[0];
 		}
 		return readPage(0).getMinKey();
-	}
-	
-	long getMinKeyValue() {
-		if (isLeaf) {
-			return values[0];
-		}
-		return readPage(0).getMinKeyValue();
 	}
 	
 	public void print(String indent) {
@@ -403,10 +592,6 @@ class BSTreePage {
 		} else {
 			System.out.println(indent + "Inner page: nK=" + nEntries + " keys=" + 
 					Arrays.toString(keys));
-			if (!ind.isUnique()) {
-				System.out.println(indent + "              " + nEntries + " values=" + 
-						Arrays.toString(values));
-			}
 //			System.out.println(indent + "                " + nEntries + " leaf=" + 
 //					Arrays.toString(leaves));
 			System.out.print(indent + "[");
@@ -429,9 +614,6 @@ class BSTreePage {
 		} else {
 			System.out.println("Inner page: nK=" + nEntries + " oids=" + 
 					Arrays.toString(keys));
-			if (!ind.isUnique()) {
-				System.out.println("                      " + Arrays.toString(values));
-			}
 			System.out.println("                      " + Arrays.toString(subPages));
 		}
 	}
@@ -509,16 +691,10 @@ class BSTreePage {
 						//TODO this is only good for merging inside the same root.
 						if ((nEntries % 2 == 0) && (prev.nEntries + nEntries < ind.maxInnerN)) {
 							System.arraycopy(keys, 0, prev.keys, prev.nEntries+1, nEntries);
-							if (!ind.isUnique()) {
-								System.arraycopy(values, 0, prev.values, prev.nEntries+1, nEntries);
-							}
 							System.arraycopy(subPages, 0, prev.subPages, prev.nEntries+1, nEntries+1);
 							//find key for the first appended page -> go up or go down????? Up!
 							int pos = parent.getPagePosition(this)-1;
 							prev.keys[prev.nEntries] = parent.keys[pos]; 
-							if (!ind.isUnique()) {
-								prev.values[prev.nEntries] = parent.values[pos]; 
-							}
 							prev.nEntries += nEntries + 1;  //for the additional key
 							prev.assignThisAsRootToLeaves();
 							parent.removeLeafPage(this, key);
@@ -545,18 +721,11 @@ class BSTreePage {
 				return;
 			}
 		}
-//		System.out.println("this:" + parent);
-//		this.printLocal();
-//		System.out.println("leaf: " + indexPage);
-//		indexPage.printLocal();
 		throw new IllegalStateException("leaf page not found.");
 	}
 
 	private void arraysRemoveKey(int pos) {
 		System.arraycopy(keys, pos+1, keys, pos, nEntries-pos-1);
-		if (!ind.isUnique()) {
-			System.arraycopy(values, pos+1, values, pos, nEntries-pos-1);
-		}
 	}
 	
 	private void arraysRemoveChild(int pos) {
@@ -593,9 +762,6 @@ class BSTreePage {
 				subPages[i] = subChild;
 				if (i>0) {
 					keys[i-1] = subChild.getMinKey();
-					if (!ind.isUnique()) {
-						values[i-1] = subChild.getMinKeyValue();
-					}
 				}
 				subChild.setParent(this);
 				return;
@@ -654,6 +820,19 @@ class BSTreePage {
 	}
 	
 	
+	protected final BSTreePage createLeafPage(int pos) {
+		if (subPages[pos] != null) {
+			throw new IllegalStateException();
+		}
+
+		//create new page
+		BSTreePage page = ind.createPage(this, true);
+		incrementNEntries();
+		subPages[pos] = page;
+		return page;
+		
+	}
+
 	protected final BSTreePage readOrCreatePage(int pos, boolean allowCreate) {
 		BSTreePage page = subPages[pos];
 		if (page != null) {
@@ -669,7 +848,6 @@ class BSTreePage {
 		incrementNEntries();
 		subPages[pos] = page;
 		return page;
-		
 	}
 
 	/**
@@ -811,6 +989,11 @@ class BSTreePage {
 			}
 		}
 		setNEntries(-1);
+	}
+
+
+	boolean isLeaf() {
+		return isLeaf;
 	}
 
 }
