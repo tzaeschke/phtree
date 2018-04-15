@@ -18,7 +18,7 @@
  * 
  * See the README and COPYING files for further information. 
  */
-package ch.ethz.globis.phtree.v14.bst;
+package ch.ethz.globis.phtree.v14.bst.copy2;
 
 import java.util.ArrayList;
 import java.util.NoSuchElementException;

@@ -34,9 +34,10 @@ public class TestBST {
 		//populate
 		long l11 = System.currentTimeMillis();
 		for (int i = 0; i < N; i++) {
+			//if (i%1000 == 0) 
+//				System.out.println("ins=" + i);
 			ht.put(i, i+100);
 			//assertEquals(i, pos);
-			//if (i%1000 == 0) System.out.println("ins=" + i);
 		}
 		long l12 = System.currentTimeMillis();
 		
