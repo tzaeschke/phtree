@@ -50,21 +50,19 @@ public class BSTree<T> {
 	}
 
 	public final void put(long key, long value) {
-		int[] parentPosStack = new int[1];//(nEntries >> (maxInnerN-2)) + 5];
-//		if (key == 9999999) System.out.println(parentPosStack.length);
 //		BSTreePage page = getRoot().locatePageForKey(key, true);
 //		page.put(key, value, parentPosStack);
 		//Depth as log(nEntries) 
 		BSTreePage page = getRoot();
 		while (page != null && !page.isLeaf()) {
-			page = page.findOrCreateSubPage(key, value, parentPosStack);
+			page = page.findOrCreateSubPage(key, value);
 //			page = page.findOrCreatePageForPut(key, value, parentPosStack);
 		}
 		//TODO assign page to root 
-		BSTreePage newPage = page.put(key, value, -1);
-		if (newPage != null) {
-			page.addSubPage(newPage, newPage.getMinKey());
-		}
+//		BSTreePage newPage = page.put(key, value, -1);
+//		if (newPage != null) {
+//			page.addSubPage(newPage, newPage.getMinKey());
+//		}
 	}
 
 	/**
