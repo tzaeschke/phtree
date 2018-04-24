@@ -301,14 +301,14 @@ class BSTreePage {
        		}
        	}
        	//posInParent has not changed!
-       	parent.updateKey(this, keys[0], posInParent);
+       	parent.updateKey2(this, keys[0], posInParent);
        	if (isNew) {
        		return parent.addSubPage(newP, newP.keys[0]);
        	}
        	return null;
 	}
 
-	@Deprecated //TODO provide posInParent.
+
 	private void updateKey2(BSTreePage indexPage, long key, int keyPos) {
 		//TODO do we need this whole key update business????
 		//-> surely not at the moment, where we only merge with pages that have the same 
@@ -318,15 +318,12 @@ class BSTreePage {
 		}
 		
 		//TODO simplify
-		long keyOld = keys[keyPos];
-		if (keyOld == key) {
+		if (keyPos < 0 || keys[keyPos] == key) {
 			//nothing changes
 			return;
 		}
-//		keys[keyPos] = key;
-		
 
-		if (keyPos != 0) {
+		if (keyPos >= 0) {
 			keys[keyPos] = key;
 		} else {
 			//parent page could be affected
@@ -335,35 +332,23 @@ class BSTreePage {
 				parent.updateKey(this, key, -1);
 			}
 		}
-		return;
-
-//		if (i > 0) {
-//			keys[i-1] = key;
-//		} else {
-//			//parent page could be affected
-//			if (parent != null) {
-//				//TODO this recurses all parents!!!??? 
-//				parent.updateKey(this, key);
-//			}
-//		}
-//		return;
-//		
-//		throw new IllegalStateException("leaf page not found.");
-		
 	}
 	
 	@Deprecated //TODO provide posInParent.
-	void updateKey(BSTreePage indexPage, long key, int keyPos) {
+	private void updateKey(BSTreePage indexPage, long key, int keyPos) {
 		//TODO why does this fail?
 		//TODO why does this fail?
 		//TODO why does this fail?
 		//TODO why does this fail?
 		//TODO why does this fail?
 		//TODO why does this fail?
-//		if (keyPos >=0) {
-//			updateKey2(indexPage, key, keyPos);
-//			return;
-//		}
+		if (keyPos >=0) {
+			updateKey2(indexPage, key, keyPos);
+			return;
+		} else if (true) {
+			updateKey2(indexPage, key, keyPos);
+			return;
+		}
 		
 		//TODO do we need this whole key update business????
 		//-> surely not at the moment, where we only merge with pages that have the same 
