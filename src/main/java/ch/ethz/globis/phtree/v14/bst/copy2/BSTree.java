@@ -23,7 +23,7 @@ package ch.ethz.globis.phtree.v14.bst.copy2;
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 
-import ch.ethz.globis.phtree.v14.bst.BSTreeIterator.LLEntry;
+import ch.ethz.globis.phtree.v14.bst.copy2.BSTreeIterator.LLEntry;
 
 
 /**

@@ -238,72 +238,85 @@ class BSTreePage {
         } 
 
         //treat page overflow
-        BSTreePage newP;
+        
+        //destination page
+        BSTreePage destP;
+        //created new page?
         boolean isNew = false;
+        //is previous page?
         boolean isPrev = false;
+        
         //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
         //loops, see iterator tests)
         BSTreePage next = (BSTreePage) parent.getNextLeafPage(this);
         if (next != null && next.nEntries < ind.maxLeafN-1) {
         	//merge
-        	newP = next;
+        	destP = next;
         	isPrev = false;
         } else {
         	//Merging with prev is not make a big difference, maybe we should remove it...
         	BSTreePage prev = (BSTreePage) parent.getPrevLeafPage(this);
         	if (prev != null && prev.nEntries < ind.maxLeafN-1) {
         		//merge
-        		newP = prev;
+        		destP = prev;
         		isPrev = true;
         	} else {
-        		newP = new BSTreePage(ind, parent, true);
+        		destP = new BSTreePage(ind, parent, true);
         		isNew = true;
         	}
         }
 
         //TODO during bulkloading, keep 95% or so in old page. 100%?
-        int nEntriesToKeep = (nEntries + newP.nEntries) >> 1;
+        int nEntriesToKeep = (nEntries + destP.nEntries) >> 1;
        	int nEntriesToCopy = nEntries - nEntriesToKeep;
        	if (isNew) {
        		//works only if new page follows current page
-       		System.arraycopy(keys, nEntriesToKeep, newP.keys, 0, nEntriesToCopy);
-       		System.arraycopy(values, nEntriesToKeep, newP.values, 0, nEntriesToCopy);
+       		System.arraycopy(keys, nEntriesToKeep, destP.keys, 0, nEntriesToCopy);
+       		System.arraycopy(values, nEntriesToKeep, destP.values, 0, nEntriesToCopy);
        	} else if (isPrev) {
        		//copy element to previous page
-       		System.arraycopy(keys, 0, newP.keys, newP.nEntries, nEntriesToCopy);
-       		System.arraycopy(values, 0, newP.values, newP.nEntries, nEntriesToCopy);
+       		System.arraycopy(keys, 0, destP.keys, destP.nEntries, nEntriesToCopy);
+       		System.arraycopy(values, 0, destP.values, destP.nEntries, nEntriesToCopy);
        		//move element forward to beginning of page
        		System.arraycopy(keys, nEntriesToCopy, keys, 0, nEntries-nEntriesToCopy);
        		System.arraycopy(values, nEntriesToCopy, values, 0, nEntries-nEntriesToCopy);
        	} else {
        		//make space on next page
-       		System.arraycopy(newP.keys, 0, newP.keys, nEntriesToCopy, newP.nEntries);
-       		System.arraycopy(newP.values, 0, newP.values, nEntriesToCopy, newP.nEntries);
+       		System.arraycopy(destP.keys, 0, destP.keys, nEntriesToCopy, destP.nEntries);
+       		System.arraycopy(destP.values, 0, destP.values, nEntriesToCopy, destP.nEntries);
        		//insert element in next page
-       		System.arraycopy(keys, nEntriesToKeep, newP.keys, 0, nEntriesToCopy);
-       		System.arraycopy(values, nEntriesToKeep, newP.values, 0, nEntriesToCopy);
+       		System.arraycopy(keys, nEntriesToKeep, destP.keys, 0, nEntriesToCopy);
+       		System.arraycopy(values, nEntriesToKeep, destP.values, 0, nEntriesToCopy);
        	}
        	nEntries = (short) nEntriesToKeep;
-       	newP.nEntries = (short) (nEntriesToCopy + newP.nEntries);
+       	destP.nEntries = (short) (nEntriesToCopy + destP.nEntries);
        	//New page and min key
        	if (isNew || !isPrev) {
-       		if (newP.keys[0] > key) {
+       		if (destP.keys[0] > key) {
        			//posInParent=-2, because we won't need it there
        			put(key, value, -2);
        		} else {
-       			newP.put(key, value, -2);
+       			destP.put(key, value, -2);
        		}
        	} else {
        		if (keys[0] > key) {
-       			newP.put(key, value, -2);
+       			destP.put(key, value, -2);
        		} else {
        			put(key, value, -2);
        		}
        	}
-       	//posInParent has not changed!
-       	parent.updateKey2(this, keys[0], posInParent);
        	if (isNew) {
-       		return parent.addSubPage(newP, newP.keys[0]);
+       		//own key remains unchanged
+       		return parent.addSubPage(destP, destP.keys[0]);
+       	} else {
+       		//change own key?
+       		if (isPrev) {
+       	       	//posInParent has not changed!
+       	       	parent.updateKey2(this, keys[0], posInParent);
+       		} else {
+       			//change key of 'next' page
+       	       	parent.updateKey2(this, destP.keys[0], posInParent + 1);
+       		}
        	}
        	return null;
 	}
@@ -342,13 +355,17 @@ class BSTreePage {
 		//TODO why does this fail?
 		//TODO why does this fail?
 		//TODO why does this fail?
-		if (keyPos >=0) {
-			updateKey2(indexPage, key, keyPos);
-			return;
-		} else if (true) {
-			updateKey2(indexPage, key, keyPos);
-			return;
-		}
+//		updateKey2(indexPage, key, keyPos);
+//		if (keyPos >=0) {
+//			updateKey2(indexPage, key, keyPos);
+//			return;
+//		} else if (true) {
+//			updateKey2(indexPage, key, keyPos);
+//			return;
+//		}
+//		if (true) {
+//			return;
+//		}
 		
 		//TODO do we need this whole key update business????
 		//-> surely not at the moment, where we only merge with pages that have the same 
