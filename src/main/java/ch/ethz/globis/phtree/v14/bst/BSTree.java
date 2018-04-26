@@ -62,22 +62,22 @@ public class BSTree<T> {
 	 * @return the previous value
 	 * @throws NoSuchElementException if key is not found
 	 */
-	public long remove(long key) {
+	public boolean remove(long key) {
 		BSTreePage page = getRoot();
 		while (page != null && !page.isLeaf()) {
-			page = page.findSubPage(key);
+			page = page.findSubPage(key, true);
 		}
 
 		if (page == null) {
 			throw new NoSuchElementException("Key not found: " + key);
 		}
-		return page.remove(key);
+		return true;
 	}
 
 	public LLEntry get(long key) {
 		BSTreePage page = getRoot();
 		while (page != null && !page.isLeaf()) {
-			page = page.findSubPage(key);
+			page = page.findSubPage(key, false);
 		}
 		if (page == null) {
 			return null;
@@ -89,7 +89,7 @@ public class BSTree<T> {
 		return new BSTreePage(this, (BSTreePage) parent, isLeaf);
 	}
 
-	protected final BSTreePage getRoot() {
+	BSTreePage getRoot() {
 		return root;
 	}
 
@@ -97,7 +97,7 @@ public class BSTree<T> {
 		return new BSTreeIterator<>(this, min, max);
 	}
 
-	protected void updateRoot(BSTreePage newRoot) {
+	void updateRoot(BSTreePage newRoot) {
 		root = newRoot;
 	}
 	
@@ -120,10 +120,7 @@ public class BSTree<T> {
 	public BSTreeIterator<T> iterator() {
 		return iterator(Long.MIN_VALUE, Long.MAX_VALUE);
 	}
-	
-	final void notifyPageUpdate() {
-		modCount++;
-	}
+
 	
 	public void clear() {
 		getRoot().clear();
@@ -132,13 +129,48 @@ public class BSTree<T> {
 		BSTree.statNLeaves = 0;
 	}
 	
-	public void checkValidity(int modCount) {
+	void checkValidity(int modCount) {
 		if (this.modCount != modCount) {
 			throw new ConcurrentModificationException();
 		}
 	}
 
-	protected int getModCount() {
+	public static class Stats {
+		int nNodesInner = 0;
+		int nNodesLeaf = 0;
+		int capacityInner = 0;
+		int capacityLeaf = 0;
+		int nEntriesInner = 0;
+		int nEntriesLeaf = 0;
+		
+		@Override
+		public String toString() {
+			return "nNodesI=" + nNodesInner
+					+ ";nNodesL=" + nNodesLeaf
+					+ ";capacityI=" + capacityInner
+					+ ";capacityL=" + capacityLeaf
+					+ ";nEntriesI=" + nEntriesInner
+					+ ";nEntriesL=" + nEntriesLeaf
+					+ ";fillRatioI=" + round(nEntriesInner/(double)capacityInner)
+					+ ";fillRatioL=" + round(nEntriesLeaf/(double)capacityLeaf)
+					+ ";fillRatio=" + round((nEntriesInner+nEntriesLeaf)/(double)(capacityInner+capacityLeaf));
+		}
+		private static double round(double d) {
+			return ((int)(d*100+0.5))/100.;
+		}
+	}
+	
+	public Stats getStats() {
+		Stats stats = new Stats();
+		if (root != null) {
+			root.getStats(stats);
+		}
+		return stats;
+	}
+
+	int getModCount() {
 		return modCount;
 	}
+	
 }
+

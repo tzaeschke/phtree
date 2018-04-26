@@ -8,6 +8,7 @@ package ch.ethz.globis.phtree.ht;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 import java.util.List;
@@ -80,6 +81,8 @@ public class TestBST {
 		}
 		long l12 = System.currentTimeMillis();
 		
+		System.out.println(ht.getStats());
+		
 		//lookup
 		long l21 = System.currentTimeMillis();
 		for (int i : list) {
@@ -102,7 +105,7 @@ public class TestBST {
 		//remove some
 		long l41 = System.currentTimeMillis();
 		for (int i : list) {
-			assertEquals(-i, (int) ht.remove(i));
+			assertTrue(ht.remove(i));
 			//if (i%1000 == 0) System.out.println("rem=" + i);
 		}
 		long l42 = System.currentTimeMillis();

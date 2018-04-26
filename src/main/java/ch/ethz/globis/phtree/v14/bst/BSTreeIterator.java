@@ -242,7 +242,7 @@ public class BSTreeIterator<T> {
 	
 	
 	protected final BSTreePage findPage(BSTreePage currentPage, short pagePos) {
-		return currentPage.readPage(pagePos);
+		return currentPage.getPageByPos(pagePos);
 	}
 
 	protected void checkValidity() {

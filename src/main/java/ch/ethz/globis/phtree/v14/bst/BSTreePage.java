@@ -23,6 +23,7 @@ package ch.ethz.globis.phtree.v14.bst;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
+import ch.ethz.globis.phtree.v14.bst.BSTree.Stats;
 import ch.ethz.globis.phtree.v14.bst.BSTreeIterator.LLEntry;
 
 class BSTreePage {
@@ -65,10 +66,7 @@ class BSTreePage {
 	}
 
 	
-	public BSTreePage findSubPage(long key) {
-//		if (nEntries == -1) {
-//			return null;
-//		}
+	public BSTreePage findSubPage(long key, boolean remove) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -78,7 +76,11 @@ class BSTreePage {
             pos = -(pos+1);
         }
         //read page before that value
-        return subPages[pos];
+        BSTreePage page = subPages[pos]; 
+        if (remove && page.isLeaf()) {
+        	page.remove(key, pos);
+        }
+    	return page;
 	}
 	
 	/**
@@ -96,17 +98,17 @@ class BSTreePage {
             pos = -(pos+1);
         }
         //read page before that value
-        BSTreePage page = readPage(pos);
+        BSTreePage page = getPageByPos(pos);
         if (page == null) {
         	page = createLeafPage(pos);
         }
         if (page.isLeaf()) {
-    		Object o = page.put(key, value, this);
+    		Object o = page.put(key, value, this, pos);
     		if (o != null) {
         		if (o instanceof Integer) {
         			//update key in page's parent
         			int x = (int) o;
-        			updateKey(readPage(pos+x).getMinKey(), pos-1+x);
+        			updateKey(getPageByPos(pos+x).getMinKey(), pos-1+x);
         		} else {
         			//add page
         			BSTreePage newPage = (BSTreePage) o;
@@ -161,7 +163,7 @@ class BSTreePage {
      * @param key
      * @param value
      */
-	public final Object put(long key, long value, BSTreePage parent) {
+	public final Object put(long key, long value, BSTreePage parent, int posPageInParent) {
 		if (!isLeaf) {
 			throw new IllegalStateException("Tree inconsistency.");
 		}
@@ -202,14 +204,14 @@ class BSTreePage {
         
         //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
         //loops, see iterator tests)
-        BSTreePage next = (BSTreePage) parent.getNextLeafPage(this);
+        BSTreePage next = (BSTreePage) parent.getNextLeafPage(posPageInParent);
         if (next != null && next.nEntries < ind.maxLeafN-1) {
         	//merge
         	destP = next;
         	isPrev = false;
         } else {
         	//Merging with prev is not make a big difference, maybe we should remove it...
-        	BSTreePage prev = (BSTreePage) parent.getPrevLeafPage(this);
+        	BSTreePage prev = (BSTreePage) parent.getPrevLeafPage(posPageInParent);
         	if (prev != null && prev.nEntries < ind.maxLeafN-1) {
         		//merge
         		destP = prev;
@@ -248,15 +250,15 @@ class BSTreePage {
        	if (isNew || !isPrev) {
        		if (destP.keys[0] > key) {
        			//posInParent=-2, because we won't need it there
-       			put(key, value, parent);
+       			put(key, value, parent, -2);
        		} else {
-       			destP.put(key, value, parent);
+       			destP.put(key, value, parent, -2);
        		}
        	} else {
        		if (keys[0] > key) {
-       			destP.put(key, value, parent);
+       			destP.put(key, value, parent, -2);
        		} else {
-       			put(key, value, parent);
+       			put(key, value, parent, -2);
        		}
        	}
        	if (isNew) {
@@ -381,7 +383,7 @@ class BSTreePage {
 		if (isLeaf) {
 			return keys[0];
 		}
-		return readPage(0).getMinKey();
+		return getPageByPos(0).getMinKey();
 	}
 	
 	public void print(String indent) {
@@ -418,7 +420,7 @@ class BSTreePage {
 		}
 	}
 
-	protected short getNKeys() {
+	short getNKeys() {
 		return nEntries;
 	}
 	
@@ -426,7 +428,7 @@ class BSTreePage {
 	 * @param key
 	 * @return the previous value
 	 */
-	protected long remove(long oid) {
+	private long remove(long oid, int posPageInParent) {
         int i = binarySearch(0, nEntries, oid);
         if (i < 0) {
         	//key not found
@@ -463,7 +465,7 @@ class BSTreePage {
         	//TODO Should we instead check for nEntries==MAx>>1 then == (MAX>>2) then <= (MAX>>3)?
 
         	//now attempt merging this page
-        	BSTreePage prevPage = (BSTreePage) parent.getPrevLeafPage(this);
+        	BSTreePage prevPage = (BSTreePage) parent.getPrevLeafPage(posPageInParent);
         	if (prevPage != null) {
          		//We merge only if they all fit on a single page. This means we may read
         		//the previous page unnecessarily, but we avoid writing it as long as 
@@ -483,7 +485,7 @@ class BSTreePage {
 	}
 
 
-	protected void removeLeafPage(BSTreePage indexPage, long key) {
+	private void removeLeafPage(BSTreePage indexPage, long key) {
 		int start = binarySearch(0, nEntries, key);
 		if (start < 0) {
 			start = -(start+1);
@@ -521,7 +523,7 @@ class BSTreePage {
 					
 					if (nEntries == 0) {
 						//only one element left, no merging occurred -> move sub-page up to parent
-						BSTreePage child = readPage(0);
+						BSTreePage child = getPageByPos(0);
 						parent.replaceChildPage(this, key, child);
 						BSTree.statNInner--;
 					}
@@ -615,7 +617,7 @@ class BSTreePage {
 	}
 
 
-	protected void incrementNEntries() {
+	private void incrementNEntries() {
 		nEntries++;
 	}
 
@@ -627,17 +629,12 @@ class BSTreePage {
 		return values;
 	}
 
-	final void setNEntries(int n) {
+	private void setNEntries(int n) {
 		nEntries = (short) n;
 	}
 	
 	
-	protected final BSTreePage readPage(int pos) {
-		return subPages[pos];
-	}
-	
-	
-	protected final BSTreePage createLeafPage(int pos) {
+	private BSTreePage createLeafPage(int pos) {
 		if (subPages[pos] != null) {
 			throw new IllegalStateException();
 		}
@@ -657,7 +654,7 @@ class BSTreePage {
 	 * @param indexPage
 	 * @return The previous leaf page or null, if the given page is the first page.
 	 */
-	final protected BSTreePage getPrevInnerPage(BSTreePage indexPage) {
+	private BSTreePage getPrevInnerPage(BSTreePage indexPage) {
 		int pos = getPagePosition(indexPage);
 		if (pos > 0) {
 			BSTreePage page = getPageByPos(pos-1);
@@ -682,14 +679,57 @@ class BSTreePage {
 	 * @param indexPage
 	 * @return The previous leaf page or null, if the given page is the first page.
 	 */
-	final protected BSTreePage getPrevLeafPage(BSTreePage indexPage) {
-		int pos = getPagePosition(indexPage);
-		if (pos > 0) {
-			BSTreePage page = getPageByPos(pos-1);
-			return page.getLastLeafPage();
-		}
-		if (getParent() == null) {
-			return null;
+//	private BSTreePage getPrevLeafPage(BSTreePage indexPage) {
+//		int pos = getPagePosition(indexPage);
+//		if (pos > 0) {
+//			BSTreePage page = getPageByPos(pos-1);
+//			return page.getLastLeafPage();
+//		}
+//		if (getParent() == null) {
+//			return null;
+//		}
+//		//TODO we really should return the last leaf page of the previous inner page.
+//		//But if they get merged, then we have to shift minimal values, which is
+//		//complicated. For now we ignore this case, hoping that it doesn't matter much.
+//		return null;
+//	}
+
+	/**
+	 * Returns only LEAF pages.
+	 * TODO for now this ignores leafPages on other inner nodes. It returns only leaf pages
+	 * from the current node.
+	 * @param indexPage
+	 * @return The previous next page or null, if the given page is the first page.
+	 */
+//	private BSTreePage getNextLeafPage(BSTreePage indexPage) {
+//		int pos = getPagePosition(indexPage);
+//		if (pos < getNKeys()) {
+//			BSTreePage page = getPageByPos(pos+1);
+//			return page.getFirstLeafPage();
+//		}
+//		if (getParent() == null) {
+//			return null;
+//		}
+//		//TODO we really should return the last leaf page of the previous inner page.
+//		//But if they get merged, then we have to shift minimal values, which is
+//		//complicated. For now we ignore this case, hoping that it doesn't matter much.
+//		return null;
+//	}
+
+	/**
+	 * Returns only INNER pages.
+	 * TODO for now this ignores leafPages on a previous inner node. It returns only leaf pages
+	 * from the current node.
+	 * @param currentSubPos
+	 * @return The previous leaf page or null, if the given page is the first page.
+	 */
+	private BSTreePage getPrevInnerPage(int currentSubPos) {
+		if (currentSubPos > 0) {
+			BSTreePage page = getPageByPos(currentSubPos-1);
+			if (page.isLeaf) {
+				return null;
+			}
+			return page;
 		}
 		//TODO we really should return the last leaf page of the previous inner page.
 		//But if they get merged, then we have to shift minimal values, which is
@@ -699,23 +739,35 @@ class BSTreePage {
 
 	/**
 	 * Returns only LEAF pages.
-	 * TODO for now this ignores leafPages on other inner nodes. It returns only leaf pages
+	 * TODO for now this ignores leafPages on a previous inner node. It returns only leaf pages
 	 * from the current node.
-	 * @param indexPage
-	 * @return The previous next page or null, if the given page is the first page.
+	 * @param currentSubPos
+	 * @return The previous leaf page or null, if the given page is the first page.
 	 */
-	final protected BSTreePage getNextLeafPage(BSTreePage indexPage) {
-		int pos = getPagePosition(indexPage);
-		if (pos < getNKeys()) {
-			BSTreePage page = getPageByPos(pos+1);
-			return page.getFirstLeafPage();
-		}
-		if (getParent() == null) {
-			return null;
+	private BSTreePage getPrevLeafPage(int currentSubPos) {
+		if (currentSubPos > 0) {
+			BSTreePage page = getPageByPos(currentSubPos-1);
+			return page.getLastLeafPage();
 		}
 		//TODO we really should return the last leaf page of the previous inner page.
 		//But if they get merged, then we have to shift minimal values, which is
 		//complicated. For now we ignore this case, hoping that it doesn't matter much.
+		return null;
+	}
+
+	/**
+	 * Returns only LEAF pages.
+	 * TODO for now this ignores leafPages in other inner nodes. It returns only leaf pages
+	 * from the current node.
+	 * @param currentSubPos
+	 * @return The previous next page or null, if the given page is the first page.
+	 */
+	private BSTreePage getNextLeafPage(int currentSubPos) {
+		//do not add +1, because we compare pages to keys
+		if (currentSubPos < getNKeys()) {
+			//TODO can we handle this (leaves in other parent) everywhere?
+			return getPageByPos(currentSubPos+1).getFirstLeafPage(); 
+		}
 		return null;
 	}
 
@@ -727,7 +779,7 @@ class BSTreePage {
 		if (isLeaf) {
 			return this;
 		}
-		return readPage(0).getFirstLeafPage();
+		return getPageByPos(0).getFirstLeafPage();
 	}
 
 	/**
@@ -738,13 +790,13 @@ class BSTreePage {
 		if (isLeaf) {
 			return this;
 		}
-		return readPage(getNKeys()).getLastLeafPage();
+		return getPageByPos(getNKeys()).getLastLeafPage();
 	}
 
 	/**
-	 * Returns (and loads, if necessary) the page at the specified position.
+	 * Returns the page at the specified position.
 	 */
-	protected BSTreePage getPageByPos(int pos) {
+	BSTreePage getPageByPos(int pos) {
 		return subPages[pos];
 	}
 
@@ -778,7 +830,7 @@ class BSTreePage {
 	final void clear() {
 		if (!isLeaf) {
 			for (int i = 0; i < getNKeys()+1; i++) {
-				BSTreePage p = readPage(i);
+				BSTreePage p = getPageByPos(i);
 				p.clear();
 				//0-IDs are automatically ignored.
 				BTPool.reportFreePage(p);
@@ -795,6 +847,22 @@ class BSTreePage {
 
 	boolean isLeaf() {
 		return isLeaf;
+	}
+
+
+	void getStats(Stats stats) {
+		if (isLeaf()) {
+			stats.nNodesLeaf++;
+			stats.nEntriesLeaf += nEntries;
+			stats.capacityLeaf += keys.length;
+		} else {
+			stats.nNodesInner++;
+			stats.nEntriesInner += nEntries + 1;
+			stats.capacityInner += keys.length + 1;
+			for (int i = 0; i < getNKeys() + 1; i++) {
+				getPageByPos(i).getStats(stats);
+			}
+		}
 	}
 
 }
