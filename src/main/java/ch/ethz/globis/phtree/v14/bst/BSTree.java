@@ -50,19 +50,11 @@ public class BSTree<T> {
 	}
 
 	public final void put(long key, long value) {
-//		BSTreePage page = getRoot().locatePageForKey(key, true);
-//		page.put(key, value, parentPosStack);
 		//Depth as log(nEntries) 
 		BSTreePage page = getRoot();
 		while (page != null && !page.isLeaf()) {
-			page = page.findOrCreateSubPage(key, value);
-//			page = page.findOrCreatePageForPut(key, value, parentPosStack);
+			page = page.put(key, value);
 		}
-		//TODO assign page to root 
-//		BSTreePage newPage = page.put(key, value, -1);
-//		if (newPage != null) {
-//			page.addSubPage(newPage, newPage.getMinKey());
-//		}
 	}
 
 	/**
@@ -71,7 +63,11 @@ public class BSTree<T> {
 	 * @throws NoSuchElementException if key is not found
 	 */
 	public long remove(long key) {
-		BSTreePage page = getRoot().locatePageForKey(key, false);
+		BSTreePage page = getRoot();
+		while (page != null && !page.isLeaf()) {
+			page = page.findSubPage(key);
+		}
+
 		if (page == null) {
 			throw new NoSuchElementException("Key not found: " + key);
 		}
