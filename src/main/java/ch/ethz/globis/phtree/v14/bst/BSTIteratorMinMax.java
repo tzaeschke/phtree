@@ -40,25 +40,34 @@ public class BSTIteratorMinMax<T> {
 		}
 	}
 
-	protected final BSTree<T> ind;
-	private final int modCount;
+	private BSTree<T> ind;
+	private int modCount;
 	private BSTreePage currentPage = null;
 	private short currentPos = 0;
-	private final long minKey;
-	private final long maxKey;
+	private long minKey;
+	private long maxKey;
+	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
+	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
+	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
+	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
+	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
 	private final ArrayList<IteratorPos> stack = new ArrayList<IteratorPos>(20);
 	private long nextKey;
 	private Object nextValue;
 	private boolean hasValue = false;
 	
-	public BSTIteratorMinMax(BSTree<T> ind, long minKey, long maxKey) {
+	public BSTIteratorMinMax(int dims) {
+		//nothing
+	}
+	
+	public BSTIteratorMinMax<T> reset(BSTree<T> ind, long minKey, long maxKey) {
 		this.ind = ind;
 		this.modCount = ind.getModCount();
 		this.minKey = minKey;
 		this.maxKey = maxKey;
 		this.currentPage = (BSTreePage) ind.getRoot();
-
 		findFirstPosInPage();
+		return this;
 	}
 
 

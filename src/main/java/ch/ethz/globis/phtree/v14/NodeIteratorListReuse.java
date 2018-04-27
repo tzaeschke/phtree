@@ -12,6 +12,7 @@ import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v14.bst.NtIteratorMask;
 
 /**
@@ -62,7 +63,7 @@ public class NodeIteratorListReuse<T, R> {
 	private final class NodeIterator {
 	
 		private Node node;
-		private NtIteratorMask<Object> niIterator;
+		private BSTIteratorMask<Object> niIterator;
 		private int nMaxEntry;
 		private int nEntryFound = 0;
 		private long maskLower;
@@ -251,7 +252,7 @@ public class NodeIteratorListReuse<T, R> {
 		
 		private void niAllNextIterator() {
 			//ITERATOR is used for DIM>6 or if results are dense 
-			while (niIterator.hasNext() && results.size() < maxResults) {
+			while (niIterator.hasNextULL() && results.size() < maxResults) {
 				NtEntry<Object> e = niIterator.nextEntryReuse();
 				Object v = e.value();
 				if (v instanceof Node) {

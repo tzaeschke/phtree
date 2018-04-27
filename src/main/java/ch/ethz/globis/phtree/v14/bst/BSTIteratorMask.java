@@ -40,27 +40,35 @@ public class BSTIteratorMask<T> {
 		}
 	}
 
-	protected final BSTree<T> ind;
-	private final int modCount;
+	private BSTree<T> ind;
+	private int modCount;
 	private BSTreePage currentPage = null;
 	private short currentPos = 0;
-	private final long minMask;
-	private final long maxMask;
+	private long minMask;
+	private long maxMask;
 	private final ArrayList<IteratorPos> stack = new ArrayList<IteratorPos>(20);
 	private long nextKey;
 	private Object nextValue;
 	private boolean hasValue = false;
 	
-	public BSTIteratorMask(BSTree<T> ind, long minMask, long maxMask) {
+	public BSTIteratorMask(int dims) {
+		//nothing
+	}
+
+	public BSTIteratorMask<T> reset(BSTree<T> ind, long minMask, long maxMask) {
 		this.ind = ind;
 		this.modCount = ind.getModCount();
 		this.minMask = minMask;
 		this.maxMask = maxMask;
 		this.currentPage = (BSTreePage) ind.getRoot();
-
 		findFirstPosInPage();
+		return this;
 	}
 
+	public void adjustMinMax(long maskLower, long maskUpper) {
+		this.minMask = maskLower;
+		this.maxMask = maskUpper;
+	}
 
 	public boolean hasNextULL() {
         checkValidity();

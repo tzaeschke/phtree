@@ -16,6 +16,7 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v14.bst.BSTree;
 import ch.ethz.globis.phtree.v14.bst.NtIteratorMask;
 import ch.ethz.globis.phtree.v14.nt.NtNode;
@@ -1481,12 +1482,12 @@ public class Node {
 //      return new NtIteratorMinMax<>(dims).reset(ind, Long.MIN_VALUE, Long.MAX_VALUE);
     }
 
-    NtIteratorMask<Object> ntIteratorWithMask(int dims, long maskLower, long maskUpper) {
+    BSTIteratorMask<Object> ntIteratorWithMask(int dims, long maskLower, long maskUpper) {
+    	return new BSTIteratorMask<>(dims).reset(ind, maskLower, maskUpper);
+		//TODO reuse iterator???
 		//TODO
 		//TODO
 		//TODO
-		//TODO
-		throw new UnsupportedOperationException();
 //	return new NtIteratorMask<>(dims).reset(ind, maskLower, maskUpper);
 	}
 

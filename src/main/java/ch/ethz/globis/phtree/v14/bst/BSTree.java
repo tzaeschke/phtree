@@ -92,11 +92,11 @@ public class BSTree<T> {
 	}
 
 	public BSTIteratorMinMax<T> iterator(long min, long max) {
-		return new BSTIteratorMinMax<>(this, min, max);
+		return new BSTIteratorMinMax<T>(-1).reset(this, min, max);
 	}
 
 	public BSTIteratorMask<T> iteratorMask(long minMask, long maxMask) {
-		return new BSTIteratorMask<>(this, minMask, maxMask);
+		return new BSTIteratorMask<T>(-1).reset(this, minMask, maxMask);
 	}
 
 	void updateRoot(BSTreePage newRoot) {

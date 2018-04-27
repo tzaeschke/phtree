@@ -11,6 +11,7 @@ package ch.ethz.globis.phtree.v14;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v14.bst.NtIteratorMinMax;
 
 
@@ -33,7 +34,7 @@ public class NodeIteratorFullNoGC<T> {
 	private long next = -1;
 	private Node node;
 	private int currentOffsetKey;
-	private NtIteratorMinMax<Object> ntIterator;
+	private BSTIteratorMinMax<Object> ntIterator;
 	private int nMaxEntries;
 	private int nEntriesFound = 0;
 	private int postEntryLenLHC;
@@ -77,7 +78,7 @@ public class NodeIteratorFullNoGC<T> {
 		//Position of the current entry
 		if (isNI) {
 			if (ntIterator == null) {
-				ntIterator = new NtIteratorMinMax<>(dims);
+				ntIterator = new BSTIteratorMinMax<>(dims);
 			}
 			ntIterator.reset(node.ind(), 0, Long.MAX_VALUE);
 		} else {
@@ -181,7 +182,7 @@ public class NodeIteratorFullNoGC<T> {
 	}
 	
 	private void niFindNext(PhEntry<T> result) {
-		while (ntIterator.hasNext()) {
+		while (ntIterator.hasNextULL()) {
 			NtEntry<Object> e = ntIterator.nextEntryReuse();
 			if (readValue(e.key(), e.getKdKey(), e.value(), result)) {
 				next = e.key();
