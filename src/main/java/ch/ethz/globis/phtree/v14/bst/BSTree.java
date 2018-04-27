@@ -23,6 +23,7 @@ package ch.ethz.globis.phtree.v14.bst;
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 
+import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v14.bst.BSTreeIterator.LLEntry;
 
 
@@ -30,6 +31,8 @@ import ch.ethz.globis.phtree.v14.bst.BSTreeIterator.LLEntry;
  * @author Tilmann Zaeschke
  */
 public class BSTree<T> {
+	
+	static final Object NULL = new Object();
 	
 	protected final int maxLeafN = 10;//340;
 	/** Max number of keys in inner page (there can be max+1 page-refs) */
@@ -49,11 +52,17 @@ public class BSTree<T> {
 		root = createPage(null, false);
 	}
 
-	public final void put(long key, long value) {
+	public final void put(long key, T value) {
+		Object val = value == null ? NULL : value;
 		//Depth as log(nEntries) 
 		BSTreePage page = getRoot();
-		while (page != null && !page.isLeaf()) {
-			page = page.put(key, value);
+		Object o = page;
+		while (o instanceof BSTreePage && !((BSTreePage)o).isLeaf()) {
+			o = ((BSTreePage)o).put(key, val);
+		}
+		if (o == null) {
+			//did not exist
+			nEntries++;
 		}
 	}
 
@@ -64,13 +73,30 @@ public class BSTree<T> {
 	 */
 	public boolean remove(long key) {
 		BSTreePage page = getRoot();
-		while (page != null && !page.isLeaf()) {
-			page = page.findSubPage(key, true);
+//		while (page != null && !page.isLeaf()) {
+//			page = page.findSubPage(key, true);
+//		}
+		Object result = null;
+		if (page != null) {
+//			result = page.findAndRemoveOld(key, -100);
+			result = page.findAndRemove(key);
+			//TODO underflow leaf/inner?!?!
+//			if (result instanceof BSTreePage) {
+//				root = null;
+//			}
+//			if (!page.isLeaf() && page.getNKeys() == 0) {
+//				root = page.getPageByPos(0);
+//				root.setParent(null);
+//			}
+			if (result == null) {
+				throw new NoSuchElementException("Key not found: " + key);
+			}
 		}
 
-		if (page == null) {
-			throw new NoSuchElementException("Key not found: " + key);
-		}
+//		if (page == null) {
+//			throw new NoSuchElementException("Key not found: " + key);
+//		}
+		nEntries--;
 		return true;
 	}
 
@@ -105,6 +131,14 @@ public class BSTree<T> {
 		root.print("");
 	}
 
+	public String toStringTree() {
+		StringBuilderLn sb = new StringBuilderLn();
+		if (root != null) {
+			root.toStringTree(sb, "");
+		}
+		return sb.toString();
+	}
+
 	public long getMaxKey() {
 		return root.getMax();
 	}
@@ -113,10 +147,7 @@ public class BSTree<T> {
 		return root.getMinKey();
 	}
 
-	public long size() {
-		throw new UnsupportedOperationException();
-	}
-
+	
 	public BSTreeIterator<T> iterator() {
 		return iterator(Long.MIN_VALUE, Long.MAX_VALUE);
 	}
@@ -124,6 +155,7 @@ public class BSTree<T> {
 	
 	public void clear() {
 		getRoot().clear();
+		nEntries = 0;
 		BTPool.reportFreePage(getRoot());
 		BSTree.statNInner = 0;
 		BSTree.statNLeaves = 0;
@@ -170,6 +202,10 @@ public class BSTree<T> {
 
 	int getModCount() {
 		return modCount;
+	}
+	
+	public int size() {
+		return nEntries;
 	}
 	
 }

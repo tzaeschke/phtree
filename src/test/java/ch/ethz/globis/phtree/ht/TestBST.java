@@ -42,11 +42,11 @@ public class TestBST {
 	
 	@Test
 	public void testBSTreeRND() {
-//		for (int i = 0; i < 100; i++) {
+//		for (int i = 0; i < 1000; i++) {
 //			System.out.println("seed=" + i);
-//			runTest(createDataRND(i, 9), "R-");
+//			runTest(createDataRND(i, 44), "R-");
 //		}
-//		runTest(createDataRND(14, 9), "R-");
+		runTest(createDataRND(834, 44), "R-");
 		runTest(createDataRND(0, N1), "R-");
 		System.gc();
 		runTest(createDataRND(0, N2), "R-");
@@ -80,16 +80,17 @@ public class TestBST {
 //			System.out.println(ht.toString());
 		}
 		long l12 = System.currentTimeMillis();
+		assertEquals(list.size(), ht.size());
 		
-		System.out.println(ht.getStats());
+		println(ht.getStats().toString());
 		
 		//lookup
 		long l21 = System.currentTimeMillis();
 		for (int i : list) {
 			LLEntry e = ht.get(i);
-			assertNotNull("i=" + i, e);
+			//assertNotNull("i=" + i, e);
 			int x = (int) e.getValue();
-			assertEquals("i=" + i, i, (int) x);
+			assertEquals(i, (int) x);
 			//if (i%1000 == 0) System.out.println("lu=" + i);
 		}
 		long l22 = System.currentTimeMillis();
@@ -101,19 +102,33 @@ public class TestBST {
 			//if (i%1000 == 0) System.out.println("rep=" + i);
 		}
 		long l32 = System.currentTimeMillis();
+		assertEquals(list.size(), ht.size());
 		
 		//remove some
 		long l41 = System.currentTimeMillis();
 		for (int i : list) {
+			//if (i%1000 == 0) 
+//			System.out.println("rem=" + i);
 			assertTrue(ht.remove(i));
-			//if (i%1000 == 0) System.out.println("rem=" + i);
+			if (ht.size()*2 == list.size()) {
+				println(ht.getStats().toString());
+			}
 		}
 		long l42 = System.currentTimeMillis();
+		assertEquals(0, ht.size());
 		
-		System.out.println(prefix + "Load: " + (l12-l11));
-		System.out.println(prefix + "Get:  " + (l22-l21));
-		System.out.println(prefix + "Load: " + (l32-l31));
-		System.out.println(prefix + "Rem : " + (l42-l41));
+		println(prefix + "Load: " + (l12-l11));
+		println(prefix + "Get:  " + (l22-l21));
+		println(prefix + "Load: " + (l32-l31));
+		println(prefix + "Rem : " + (l42-l41));
+		println();
+	}
+	
+	private static void println(String str) {
+		System.out.println(str);
+	}
+	
+	private static void println() {
 		System.out.println();
 	}
 	

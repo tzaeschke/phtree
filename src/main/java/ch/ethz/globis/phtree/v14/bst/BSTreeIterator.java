@@ -41,15 +41,15 @@ public class BSTreeIterator<T> {
 
 	public static class LLEntry {
 		private final long key;
-		private final long value;
-		public LLEntry(long k, long v) {
+		private final Object value;
+		public LLEntry(long k, Object v) {
 			key = k;
 			value = v;
 		}
 		public long getKey() {
 			return key;
 		}
-		public long getValue() {
+		public Object getValue() {
 			return value;
 		}
 	}
@@ -62,7 +62,7 @@ public class BSTreeIterator<T> {
 	private final long maxKey;
 	private final ArrayList<IteratorPos> stack = new ArrayList<IteratorPos>(20);
 	private long nextKey;
-	private long nextValue;
+	private Object nextValue;
 	private boolean hasValue = false;
 	
 	public BSTreeIterator(BSTree<T> ind, long minKey, long maxKey) {
