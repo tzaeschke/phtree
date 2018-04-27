@@ -46,7 +46,7 @@ public class TestBST {
 //			System.out.println("seed=" + i);
 //			runTest(createDataRND(i, 44), "R-");
 //		}
-		runTest(createDataRND(834, 44), "R-");
+//		runTest(createDataRND(834, 44), "R-");
 		runTest(createDataRND(0, N1), "R-");
 		System.gc();
 		runTest(createDataRND(0, N2), "R-");
@@ -75,9 +75,7 @@ public class TestBST {
 			//if (i%1000 == 0) 
 			//	System.out.println("ins=" + i);
 			ht.put(i, i);
-//			ht.print();
 			assertEquals(i, ht.get(i).getKey());
-//			System.out.println(ht.toString());
 		}
 		long l12 = System.currentTimeMillis();
 		assertEquals(list.size(), ht.size());
@@ -91,7 +89,6 @@ public class TestBST {
 			//assertNotNull("i=" + i, e);
 			int x = (int) e.getValue();
 			assertEquals(i, (int) x);
-			//if (i%1000 == 0) System.out.println("lu=" + i);
 		}
 		long l22 = System.currentTimeMillis();
 		
@@ -110,9 +107,9 @@ public class TestBST {
 			//if (i%1000 == 0) 
 //			System.out.println("rem=" + i);
 			assertTrue(ht.remove(i));
-			if (ht.size()*2 == list.size()) {
-				println(ht.getStats().toString());
-			}
+//			if (ht.size() % 100_000 == 0) {
+//				println(ht.getStats().toString());
+//			}
 		}
 		long l42 = System.currentTimeMillis();
 		assertEquals(0, ht.size());
@@ -124,12 +121,13 @@ public class TestBST {
 		println();
 	}
 	
-	private static void println(String str) {
-		System.out.println(str);
-	}
 	
 	private static void println() {
-		System.out.println();
+		println("");
+	}
+
+	private static void println(String str) {
+		System.out.println(str);
 	}
 	
 }
