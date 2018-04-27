@@ -95,6 +95,10 @@ public class BSTree<T> {
 		return new BSTIteratorMinMax<>(this, min, max);
 	}
 
+	public BSTIteratorMask<T> iteratorMask(long minMask, long maxMask) {
+		return new BSTIteratorMask<>(this, minMask, maxMask);
+	}
+
 	void updateRoot(BSTreePage newRoot) {
 		root = newRoot;
 	}

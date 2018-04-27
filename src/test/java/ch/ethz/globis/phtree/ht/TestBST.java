@@ -7,7 +7,6 @@
 package ch.ethz.globis.phtree.ht;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
@@ -18,9 +17,10 @@ import java.util.stream.IntStream;
 
 import org.junit.Test;
 
-import ch.ethz.globis.phtree.v14.bst.BSTree;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
+import ch.ethz.globis.phtree.v14.bst.BSTree;
 
 public class TestBST {
 
@@ -104,6 +104,16 @@ public class TestBST {
 		}
 		assertEquals(prev, list.size() - 1);
 		long l52 = System.currentTimeMillis();
+		long l61 = System.currentTimeMillis();
+		BSTIteratorMask<Integer> iterMask = ht.iteratorMask(0, 0xFFFFFFFFFFFEL);
+		prev = -2;
+		while (iterMask.hasNextULL()) {
+			long current = iterMask.nextKey();
+			assertEquals(prev + 2, current);
+			prev = current;
+		}
+		assertEquals(prev, list.size() - 2);
+		long l62 = System.currentTimeMillis();
 		
 		//replace some
 		long l31 = System.currentTimeMillis();
@@ -130,6 +140,7 @@ public class TestBST {
 		println(prefix + "Load: " + (l12-l11));
 		println(prefix + "Get:  " + (l22-l21));
 		println(prefix + "Iter: " + (l52-l51));
+		println(prefix + "IterM:" + (l62-l61));
 		println(prefix + "Load: " + (l32-l31));
 		println(prefix + "Rem : " + (l42-l41));
 		println();
