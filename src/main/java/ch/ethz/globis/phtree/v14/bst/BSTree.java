@@ -34,9 +34,9 @@ public class BSTree<T> {
 	
 	static final Object NULL = new Object();
 	
-	protected final int maxLeafN = 100;//340;
+	protected final int maxLeafN = 10;//340;
 	/** Max number of keys in inner page (there can be max+1 page-refs) */
-	protected final int maxInnerN = 101;//509;
+	protected final int maxInnerN = 11;//509;
 	protected final int minLeafN = maxLeafN >> 1;  //254
 	protected final int minInnerN = maxInnerN >> 1;  //170
 	protected static int statNLeaves = 0;
@@ -73,29 +73,14 @@ public class BSTree<T> {
 	 */
 	public boolean remove(long key) {
 		BSTreePage page = getRoot();
-//		while (page != null && !page.isLeaf()) {
-//			page = page.findSubPage(key, true);
-//		}
 		Object result = null;
 		if (page != null) {
-//			result = page.findAndRemoveOld(key, -100);
 			result = page.findAndRemove(key);
-			//TODO underflow leaf/inner?!?!
-//			if (result instanceof BSTreePage) {
-//				root = null;
-//			}
-//			if (!page.isLeaf() && page.getNKeys() == 0) {
-//				root = page.getPageByPos(0);
-//				root.setParent(null);
-//			}
 			if (result == null) {
 				throw new NoSuchElementException("Key not found: " + key);
 			}
 		}
 
-//		if (page == null) {
-//			throw new NoSuchElementException("Key not found: " + key);
-//		}
 		nEntries--;
 		return true;
 	}
@@ -103,12 +88,12 @@ public class BSTree<T> {
 	public LLEntry get(long key) {
 		BSTreePage page = getRoot();
 		while (page != null && !page.isLeaf()) {
-			page = page.findSubPage(key, false);
+			page = page.findSubPage(key);
 		}
 		if (page == null) {
 			return null;
 		}
-		return page.getValueFromLeafUnique(key);
+		return page.getValueFromLeaf(key);
 	}
 
 	BSTreePage createPage(BSTreePage parent, boolean isLeaf) {
