@@ -19,7 +19,8 @@ import java.util.stream.IntStream;
 import org.junit.Test;
 
 import ch.ethz.globis.phtree.v14.bst.BSTree;
-import ch.ethz.globis.phtree.v14.bst.BSTreeIterator.LLEntry;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
 
 public class TestBST {
 
@@ -92,6 +93,18 @@ public class TestBST {
 		}
 		long l22 = System.currentTimeMillis();
 		
+		//iterate
+		long l51 = System.currentTimeMillis();
+		BSTIteratorMinMax<Integer> iter = ht.iterator();
+		long prev = -1;
+		while (iter.hasNextULL()) {
+			long current = iter.nextKey();
+			assertEquals(prev + 1, current);
+			prev = current;
+		}
+		assertEquals(prev, list.size() - 1);
+		long l52 = System.currentTimeMillis();
+		
 		//replace some
 		long l31 = System.currentTimeMillis();
 		for (int i : list) {
@@ -116,6 +129,7 @@ public class TestBST {
 		
 		println(prefix + "Load: " + (l12-l11));
 		println(prefix + "Get:  " + (l22-l21));
+		println(prefix + "Iter: " + (l52-l51));
 		println(prefix + "Load: " + (l32-l31));
 		println(prefix + "Rem : " + (l42-l41));
 		println();

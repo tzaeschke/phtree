@@ -1,22 +1,8 @@
 /*
- * Copyright 2009-2016 Tilmann Zaeschke. All rights reserved.
- * 
- * This file is part of ZooDB.
- * 
- * ZooDB is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * ZooDB is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with ZooDB.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * See the README and COPYING files for further information. 
+ * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ *
+ * This software is the proprietary information of Tilmann Zäschke.
+ * Use is subject to license terms.
  */
 package ch.ethz.globis.phtree.v14.bst;
 
@@ -24,7 +10,7 @@ import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v14.bst.BSTreeIterator.LLEntry;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
 
 
 /**
@@ -52,7 +38,7 @@ public class BSTree<T> {
 		root = createPage(null, false);
 	}
 
-	public final void put(long key, T value) {
+	public final Object put(long key, T value) {
 		Object val = value == null ? NULL : value;
 		//Depth as log(nEntries) 
 		BSTreePage page = getRoot();
@@ -64,6 +50,7 @@ public class BSTree<T> {
 			//did not exist
 			nEntries++;
 		}
+		return o;
 	}
 
 	/**
@@ -104,8 +91,8 @@ public class BSTree<T> {
 		return root;
 	}
 
-	public BSTreeIterator<T> iterator(long min, long max) {
-		return new BSTreeIterator<>(this, min, max);
+	public BSTIteratorMinMax<T> iterator(long min, long max) {
+		return new BSTIteratorMinMax<>(this, min, max);
 	}
 
 	void updateRoot(BSTreePage newRoot) {
@@ -133,7 +120,7 @@ public class BSTree<T> {
 	}
 
 	
-	public BSTreeIterator<T> iterator() {
+	public BSTIteratorMinMax<T> iterator() {
 		return iterator(Long.MIN_VALUE, Long.MAX_VALUE);
 	}
 

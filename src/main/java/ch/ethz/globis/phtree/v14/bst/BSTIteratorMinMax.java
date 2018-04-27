@@ -1,22 +1,8 @@
 /*
- * Copyright 2009-2016 Tilmann Zaeschke. All rights reserved.
- * 
- * This file is part of ZooDB.
- * 
- * ZooDB is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * ZooDB is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with ZooDB.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * See the README and COPYING files for further information. 
+ * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ *
+ * This software is the proprietary information of Tilmann Zäschke.
+ * Use is subject to license terms.
  */
 package ch.ethz.globis.phtree.v14.bst;
 
@@ -28,7 +14,7 @@ import java.util.NoSuchElementException;
  * @author Tilmann Zaeschke
  *
  */
-public class BSTreeIterator<T> {
+public class BSTIteratorMinMax<T> {
 
 	static class IteratorPos {
 		IteratorPos(BSTreePage page, short pos) {
@@ -65,7 +51,7 @@ public class BSTreeIterator<T> {
 	private Object nextValue;
 	private boolean hasValue = false;
 	
-	public BSTreeIterator(BSTree<T> ind, long minKey, long maxKey) {
+	public BSTIteratorMinMax(BSTree<T> ind, long minKey, long maxKey) {
 		this.ind = ind;
 		this.modCount = ind.getModCount();
 		this.minKey = minKey;
@@ -105,7 +91,7 @@ public class BSTreeIterator<T> {
 
 			//read last page
 			stack.add(new IteratorPos(currentPage, currentPos));
-			currentPage = findPage(currentPage, currentPos);
+			currentPage = currentPage.getPageByPos(currentPos);
 			currentPos = 0;
 		}
 	}
@@ -126,7 +112,7 @@ public class BSTreeIterator<T> {
 		    }
 	    	currentPos = (short)pos2;
 
-	    	BSTreePage newPage = findPage(currentPage, currentPos);
+	    	BSTreePage newPage = currentPage.getPageByPos(currentPos);
 			//are we on the correct branch?
 	    	//We are searching with LONG_MIN value. If the key[] matches exactly, then the
 	    	//selected page may not actually contain any valid elements.
@@ -143,6 +129,10 @@ public class BSTreeIterator<T> {
 		//when we get here, we are on a valid page with a valid position 
 		//(TODO check for pos after goToPage())
 		//we only need to check the value.
+		
+		if (currentPage == null || currentPage.getValues() == null || currentPage.getValues()[currentPos] == null) {
+			throw new IllegalStateException();
+		}
 		
 		nextKey = currentPage.getKeys()[currentPos];
 		nextValue = currentPage.getValues()[currentPos];
@@ -235,17 +225,11 @@ public class BSTreeIterator<T> {
 
 	
 	private void close() {
-		
+		currentPage = null;
 	}
 
 	
-	
-	
-	protected final BSTreePage findPage(BSTreePage currentPage, short pagePos) {
-		return currentPage.getPageByPos(pagePos);
-	}
-
-	protected void checkValidity() {
+	private void checkValidity() {
 		ind.checkValidity(modCount);
 	}
 

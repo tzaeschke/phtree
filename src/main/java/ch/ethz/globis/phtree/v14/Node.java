@@ -16,11 +16,9 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
-import ch.ethz.globis.phtree.v14.nt.NodeTreeV14;
-import ch.ethz.globis.phtree.v14.nt.NtIteratorMask;
-import ch.ethz.globis.phtree.v14.nt.NtIteratorMinMax;
+import ch.ethz.globis.phtree.v14.bst.BSTree;
+import ch.ethz.globis.phtree.v14.bst.NtIteratorMask;
 import ch.ethz.globis.phtree.v14.nt.NtNode;
-import ch.ethz.globis.phtree.v14.nt.NtNodePool;
 
 
 /**
@@ -78,7 +76,7 @@ public class Node {
 
 	//Hierarchical tree index: a hierarchy of long[]
 	//Nested tree index
-	private HTable2<Object> ind = null;
+	private BSTree<Object> ind = null;
 
 	
 	/**
@@ -760,7 +758,7 @@ public class Node {
 	Object ntReplaceEntry(long hcPos, long[] kdKey, Object value) {
 		//We use 'null' as parameter to indicate that we want replacement, rather than splitting,
 		//if the value exists.
-		return HTHandler.addEntry(ba, ind, hcPos, kdKey, value, null);
+		return BSTHandler.addEntry(ba, ind, hcPos, kdKey, value, null);
 	}
 	
 	/**
@@ -777,7 +775,7 @@ public class Node {
 	 * @return
 	 */
 	Object ntPut(long hcPos, long[] kdKey, Object value) {
-		return HTHandler.addEntry(ba, ind, hcPos, kdKey, value, this);
+		return BSTHandler.addEntry(ba, ind, hcPos, kdKey, value, this);
 	}
 	
 	/**
@@ -794,19 +792,19 @@ public class Node {
 	 * @return
 	 */
 	Object ntRemoveAnything(long hcPos, int dims) {
-    	return HTHandler.removeEntry(ba, ind, hcPos, dims, null, null, null, null);
+    	return BSTHandler.removeEntry(ba, ind, hcPos, dims, null, null, null, null);
 	}
 
 	Object ntRemoveEntry(long hcPos, long[] key, long[] newKey, int[] insertRequired) {
-    	return HTHandler.removeEntry(ba, ind, hcPos, key.length, key, newKey, insertRequired, this);
+    	return BSTHandler.removeEntry(ba, ind, hcPos, key.length, key, newKey, insertRequired, this);
 	}
 
 	Object ntGetEntry(long hcPos, long[] outKey, long[] valTemplate) {
-		return HTHandler.getEntry(ba, ind(), hcPos, outKey, null, null);
+		return BSTHandler.getEntry(ba, ind(), hcPos, outKey, null, null);
 	}
 
 	Object ntGetEntryIfMatches(long hcPos, long[] keyToMatch) {
-		return HTHandler.getEntry(ba, ind(), hcPos, null, keyToMatch, this);
+		return BSTHandler.getEntry(ba, ind(), hcPos, null, keyToMatch, this);
 	}
 
 	int ntGetSize() {
@@ -959,8 +957,8 @@ public class Node {
 	 * WARNING: This is overloaded in subclasses of Node.
 	 * @return Index.
 	 */
-	HTable2<Object> createNiIndex(int dims) {
-		return new HTable2<>();
+	BSTree<Object> createNiIndex(int dims) {
+		return new BSTree<>();
 	}
 	
 	private void ntBuild(int bufEntryCnt, int dims, long[] prefix) {
@@ -987,7 +985,7 @@ public class Node {
 				postToNI(dataOffs, buffer, i, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
-				HTHandler.addEntry(ba, ind, i, buffer, o, null);
+				BSTHandler.addEntry(ba, ind, i, buffer, o, null);
 			}
 		} else {
 			int offsIndex = getBitPosIndex();
@@ -1001,7 +999,7 @@ public class Node {
 				postToNI(dataOffs, buffer, p2, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
-				HTHandler.addEntry(ba, ind, p2, buffer, e, null);
+				BSTHandler.addEntry(ba, ind, p2, buffer, e, null);
 				dataOffs += postLenTotal;
 			}
 		}
@@ -1465,7 +1463,7 @@ public class Node {
 		return postLenStored;
 	}
 	
-	NtNode<Object> ind() {
+	BSTree<Object> ind() {
 		//TODO
 		//TODO
 		//TODO

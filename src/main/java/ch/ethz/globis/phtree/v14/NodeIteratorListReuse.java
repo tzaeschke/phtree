@@ -12,7 +12,7 @@ import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.v14.nt.NtIteratorMask;
+import ch.ethz.globis.phtree.v14.bst.NtIteratorMask;
 
 /**
  * A NodeIterator that returns a list instead of an Iterator AND reuses the NodeIterator.
