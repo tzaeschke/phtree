@@ -11,6 +11,7 @@ package ch.ethz.globis.phtree.v14;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
+import ch.ethz.globis.phtree.v14.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v14.bst.NtIteratorMinMax;
 
@@ -34,7 +35,7 @@ public class NodeIteratorFullNoGC<T> {
 	private long next = -1;
 	private Node node;
 	private int currentOffsetKey;
-	private BSTIteratorMinMax<Object> ntIterator;
+	private BSTIteratorMinMax<BSTEntry> ntIterator;
 	private int nMaxEntries;
 	private int nEntriesFound = 0;
 	private int postEntryLenLHC;

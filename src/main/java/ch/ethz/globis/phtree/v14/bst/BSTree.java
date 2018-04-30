@@ -8,6 +8,7 @@ package ch.ethz.globis.phtree.v14.bst;
 
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
+import java.util.function.Predicate;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
@@ -31,26 +32,26 @@ public class BSTree<T> {
 
 	private int nEntries = 0;
 	
-	private transient BSTreePage root;
+	private transient BSTreePage<T> root;
 	
 	public BSTree() {
 		//bootstrap index
 		root = createPage(null, false);
 	}
 
-	public final Object put(long key, T value) {
+	public final T put(long key, T value) {
 		Object val = value == null ? NULL : value;
 		//Depth as log(nEntries) 
-		BSTreePage page = getRoot();
+		BSTreePage<T> page = getRoot();
 		Object o = page;
-		while (o instanceof BSTreePage && !((BSTreePage)o).isLeaf()) {
-			o = ((BSTreePage)o).put(key, val);
+		while (o instanceof BSTreePage && !((BSTreePage<T>)o).isLeaf()) {
+			o = ((BSTreePage<T>)o).put(key, val);
 		}
 		if (o == null) {
 			//did not exist
 			nEntries++;
 		}
-		return o;
+		return (T)o;
 	}
 
 	/**
@@ -58,22 +59,33 @@ public class BSTree<T> {
 	 * @return the previous value
 	 * @throws NoSuchElementException if key is not found
 	 */
-	public boolean remove(long key) {
-		BSTreePage page = getRoot();
+	public T remove(long key) {
+		return remove(key, null);
+	}
+	
+	/**
+	 * @param key The key to remove
+	 * @param predicateRemove Whether to remove the entry. This methods will always return T, even if
+	 * the 'predicate' returns false. 
+	 * @return the previous value
+	 * @throws NoSuchElementException if key is not found
+	 */
+	public T remove(long key, Predicate<T> predicateRemove) {
+		BSTreePage<T> page = getRoot();
 		Object result = null;
 		if (page != null) {
-			result = page.findAndRemove(key);
+			result = page.findAndRemove(key, predicateRemove);
 			if (result == null) {
 				throw new NoSuchElementException("Key not found: " + key);
 			}
 		}
 
 		nEntries--;
-		return true;
+		return result == NULL ? null : (T) result;
 	}
 
 	public LLEntry get(long key) {
-		BSTreePage page = getRoot();
+		BSTreePage<T> page = getRoot();
 		while (page != null && !page.isLeaf()) {
 			page = page.findSubPage(key);
 		}
@@ -83,11 +95,11 @@ public class BSTree<T> {
 		return page.getValueFromLeaf(key);
 	}
 
-	BSTreePage createPage(BSTreePage parent, boolean isLeaf) {
-		return new BSTreePage(this, (BSTreePage) parent, isLeaf);
+	BSTreePage<T> createPage(BSTreePage<T> parent, boolean isLeaf) {
+		return new BSTreePage<>(this, parent, isLeaf);
 	}
 
-	BSTreePage getRoot() {
+	BSTreePage<T> getRoot() {
 		return root;
 	}
 
@@ -99,7 +111,7 @@ public class BSTree<T> {
 		return new BSTIteratorMask<T>(-1).reset(this, minMask, maxMask);
 	}
 
-	void updateRoot(BSTreePage newRoot) {
+	void updateRoot(BSTreePage<T> newRoot) {
 		root = newRoot;
 	}
 	

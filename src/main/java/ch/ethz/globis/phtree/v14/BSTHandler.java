@@ -28,29 +28,86 @@ public class BSTHandler {
 		
 	}
 	
-	public static Object addEntry(long[] ba, BSTree<Object> ind, long hcPos, long[] kdKey, Object value, Node node) {
-		return ind.put(hcPos, new BSTEntry(kdKey, value));
+	public static Object addEntry(long[] ba, BSTree<BSTEntry> ind, long hcPos, long[] kdKey, Object value, Node node) {
+		//TODO for replace, can we reuse the existing key???
+		BSTEntry be = ind.put(hcPos, new BSTEntry(kdKey, value), e -> {
+			if (e != null && e.getValue()) {
+				//TODO pass in Predicate from outside, or at least a flag to indicate which predicate to use, 
+				//such as: overwrite (move point with same hcPos), split, or merge. 
+			}
+		});
+		return be == null ? null : be.getValue();
 	}
 
-	public static Object removeEntry(long[] ba, BSTree<Object> ind, long hcPos, int dims, long[] key, 
+	public static Object removeEntry(long[] ba, BSTree<BSTEntry> ind, long hcPos, int dims, long[] key, 
 			long[] newKey, int[] insertRequired, Node node) {
-		Object prev = ind.remove(hcPos);
+		//Only remove value-entries, node-entries are simply returned without removing them
+		BSTEntry prev = ind.remove(hcPos, e -> (e != null && !(e.value instanceof Node) && matches(e, key, node)) );
+		//return values: 
+		// - null -> not found / remove failed
+		// - Node -> recurse node
+		// - T -> remove success
+		//Node: removeing a node is never necessary: When values are removed from the PH-Tree, nodes are replaced
+		// with vales from sub-nodes, but they are never simply removed.
 		if (newKey != null) {
 			throw new UnsupportedOperationException();
 		}
-		return prev;
+		return prev == null ? null : prev.getValue();
 	}
 
-	public static Object getEntry(long[] ba, BSTree<Object> ind, long hcPos, long[] outKey, long[] keyToMatch,
-			Node object2) {
+	public static Object getEntry(long[] ba, BSTree<BSTEntry> ind, long hcPos, long[] outKey, long[] keyToMatch,
+			Node node) {
 		LLEntry e = ind.get(hcPos);
+		if (e == null) {
+			return null;
+		}
 		BSTEntry be = (BSTEntry) e.getValue();
-		System.arraycopy(be.getKdKey(), 0, outKey, 0, outKey.length);
-		//TODO check keyToMatch?!??!
-		return e.getValue(); 
+		if (keyToMatch != null) {
+			if (!matches(be, keyToMatch, node)) {
+				return null;
+			}
+		}
+		if (outKey != null) {  //TODO de we need outkey?
+			System.arraycopy(be.getKdKey(), 0, outKey, 0, outKey.length);
+		}
+		return be.getValue(); 
 	}
 
+	private static boolean matches(BSTEntry be, long[] keyToMatch, Node node) {
+		//This is always 0, unless we decide to put several keys into a single array
+		final int offs = 0;
+		if (be.getValue() instanceof Node) {
+			Node sub = (Node) be.getValue();
+			//TODO we are currently nmot setting this, so we can't read it...
+//TODO				if (node.hasSubInfix(offs, dims)) {
+				final long mask = node.calcInfixMask(sub.getPostLen());
+				if (!readAndCheckKdKey(be.getKdKey(), offs, keyToMatch, mask, node.postLenStored())) {
+					return false;
+				}
+//			}
+		} else {
+			final long mask = node.calcPostfixMask();
+			if (!readAndCheckKdKey(be.getKdKey(), offs, keyToMatch, mask, node.postLenStored())) {
+				return false;
+			}
+		}
+		return true;
+	}
 	
+	private static boolean readAndCheckKdKey(long[] allKeys, int offs, long[] keyToMatch, long mask, int postLen) {
+		for (int i = 0; i < keyToMatch.length; i++) {
+//			long k = Bits.readArray(allKeys, offs, postLen);
+//			if (((k ^ keyToMatch[i]) & mask) != 0) {
+//				return false;
+//			}
+//			offs += postLen;
+			if (((allKeys[i] ^ keyToMatch[i]) & mask) != 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	void addPostPIN(long hcPos, int pin, long[] key, Object value, Node node) {
 		final int dims = key.length;
 		final int bufEntryCnt = node.getEntryCount();

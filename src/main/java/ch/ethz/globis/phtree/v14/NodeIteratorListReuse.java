@@ -12,6 +12,7 @@ import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.v14.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v14.bst.NtIteratorMask;
 
@@ -63,7 +64,7 @@ public class NodeIteratorListReuse<T, R> {
 	private final class NodeIterator {
 	
 		private Node node;
-		private BSTIteratorMask<Object> niIterator;
+		private BSTIteratorMask<BSTEntry> niIterator;
 		private int nMaxEntry;
 		private int nEntryFound = 0;
 		private long maskLower;

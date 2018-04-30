@@ -11,6 +11,7 @@ package ch.ethz.globis.phtree.v14;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
+import ch.ethz.globis.phtree.v14.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v14.bst.NtIteratorMask;
 
@@ -34,7 +35,7 @@ public class NodeIteratorNoGC<T> {
 	private long next;
 	private Node node;
 	private int currentOffsetKey;
-	private BSTIteratorMask<Object> niIterator;
+	private BSTIteratorMask<BSTEntry> niIterator;
 	private int nMaxEntry;
 	private int nFound = 0;
 	private int postEntryLenLHC;
@@ -267,7 +268,7 @@ public class NodeIteratorNoGC<T> {
 	
 	private boolean niFindNextIter(PhEntry<T> result) {
 		while (niIterator.hasNextULL()) {
-			NtEntry<Object> e = niIterator.nextEntryReuse();
+			NtEntry<BSTEntry> e = niIterator.nextEntryReuse();
 			System.arraycopy(e.getKdKey(), 0, result.getKey(), 0, dims);
 			if (readValue(e.key(), e.value(), result)) {
 				next = e.getKey(); //This is required for kNN-adjusting of iterators

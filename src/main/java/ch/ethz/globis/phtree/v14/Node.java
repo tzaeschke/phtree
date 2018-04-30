@@ -16,10 +16,9 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
+import ch.ethz.globis.phtree.v14.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v14.bst.BSTree;
-import ch.ethz.globis.phtree.v14.bst.NtIteratorMask;
-import ch.ethz.globis.phtree.v14.nt.NtNode;
 
 
 /**
@@ -35,7 +34,7 @@ public class Node {
 	private static final int INN_HC_WIDTH = 0; //Index-NotNull: width of not-null flag for post/infix-hc
 	/** Bias towards using AHC. AHC is used if (sizeLHC*AHC_LHC_BIAS) greater than (sizeAHC)  */
 	public static final double AHC_LHC_BIAS = 2.0; 
-	public static final int NT_THRESHOLD = 150; 
+	public static final int NT_THRESHOLD = 2;//150; 
 
 	private Object[] values;
 	
@@ -77,7 +76,7 @@ public class Node {
 
 	//Hierarchical tree index: a hierarchy of long[]
 	//Nested tree index
-	private BSTree<Object> ind = null;
+	private BSTree<BSTEntry> ind = null;
 
 	
 	/**
@@ -708,6 +707,8 @@ public class Node {
 
 	void replaceEntryWithSub(int posInNode, long hcPos, long[] infix, Node newSub) {
 		if (isNT()) {
+			//TODO remove, this never happens, except when directly called from megreIntoParentNt()...
+			if (true) throw new UnsupportedOperationException();
 			ntReplaceEntry(hcPos, infix, newSub);
 			return;
 		}
@@ -958,7 +959,7 @@ public class Node {
 	 * WARNING: This is overloaded in subclasses of Node.
 	 * @return Index.
 	 */
-	BSTree<Object> createNiIndex(int dims) {
+	BSTree<BSTEntry> createNiIndex(int dims) {
 		return new BSTree<>();
 	}
 	
@@ -976,13 +977,13 @@ public class Node {
 			int oldOffsIndex = getBitPosIndex();
 			int oldPostBitsVal = posToOffsBitsDataAHC(0, oldOffsIndex, dims);
 			int postLenTotal = dims*postLenStored();
-			final long[] buffer = new long[dims];
 			for (int i = 0; i < (1L<<dims); i++) {
 				Object o = values[i];
 				if (o == null) {
 					continue;
 				} 
 				int dataOffs = oldPostBitsVal + i*postLenTotal;
+				final long[] buffer = new long[dims];
 				postToNI(dataOffs, buffer, i, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
@@ -992,11 +993,11 @@ public class Node {
 			int offsIndex = getBitPosIndex();
 			int dataOffs = pinToOffsBitsLHC(0, offsIndex, dims);
 			int postLenTotal = dims*postLenStored();
-			final long[] buffer = new long[dims];
 			for (int i = 0; i < bufEntryCnt; i++) {
 				long p2 = Bits.readArray(ba, dataOffs, IK_WIDTH(dims));
 				dataOffs += IK_WIDTH(dims);
 				Object e = values[i];
+				final long[] buffer = new long[dims];
 				postToNI(dataOffs, buffer, p2, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
@@ -1008,6 +1009,9 @@ public class Node {
 		setAHC(false);
 		ba = Bits.arrayTrim(ba, calcArraySizeTotalBitsNt());
 		values = Refs.arrayReplace(values, null); 
+		
+		//TODO remove me
+		System.out.println("index-print: " +  ind.toStringTree());
 	}
 
 	/**
@@ -1464,13 +1468,8 @@ public class Node {
 		return postLenStored;
 	}
 	
-	BSTree<Object> ind() {
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		throw new UnsupportedOperationException();
-//		return ind;
+	BSTree<BSTEntry> ind() {
+		return ind;
 	}
 
     PhIterator64<Object> ntIterator(int dims) {
@@ -1482,8 +1481,8 @@ public class Node {
 //      return new NtIteratorMinMax<>(dims).reset(ind, Long.MIN_VALUE, Long.MAX_VALUE);
     }
 
-    BSTIteratorMask<Object> ntIteratorWithMask(int dims, long maskLower, long maskUpper) {
-    	return new BSTIteratorMask<>(dims).reset(ind, maskLower, maskUpper);
+    BSTIteratorMask<BSTEntry> ntIteratorWithMask(int dims, long maskLower, long maskUpper) {
+    	return new BSTIteratorMask<BSTEntry>(dims).reset(ind, maskLower, maskUpper);
 		//TODO reuse iterator???
 		//TODO
 		//TODO
