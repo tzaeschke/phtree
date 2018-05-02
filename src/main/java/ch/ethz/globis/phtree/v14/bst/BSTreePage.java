@@ -8,11 +8,12 @@ package ch.ethz.globis.phtree.v14.bst;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v14.bst.BSTree.Stats;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
+import ch.ethz.globis.phtree.v14.bst.BSTree.Stats;
 
 class BSTreePage<T> {
 	
@@ -89,9 +90,10 @@ class BSTreePage<T> {
 	/**
 	 * 
 	 * @param key the lookup key
+	 * @param collisionHandler 
 	 * @return the page
 	 */
-	public Object put(long key, Object value) {
+	public Object put(long key, Object value, BiFunction<T, T, Object> collisionHandler) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -106,7 +108,7 @@ class BSTreePage<T> {
         	page = createLeafPage(pos);
         }
         if (page.isLeaf()) {
-    		Object o = page.put(key, value, this, pos);
+    		Object o = page.put(key, value, this, pos, collisionHandler);
     		if (o instanceof BSTreePage) {
     			//add page
     			BSTreePage newPage = (BSTreePage) o;
@@ -160,8 +162,10 @@ class BSTreePage<T> {
      * Overwrite the entry at 'key'.
      * @param key
      * @param value
+     * @param collisionHandler 
      */
-	public final Object put(long key, Object value, BSTreePage<T> parent, int posPageInParent) {
+	public final Object put(long key, T value, BSTreePage<T> parent, int posPageInParent, 
+			BiFunction<T, T, Object> collisionHandler) {
 		if (!isLeaf) {
 			throw new IllegalStateException("Tree inconsistency.");
 		}
@@ -170,11 +174,20 @@ class BSTreePage<T> {
         int pos = binarySearch(0, nEntries, key);
         //key found? -> pos >=0
         if (pos >= 0) {
-        	Object oldVal = values[pos];
+        	T oldVal = (T) values[pos];
+        	if (collisionHandler != null) {
+        		//Collision -> use collision handler (this will retain BSTEntry but may update it's value T
+        		return collisionHandler.apply(oldVal, value);
+        	}
         	values[pos] = value;
             return oldVal;
         } 
 
+    	if (collisionHandler != null) {
+    		//No collision, call handler, but no need to return anything (except null)
+    		collisionHandler.apply(null, null);
+    	}
+        
         if (nEntries < ind.maxLeafN) {
         	//okay so we add it locally
         	pos = -(pos+1);
@@ -245,15 +258,15 @@ class BSTreePage<T> {
        	if (isNew || !isPrev) {
        		if (destP.keys[0] > key) {
        			//posInParent=-2, because we won't need it there
-       			put(key, value, parent, -2);
+       			put(key, value, parent, -2, null);
        		} else {
-       			destP.put(key, value, parent, -2);
+       			destP.put(key, value, parent, -2, null);
        		}
        	} else {
        		if (keys[0] > key) {
-       			destP.put(key, value, parent, -2);
+       			destP.put(key, value, parent, -2, null);
        		} else {
-       			put(key, value, parent, -2);
+       			put(key, value, parent, -2, null);
        		}
        	}
        	if (isNew) {
@@ -447,10 +460,11 @@ class BSTreePage<T> {
         
         // first remove the element
         Object prevValue = values[i];
-        if (predicateRemove == null && predicateRemove.test((T)prevValue)) {
+        if (predicateRemove == null || predicateRemove.test((T)prevValue)) {
         	System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
         	System.arraycopy(values, i+1, values, i, nEntries-i-1);
         	nEntries--;
+        	ind.decreaseEntries();
         }
         return prevValue;
 	}

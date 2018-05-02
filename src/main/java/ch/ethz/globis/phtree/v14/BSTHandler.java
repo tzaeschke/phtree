@@ -6,15 +6,20 @@
  */
 package ch.ethz.globis.phtree.v14;
 
+import java.io.ObjectOutputStream.PutField;
+import java.util.List;
+
+import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.Refs;
-import ch.ethz.globis.phtree.v14.bst.BSTree;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
+import ch.ethz.globis.phtree.v14.bst.BSTree;
 
 public class BSTHandler {
 
 	public static class BSTEntry {
 		private final long[] kdKey;
-		private final Object value;
+		private Object value;
 		public BSTEntry(long[] k, Object v) {
 			kdKey = k;
 			value = v;
@@ -25,24 +30,160 @@ public class BSTHandler {
 		public Object getValue() {
 			return value;
 		}
+		public void setValue(Object v) {
+			this.value = v;
+		}
 		
 	}
 	
-	public static Object addEntry(long[] ba, BSTree<BSTEntry> ind, long hcPos, long[] kdKey, Object value, Node node) {
+	static Object addEntry(BSTree<BSTEntry> ind, long hcPos, long[] kdKey, Object value, Node phNode) {
 		//TODO for replace, can we reuse the existing key???
-		BSTEntry be = ind.put(hcPos, new BSTEntry(kdKey, value), e -> {
-			if (e != null && e.getValue()) {
-				//TODO pass in Predicate from outside, or at least a flag to indicate which predicate to use, 
-				//such as: overwrite (move point with same hcPos), split, or merge. 
+		BSTEntry be = ind.put(hcPos, new BSTEntry(kdKey, value), (BSTEntry oldEntry, BSTEntry newEntry) -> {
+			//This returns the value to be returned for B) and C)
+			
+			//A) 
+			if (oldEntry == null) {
+				//In this case, BSTree need to assign the new Entry
+//				System.out.println("CH 1"); //TODO
+				if (phNode != null) {
+//					System.out.println("CH 1a"); //TODO
+					phNode.incEntryCount();
+				}
+//				System.out.println("CH 1b"); //TODO
+				return null;
+			}
+			
+			//B)
+			if (phNode == null) {
+//				System.out.println("CH B"); //TODO
+				oldEntry.setValue(value);
+				return null;
+			}
+			
+			//C)
+			//We two entries in the same location (local hcPos).
+			//Now we need to compare the kdKeys.
+			//If they are identical, we either replace the VALUE or return the SUB-NODE
+			// (that's actually the same, simply return the VALUE)
+			//If the kdKey differs, we have to split, insert a newSubNode and return null.
+
+			//C)
+			Object localVal = oldEntry.getValue();
+			if (localVal instanceof Node) {
+				Node subNode = (Node) localVal;
+				long mask = phNode.calcInfixMask(subNode.getPostLen());
+//				System.out.println("CH c1"); //TODO
+				return insertSplitPH(oldEntry, newEntry, mask, phNode);
+			} else {
+				if (phNode.getPostLen() > 0) {
+					long mask = phNode.calcPostfixMask();
+//					System.out.println("CH c2"); //TODO
+					return insertSplitPH(oldEntry, newEntry, mask, phNode);
+				}
+				//perfect match -> replace value
+//				System.out.println("CH c2x"); //TODO
+				oldEntry.setValue(value);
+				newEntry.setValue(localVal);
+				return newEntry;
 			}
 		});
 		return be == null ? null : be.getValue();
+		
+		//Contract:
+		//phNode==null -> replace instead of split! 
+		//Otherwise:
+		// - A) entry does not exist -> add / incCounter(phNode)
+		// - B) entry exists, phNode == null -> replace
+		// - C) entry exists: -> check infix/postfix
+		//   - C.1) value==Node: conflict ? split;insert-new-node;return-null : return Node
+		//   - C.2) value==obj:  conflict ? split;insert-new-node;return-null : return prevValue
+		//
+		//Summary:
+		// - A) set T, return null; 
+		// - B) set T, (return prev T)
+		// - C.1) set newNode return null || set (), return (prev)T
+		// - C.2) set newNode return null || set T, return prev T
+		// A) is handled by BST.put(), B)/C) is handled by lambda
+		
+		//A)
+//		long localHcPos = NtNode.pos2LocalPos(hcPos, currentNode.getPostLen());
+//		int pin = currentNode.getPosition(localHcPos, NtNode.MAX_DIM);
+//		if (pin < 0) {
+//			//insert
+//			currentNode.localAddEntryPIN(pin, localHcPos, hcPos, kdKey, value);
+//			incCounter(phNode);
+//			return null;
+//		}
+//
+//
+//		//external postfix is not checked  
+//		if (phNode == null) {
+//			//B)
+//			return (T) currentNode.localReplaceEntry(pin, kdKey, value);
+//		} else {
+//			//What do we have to do?
+//			//We two entries in the same location (local hcPos).
+//			//Now we need to compare the kdKeys.
+//			//If they are identical, we either replace the VALUE or return the SUB-NODE
+//			// (that's actually the same, simply return the VALUE)
+//			//If the kdKey differs, we have to split, insert a newSubNode and return null.
+//
+//			//C)
+//			if (localVal instanceof Node) {
+//				Node subNode = (Node) localVal;
+//				long mask = phNode.calcInfixMask(subNode.getPostLen());
+//				return (T) insertSplitPH(kdKey, value, localVal, pin, 
+//						mask, currentNode, phNode);
+//			} else {
+//				if (phNode.getPostLen() > 0) {
+//					long mask = phNode.calcPostfixMask();
+//					return (T) insertSplitPH(kdKey, value, localVal, pin, 
+//							mask, currentNode, phNode);
+//				}
+//				//perfect match -> replace value
+//				currentNode.localReplaceValue(pin, value);
+//				return (T) value;
+//			}
+//		}
 	}
 
-	public static Object removeEntry(long[] ba, BSTree<BSTEntry> ind, long hcPos, int dims, long[] key, 
-			long[] newKey, int[] insertRequired, Node node) {
+	private static BSTEntry insertSplitPH(BSTEntry currentEntry, BSTEntry newEntry, long mask, Node phNode) {
+		if (mask == 0) {
+			//There won't be any split, no need to check.
+			return currentEntry;
+		}
+		long[] localKdKey = currentEntry.getKdKey();
+		long[] newKey = newEntry.getKdKey();
+		Object currentValue = currentEntry.getValue();
+		Object newValue = newEntry.getValue();
+		int maxConflictingBits = Node.calcConflictingBits(newKey, localKdKey, mask);
+		if (maxConflictingBits == 0) {
+			if (!(currentValue instanceof Node)) {
+				//replace value
+//				System.out.println("CHis 1"); //TODO
+				currentEntry.setValue(newValue);
+				newEntry.setValue(currentValue);
+				//newEntry now contains the previous value
+				return newEntry;
+			}
+//			System.out.println("CHis 2"); //TODO
+			return currentEntry;
+		}
+		
+		Node newNode = phNode.createNode(newKey, newValue, 
+						localKdKey, currentValue, maxConflictingBits);
+
+		//replace value
+		currentEntry.setValue(newNode);
+		//entry did not exist
+//		System.out.println("CHis 3"); //TODO
+        return null;
+	}
+	
+	static Object removeEntry(BSTree<BSTEntry> ind, long hcPos, long[] key, 
+			long[] newKey, int[] insertRequired, Node phNode) {
 		//Only remove value-entries, node-entries are simply returned without removing them
-		BSTEntry prev = ind.remove(hcPos, e -> (e != null && !(e.value instanceof Node) && matches(e, key, node)) );
+		BSTEntry prev = ind.remove(hcPos, e -> (e != null && !(e.value instanceof Node) && matches(e, key, phNode)) );
 		//return values: 
 		// - null -> not found / remove failed
 		// - Node -> recurse node
@@ -50,13 +191,24 @@ public class BSTHandler {
 		//Node: removeing a node is never necessary: When values are removed from the PH-Tree, nodes are replaced
 		// with vales from sub-nodes, but they are never simply removed.
 		if (newKey != null) {
-			throw new UnsupportedOperationException();
+			if (prev != null && prev.getValue() != null && !(prev.getValue() instanceof Node)) {
+				//replace
+				int bitPosOfDiff = Node.calcConflictingBits(key, newKey, -1L);
+				//TODO fixme
+				if (bitPosOfDiff <= phNode.getPostLen()) {
+					//replace
+//					return replacePost(pinToDelete, hcPos, newKey);
+					return addEntry(ind, hcPos, newKey, prev.getValue(), phNode);
+				} else {
+					insertRequired[0] = bitPosOfDiff;
+				}
+				//throw new UnsupportedOperationException();
+			}
 		}
 		return prev == null ? null : prev.getValue();
 	}
 
-	public static Object getEntry(long[] ba, BSTree<BSTEntry> ind, long hcPos, long[] outKey, long[] keyToMatch,
-			Node node) {
+	static Object getEntry(BSTree<BSTEntry> ind, long hcPos, long[] outKey, long[] keyToMatch, Node node) {
 		LLEntry e = ind.get(hcPos);
 		if (e == null) {
 			return null;
@@ -185,6 +337,13 @@ public class BSTHandler {
 	
 	private static int ENTRY_WIDTH(int dims) {
 		return IK_WIDTH(dims) + HT_WIDTH();
+	}
+
+	static void getStats(BSTree<BSTEntry> ind, PhTreeStats stats, int dims, List<Object> entries) {
+		BSTIteratorMinMax<BSTEntry> iter = ind.iterator();
+		while (iter.hasNextULL()) {
+			entries.add(iter.nextULL().getValue());
+		}
 	}
 	
 }

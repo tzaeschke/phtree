@@ -8,6 +8,7 @@ package ch.ethz.globis.phtree.v14.bst;
 
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
@@ -40,12 +41,16 @@ public class BSTree<T> {
 	}
 
 	public final T put(long key, T value) {
+		return put(key, value, null);
+	}
+	
+	public final T put(long key, T value, BiFunction<T, T, Object> collisionHandler) {
 		Object val = value == null ? NULL : value;
 		//Depth as log(nEntries) 
 		BSTreePage<T> page = getRoot();
 		Object o = page;
 		while (o instanceof BSTreePage && !((BSTreePage<T>)o).isLeaf()) {
-			o = ((BSTreePage<T>)o).put(key, val);
+			o = ((BSTreePage<T>)o).put(key, val, collisionHandler);
 		}
 		if (o == null) {
 			//did not exist
@@ -70,6 +75,7 @@ public class BSTree<T> {
 	 * @return the previous value
 	 * @throws NoSuchElementException if key is not found
 	 */
+	@SuppressWarnings("unchecked")
 	public T remove(long key, Predicate<T> predicateRemove) {
 		BSTreePage<T> page = getRoot();
 		Object result = null;
@@ -80,7 +86,6 @@ public class BSTree<T> {
 			}
 		}
 
-		nEntries--;
 		return result == NULL ? null : (T) result;
 	}
 
@@ -194,6 +199,10 @@ public class BSTree<T> {
 	
 	public int size() {
 		return nEntries;
+	}
+
+	void decreaseEntries() {
+		nEntries--;
 	}
 	
 }

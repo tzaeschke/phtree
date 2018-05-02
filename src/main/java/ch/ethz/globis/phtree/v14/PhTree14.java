@@ -28,7 +28,6 @@ import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v14.nt.NodeTreeV14;
 import ch.ethz.globis.phtree.v14.nt.NtNode;
 
 /**
@@ -170,7 +169,7 @@ public class PhTree14<T> implements PhTree<T> {
 			}
 		} else {
 			List<Object> entries = new ArrayList<>();
-			NodeTreeV14.getStats(node.ind(), stats, dims, entries);
+			BSTHandler.getStats(node.ind(), stats, dims, entries);
 			for (Object child: entries) {
 				if (child instanceof Node) {
 					getStats(currentDepth + 1, (Node) child, stats);

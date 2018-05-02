@@ -757,10 +757,10 @@ public class Node {
 		replacePost(pin, hcPos, key);
 	}
 
-	Object ntReplaceEntry(long hcPos, long[] kdKey, Object value) {
+	void ntReplaceEntry(long hcPos, long[] kdKey, Object value) {
 		//We use 'null' as parameter to indicate that we want replacement, rather than splitting,
 		//if the value exists.
-		return BSTHandler.addEntry(ba, ind, hcPos, kdKey, value, null);
+		BSTHandler.addEntry(ind, hcPos, kdKey, value, null);
 	}
 	
 	/**
@@ -777,7 +777,7 @@ public class Node {
 	 * @return
 	 */
 	Object ntPut(long hcPos, long[] kdKey, Object value) {
-		return BSTHandler.addEntry(ba, ind, hcPos, kdKey, value, this);
+		return BSTHandler.addEntry(ind, hcPos, kdKey, value, this);
 	}
 	
 	/**
@@ -794,19 +794,19 @@ public class Node {
 	 * @return
 	 */
 	Object ntRemoveAnything(long hcPos, int dims) {
-    	return BSTHandler.removeEntry(ba, ind, hcPos, dims, null, null, null, null);
+    	return BSTHandler.removeEntry(ind, hcPos, null, null, null, null);
 	}
 
 	Object ntRemoveEntry(long hcPos, long[] key, long[] newKey, int[] insertRequired) {
-    	return BSTHandler.removeEntry(ba, ind, hcPos, key.length, key, newKey, insertRequired, this);
+    	return BSTHandler.removeEntry(ind, hcPos, key, newKey, insertRequired, this);
 	}
 
 	Object ntGetEntry(long hcPos, long[] outKey, long[] valTemplate) {
-		return BSTHandler.getEntry(ba, ind(), hcPos, outKey, null, null);
+		return BSTHandler.getEntry(ind(), hcPos, outKey, null, null);
 	}
 
 	Object ntGetEntryIfMatches(long hcPos, long[] keyToMatch) {
-		return BSTHandler.getEntry(ba, ind(), hcPos, null, keyToMatch, this);
+		return BSTHandler.getEntry(ind(), hcPos, null, keyToMatch, this);
 	}
 
 	int ntGetSize() {
@@ -987,7 +987,7 @@ public class Node {
 				postToNI(dataOffs, buffer, i, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
-				BSTHandler.addEntry(ba, ind, i, buffer, o, null);
+				BSTHandler.addEntry(ind, i, buffer, o, null);
 			}
 		} else {
 			int offsIndex = getBitPosIndex();
@@ -1001,7 +1001,7 @@ public class Node {
 				postToNI(dataOffs, buffer, p2, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
-				BSTHandler.addEntry(ba, ind, p2, buffer, e, null);
+				BSTHandler.addEntry(ind, p2, buffer, e, null);
 				dataOffs += postLenTotal;
 			}
 		}
@@ -1009,9 +1009,6 @@ public class Node {
 		setAHC(false);
 		ba = Bits.arrayTrim(ba, calcArraySizeTotalBitsNt());
 		values = Refs.arrayReplace(values, null); 
-		
-		//TODO remove me
-		System.out.println("index-print: " +  ind.toStringTree());
 	}
 
 	/**
