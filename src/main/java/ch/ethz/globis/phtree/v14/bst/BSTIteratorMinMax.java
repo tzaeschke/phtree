@@ -25,21 +25,6 @@ public class BSTIteratorMinMax<T> {
 		short pos;
 	}
 
-	public static class LLEntry {
-		private final long key;
-		private final Object value;
-		public LLEntry(long k, Object v) {
-			key = k;
-			value = v;
-		}
-		public long getKey() {
-			return key;
-		}
-		public Object getValue() {
-			return value;
-		}
-	}
-
 	private BSTree<T> ind;
 	private int modCount;
 	private BSTreePage currentPage = null;
@@ -154,6 +139,7 @@ public class BSTIteratorMinMax<T> {
 		if (currentPos >= currentPage.getNKeys()) {
 			goToNextPage();
 			if (currentPage == null) {
+					hasValue = false;
 				return;
 			}
 		}
@@ -200,6 +186,30 @@ public class BSTIteratorMinMax<T> {
 	}
 	
 	
+	public LLEntry nextEntryReuse() {
+		if (!hasNextULL()) {
+			throw new NoSuchElementException();
+		}
+
+		//TODO resuse
+		//TODO resuse
+		//TODO resuse
+		//TODO resuse
+		//TODO resuse
+		//TODO resuse
+		//TODO resuse
+		//TODO resuse
+		//TODO resuse
+		//TODO resuse
+        LLEntry e = new LLEntry(nextKey, nextValue);
+		if (currentPage == null) {
+			hasValue = false;
+		} else {
+			gotoPosInPage();
+		}
+		return e;
+	}
+
 	/**
 	 * Dirty trick to avoid delays from finding the correct method.
 	 */

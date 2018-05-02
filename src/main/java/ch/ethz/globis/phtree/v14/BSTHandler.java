@@ -10,8 +10,8 @@ import java.util.List;
 
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
-import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
 import ch.ethz.globis.phtree.v14.bst.BSTree;
+import ch.ethz.globis.phtree.v14.bst.LLEntry;
 
 public class BSTHandler {
 

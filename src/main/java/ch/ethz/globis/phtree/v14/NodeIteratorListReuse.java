@@ -10,11 +10,10 @@ package ch.ethz.globis.phtree.v14;
 
 import java.util.List;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.v14.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
-import ch.ethz.globis.phtree.v14.bst.NtIteratorMask;
+import ch.ethz.globis.phtree.v14.bst.LLEntry;
 
 /**
  * A NodeIterator that returns a list instead of an Iterator AND reuses the NodeIterator.
@@ -254,18 +253,19 @@ public class NodeIteratorListReuse<T, R> {
 		private void niAllNextIterator() {
 			//ITERATOR is used for DIM>6 or if results are dense 
 			while (niIterator.hasNextULL() && results.size() < maxResults) {
-				NtEntry<Object> e = niIterator.nextEntryReuse();
-				Object v = e.value();
+				LLEntry le = niIterator.nextEntryReuse();
+				BSTEntry be = (BSTEntry) le.getValue();
+				Object v = be.getValue();
 				if (v instanceof Node) {
 					Node nextSubNode = (Node) v; 
-					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), e.getKdKey(),
+					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), be.getKdKey(),
 							valTemplate, rangeMin, rangeMax)) {
 						checkAndRunSubnode(nextSubNode, null);
 					}
 				} else {
 					PhEntry<T> resultBuffer = results.phGetTempEntry();
-					System.arraycopy(e.getKdKey(), 0, resultBuffer.getKey(), 0, dims);
-					readValue(e.key(), v, resultBuffer);
+					System.arraycopy(be.getKdKey(), 0, resultBuffer.getKey(), 0, dims);
+					readValue(le.getKey(), v, resultBuffer);
 				}
 			}
 			return;

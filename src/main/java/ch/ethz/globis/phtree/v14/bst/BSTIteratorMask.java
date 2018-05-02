@@ -25,21 +25,6 @@ public class BSTIteratorMask<T> {
 		short pos;
 	}
 
-	public static class LLEntry {
-		private final long key;
-		private final Object value;
-		public LLEntry(long k, Object v) {
-			key = k;
-			value = v;
-		}
-		public long getKey() {
-			return key;
-		}
-		public Object getValue() {
-			return value;
-		}
-	}
-
 	private BSTree<T> ind;
 	private int modCount;
 	private BSTreePage currentPage = null;
@@ -203,6 +188,35 @@ public class BSTIteratorMask<T> {
 	}
 	
 	
+
+	public LLEntry nextEntryReuse() {
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		//TODO reuse !!!
+		if (!hasNextULL()) {
+			throw new NoSuchElementException();
+		}
+
+        LLEntry e = new LLEntry(nextKey, nextValue);
+		if (currentPage == null) {
+			hasValue = false;
+		} else {
+			gotoPosInPage();
+		}
+		return e;
+	}
+
 	/**
 	 * Dirty trick to avoid delays from finding the correct method.
 	 */
