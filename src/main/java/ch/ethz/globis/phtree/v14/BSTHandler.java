@@ -6,11 +6,9 @@
  */
 package ch.ethz.globis.phtree.v14;
 
-import java.io.ObjectOutputStream.PutField;
 import java.util.List;
 
 import ch.ethz.globis.phtree.util.PhTreeStats;
-import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
 import ch.ethz.globis.phtree.v14.bst.BSTree;
@@ -44,18 +42,14 @@ public class BSTHandler {
 			//A) 
 			if (oldEntry == null) {
 				//In this case, BSTree need to assign the new Entry
-//				System.out.println("CH 1"); //TODO
 				if (phNode != null) {
-//					System.out.println("CH 1a"); //TODO
 					phNode.incEntryCount();
 				}
-//				System.out.println("CH 1b"); //TODO
 				return null;
 			}
 			
 			//B)
 			if (phNode == null) {
-//				System.out.println("CH B"); //TODO
 				oldEntry.setValue(value);
 				return null;
 			}
@@ -72,16 +66,13 @@ public class BSTHandler {
 			if (localVal instanceof Node) {
 				Node subNode = (Node) localVal;
 				long mask = phNode.calcInfixMask(subNode.getPostLen());
-//				System.out.println("CH c1"); //TODO
 				return insertSplitPH(oldEntry, newEntry, mask, phNode);
 			} else {
 				if (phNode.getPostLen() > 0) {
 					long mask = phNode.calcPostfixMask();
-//					System.out.println("CH c2"); //TODO
 					return insertSplitPH(oldEntry, newEntry, mask, phNode);
 				}
 				//perfect match -> replace value
-//				System.out.println("CH c2x"); //TODO
 				oldEntry.setValue(value);
 				newEntry.setValue(localVal);
 				return newEntry;
@@ -148,6 +139,7 @@ public class BSTHandler {
 	}
 
 	private static BSTEntry insertSplitPH(BSTEntry currentEntry, BSTEntry newEntry, long mask, Node phNode) {
+		//TODO do we reallly need these masks?
 		if (mask == 0) {
 			//There won't be any split, no need to check.
 			return currentEntry;
@@ -160,13 +152,11 @@ public class BSTHandler {
 		if (maxConflictingBits == 0) {
 			if (!(currentValue instanceof Node)) {
 				//replace value
-//				System.out.println("CHis 1"); //TODO
 				currentEntry.setValue(newValue);
 				newEntry.setValue(currentValue);
 				//newEntry now contains the previous value
 				return newEntry;
 			}
-//			System.out.println("CHis 2"); //TODO
 			return currentEntry;
 		}
 		
@@ -176,10 +166,23 @@ public class BSTHandler {
 		//replace value
 		currentEntry.setValue(newNode);
 		//entry did not exist
-//		System.out.println("CHis 3"); //TODO
         return null;
 	}
 	
+	static Object replaceEntry(BSTree<BSTEntry> ind, long hcPos, long[] kdKey, Object value) {
+		//TODO for replace, can we reuse the existing BSTEntry???
+		//
+//		BSTEntry be = (BSTEntry) ind.get(hcPos).getValue();
+//		Object prev = be.getValue();
+//		System.arraycopy(kdKey, 0, be.getKdKey(), 0, kdKey.length);
+//		be.setValue(value);
+//		return prev;
+		
+		
+		BSTEntry be = ind.put(hcPos, new BSTEntry(kdKey, value), null);
+		return be == null ? null : be.getValue();
+	}
+
 	static Object removeEntry(BSTree<BSTEntry> ind, long hcPos, long[] key, 
 			long[] newKey, int[] insertRequired, Node phNode) {
 		//Only remove value-entries, node-entries are simply returned without removing them
@@ -247,6 +250,7 @@ public class BSTHandler {
 	}
 	
 	private static boolean readAndCheckKdKey(long[] allKeys, int offs, long[] keyToMatch, long mask, int postLen) {
+		//TODO do we reallly need these masks?
 		for (int i = 0; i < keyToMatch.length; i++) {
 //			long k = Bits.readArray(allKeys, offs, postLen);
 //			if (((k ^ keyToMatch[i]) & mask) != 0) {
@@ -260,84 +264,6 @@ public class BSTHandler {
 		return true;
 	}
 
-	void addPostPIN(long hcPos, int pin, long[] key, Object value, Node node) {
-		final int dims = key.length;
-		final int bufEntryCnt = node.getEntryCount();
-		//decide here whether to use hyper-cube or linear representation
-		//--> Initially, the linear version is always smaller, because the cube has at least
-		//    two entries, even for a single dimension. (unless DIM > 2*REF=2*32 bit 
-		//    For one dimension, both need one additional bit to indicate either
-		//    null/not-null (hypercube, actually two bit) or to indicate the index. 
-
-		node.incEntryCount();
-
-		//get position
-		pin = -(pin+1);
-
-		//resize array
-		node.setBa( Bits.arrayEnsureSize(node.ba(), calcArraySizeTotalBits(bufEntryCnt+1, dims)) );
-		long[] ia = node.ba();
-		int offs = pinToOffsBitsLHC(pin, dims);
-		Bits.insertBits(ia, offs, ENTRY_WIDTH(dims));
-		//insert key
-		Bits.writeArray(ia, offs, IK_WIDTH(dims), hcPos);
-		//insert value:
-		offs += IK_WIDTH(dims); 
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-/*		lsdflsadjlf;jsl;djfl;sajdl;jsf;l
-		for (int i = 0; i < key.length; i++) {
-			Bits.writeArray(ia, offs, postLenStored(), key[i]);
-			offs += postLenStored();
-		}
-		*/
-		node.setValues( Refs.insertSpaceAtPos(node.values(), pin, bufEntryCnt+1) );
-		node.values()[pin] = value;
-	}
-
-	@Deprecated
-	private int pinToOffsBitsLHC(int pin, int offsIndex, int dims) {
-		return pinToOffsBitsLHC(pin, dims);
-	}
-	
-	private int pinToOffsBitsLHC(int pin, int dims) {
-		return pin*ENTRY_WIDTH(dims);
-	}
-
-	@Deprecated
-	private int getBitPosIndex() {
-		return 0;
-	}
-
-	private int calcArraySizeTotalBits(int nEntries, int dims) {
-		return nEntries*ENTRY_WIDTH(dims);
-	}
-
-	private static int IK_WIDTH(int dims) {
-		return dims;
-	}
-
-	private static int HT_WIDTH() {
-		//32 bits for HT-key
-		return 31;
-	}
-	
-	private static int ENTRY_WIDTH(int dims) {
-		return IK_WIDTH(dims) + HT_WIDTH();
-	}
 
 	static void getStats(BSTree<BSTEntry> ind, PhTreeStats stats, int dims, List<Object> entries) {
 		BSTIteratorMinMax<BSTEntry> iter = ind.iterator();

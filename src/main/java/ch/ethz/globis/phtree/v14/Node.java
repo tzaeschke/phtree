@@ -707,8 +707,6 @@ public class Node {
 
 	void replaceEntryWithSub(int posInNode, long hcPos, long[] infix, Node newSub) {
 		if (isNT()) {
-			//TODO remove, this never happens, except when directly called from megreIntoParentNt()...
-			if (true) throw new UnsupportedOperationException();
 			ntReplaceEntry(hcPos, infix, newSub);
 			return;
 		}
@@ -760,7 +758,7 @@ public class Node {
 	void ntReplaceEntry(long hcPos, long[] kdKey, Object value) {
 		//We use 'null' as parameter to indicate that we want replacement, rather than splitting,
 		//if the value exists.
-		BSTHandler.addEntry(ind, hcPos, kdKey, value, null);
+		BSTHandler.replaceEntry(ind, hcPos, kdKey, value);
 	}
 	
 	/**

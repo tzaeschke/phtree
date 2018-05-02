@@ -16,6 +16,7 @@ import ch.ethz.globis.phtree.v11hd.PhTreeHD11;
 import ch.ethz.globis.phtree.v11hd2.PhTreeHD11b;
 import ch.ethz.globis.phtree.v11lhc.PhTreeLhc11;
 import ch.ethz.globis.phtree.v13.PhTree13;
+import ch.ethz.globis.phtree.v14.PhTree14;
 
 /**
  * k-dimensional index (quad-/oct-/n-tree).
@@ -193,7 +194,7 @@ public interface PhTree<T> {
 	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(int dim) {
-		return new PhTree13<>(dim);
+		return new PhTree14<>(dim);
 	}
 
 	/**
@@ -204,7 +205,7 @@ public interface PhTree<T> {
 	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(PhTreeConfig cfg) {
-		return new PhTree13<>(cfg);
+		return new PhTree14<>(cfg);
 	}
 
 	/**
