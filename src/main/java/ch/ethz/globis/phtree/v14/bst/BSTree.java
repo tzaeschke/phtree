@@ -10,7 +10,6 @@ import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 
@@ -22,9 +21,7 @@ public class BSTree<T> {
 	
 	static final Object NULL = new Object();
 	
-	protected final int maxLeafN = 10;//340;
 	/** Max number of keys in inner page (there can be max+1 page-refs) */
-	protected final int maxInnerN = 11;//509;
 	protected final int minLeafN = maxLeafN >> 1;  //254
 	protected final int minInnerN = maxInnerN >> 1;  //170
 	protected static int statNLeaves = 0;

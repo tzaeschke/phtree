@@ -23,6 +23,7 @@ import ch.ethz.globis.phtree.nv.PhTreeNV;
 import ch.ethz.globis.phtree.test.util.TestSuper;
 import ch.ethz.globis.phtree.test.util.TestUtil;
 import ch.ethz.globis.phtree.util.Bits;
+import ch.ethz.globis.phtree.util.BitsLong;
 
 public class TestIndexQuerieSet extends TestSuper {
 
@@ -185,7 +186,7 @@ public class TestIndexQuerieSet extends TestSuper {
 			int n = 0;
 			it = ind.queryAll(MIN, MAX);
 			for (PhEntry<?> v: it) {
-//				System.out.println("v=" + Bits.toBinary(v, 64));
+				//System.out.println("v=" + Arrays.toString(v.getKey()) + " / " + BitsLong.toBinary(v.getKey(), 64));
 				assertNotNull(v);
 				n++;
 			}
@@ -196,6 +197,7 @@ public class TestIndexQuerieSet extends TestSuper {
 			n = 0;
 			it = ind.queryAll(NULL, MAX);
 			for (PhEntry<?> e: it) {
+				//System.out.println("v2=" + Arrays.toString(e.getKey()) + " / " + BitsLong.toBinary(e.getKey(), 64));
 				n++;
 				nTotal++;
 			}
@@ -204,6 +206,7 @@ public class TestIndexQuerieSet extends TestSuper {
 			n = 0;
 			it = ind.queryAll(MIN, NULL);
 			for (PhEntry<?> e: it) {
+				//System.out.println("v3=" + Arrays.toString(e.getKey()) + " / " + BitsLong.toBinary(e.getKey(), 64));
 				n++;
 				nTotal++;
 			}

@@ -161,6 +161,7 @@ public class NodeIteratorListReuse<T, R> {
 
 		private void readValue(long pos, Object value, PhEntry<T> result) {
 			if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
+				results.phReturnTemp(result);
 				return;
 			}
 			

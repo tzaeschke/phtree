@@ -269,6 +269,11 @@ public class NodeIteratorNoGC<T> {
 		while (niIterator.hasNextULL()) {
 			LLEntry le = niIterator.nextEntryReuse();
 			BSTEntry be = (BSTEntry) le.getValue();
+			//TODO copy only if match!!!!!!!! Or do not copy at all?????
+			//TODO copy only if match!!!!!!!! Or do not copy at all?????
+			//TODO copy only if match!!!!!!!! Or do not copy at all?????
+			//TODO copy only if match!!!!!!!! Or do not copy at all?????
+			//TODO copy only if match!!!!!!!! Or do not copy at all?????
 			System.arraycopy(be.getKdKey(), 0, result.getKey(), 0, dims);
 			if (readValue(le.getKey(), be.getValue(), result)) {
 				next = le.getKey(); //This is required for kNN-adjusting of iterators

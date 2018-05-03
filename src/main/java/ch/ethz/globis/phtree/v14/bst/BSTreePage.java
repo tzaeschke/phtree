@@ -7,10 +7,8 @@
 package ch.ethz.globis.phtree.v14.bst;
 
 import java.util.Arrays;
-import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v14.bst.BSTree.REMOVE_OP;
