@@ -21,7 +21,9 @@ public class BSTree<T> {
 	
 	static final Object NULL = new Object();
 	
+	protected final int maxLeafN = 100;//10;//340;
 	/** Max number of keys in inner page (there can be max+1 page-refs) */
+	protected final int maxInnerN = 100;//11;//509;
 	protected final int minLeafN = maxLeafN >> 1;  //254
 	protected final int minInnerN = maxInnerN >> 1;  //170
 	protected static int statNLeaves = 0;

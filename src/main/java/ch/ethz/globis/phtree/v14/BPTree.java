@@ -178,48 +178,49 @@ public class BPTree<T> {
 		}
 		
 		
-		if (nEntries <= 1 && slotId == 0) {
-			Object ret = ht;
-			ht = data;
-			return (T) ret;
-		}
-		Chunk c = (Chunk) ht;
-		int mask = getIdMask();
-		int expectedLevel = c.level;
-		while (c.level > 0) {
-			//inner node
-			int pos = (slotId >>> SHIFT(c.level)) & mask;
-			Object sub = c.children[pos];
-			if (sub == null) {
-				//free slot, but not leaf (level > 0) -> create sub-node
-				Chunk c2 = createChunk(0);
-				c.children[pos] = c2;
-				c = c2;
-				break;
-			} 
-			//it is a chunk, but is it the correct level?
-			Chunk cSub = (Chunk) sub;
-			while (--expectedLevel != cSub.level) {
-				//Okay, some levels are unused, but do we need to insert one?
-				int pos2 = (slotId >>> SHIFT(expectedLevel)) & mask;
-				if (pos2 != 0) {  //can only be '0' or '1'...
-					//insert level!
-					Chunk c2 = createChunk(cSub.level+1);
-					c2.children[0] = sub;
-					c.children[pos] = c2;
-					//Hack: jump directly to c2, because cSub has only one child! 
-					cSub = c2;
-					break;
-				}
-			}
-			c = cSub;
-		} 
-		
-		T ret = (T) c.children[slotId & mask];
-		//TODO resize array if required?
-		c.children[slotId & mask] = data;
-		
-		return ret;
+//		if (nEntries <= 1 && slotId == 0) {
+//			Object ret = ht;
+//			ht = data;
+//			return (T) ret;
+//		}
+//		Chunk c = (Chunk) ht;
+//		int mask = getIdMask();
+//		int expectedLevel = c.level;
+//		while (c.level > 0) {
+//			//inner node
+//			int pos = (slotId >>> SHIFT(c.level)) & mask;
+//			Object sub = c.children[pos];
+//			if (sub == null) {
+//				//free slot, but not leaf (level > 0) -> create sub-node
+//				Chunk c2 = createChunk(0);
+//				c.children[pos] = c2;
+//				c = c2;
+//				break;
+//			} 
+//			//it is a chunk, but is it the correct level?
+//			Chunk cSub = (Chunk) sub;
+//			while (--expectedLevel != cSub.level) {
+//				//Okay, some levels are unused, but do we need to insert one?
+//				int pos2 = (slotId >>> SHIFT(expectedLevel)) & mask;
+//				if (pos2 != 0) {  //can only be '0' or '1'...
+//					//insert level!
+//					Chunk c2 = createChunk(cSub.level+1);
+//					c2.children[0] = sub;
+//					c.children[pos] = c2;
+//					//Hack: jump directly to c2, because cSub has only one child! 
+//					cSub = c2;
+//					break;
+//				}
+//			}
+//			c = cSub;
+//		} 
+//		
+//		T ret = (T) c.children[slotId & mask];
+//		//TODO resize array if required?
+//		c.children[slotId & mask] = data;
+//		
+//		return ret;
+		return null; //TODO 
 	}
 	
 	

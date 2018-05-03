@@ -23,7 +23,6 @@ import ch.ethz.globis.phtree.nv.PhTreeNV;
 import ch.ethz.globis.phtree.test.util.TestSuper;
 import ch.ethz.globis.phtree.test.util.TestUtil;
 import ch.ethz.globis.phtree.util.Bits;
-import ch.ethz.globis.phtree.util.BitsLong;
 
 public class TestIndexQuerieSet extends TestSuper {
 

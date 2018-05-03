@@ -17,7 +17,7 @@ import ch.ethz.globis.phtree.v14.bst.LLEntry;
 public class BSTHandler {
 
 	public static class BSTEntry {
-		private final long[] kdKey;
+		private long[] kdKey;
 		private Object value;
 		public BSTEntry(long[] k, Object v) {
 			kdKey = k;
@@ -31,6 +31,10 @@ public class BSTHandler {
 		}
 		public void setValue(Object v) {
 			this.value = v;
+		}
+		public void setKdKey(long[] key) {
+			this.kdKey = key;
+			
 		}
 		
 	}
@@ -52,11 +56,12 @@ public class BSTHandler {
 			//B)
 			if (phNode == null) {
 				oldEntry.setValue(value);
+				oldEntry.setKdKey(kdKey);
 				return null;
 			}
 			
 			//C)
-			//We two entries in the same location (local hcPos).
+			//We have two entries in the same location (local hcPos).
 			//Now we need to compare the kdKeys.
 			//If they are identical, we either replace the VALUE or return the SUB-NODE
 			// (that's actually the same, simply return the VALUE)
@@ -74,7 +79,9 @@ public class BSTHandler {
 					return insertSplitPH(oldEntry, newEntry, mask, phNode);
 				}
 				//perfect match -> replace value
+				//TODO is this swapping good/sensible???
 				oldEntry.setValue(value);
+				oldEntry.setKdKey(kdKey);
 				newEntry.setValue(localVal);
 				return newEntry;
 			}
@@ -85,7 +92,7 @@ public class BSTHandler {
 		//phNode==null -> replace instead of split! 
 		//Otherwise:
 		// - A) entry does not exist -> add / incCounter(phNode)
-		// - B) entry exists, phNode == null -> replace
+		// - B) entry exists, phNode == null -> replace with subnode
 		// - C) entry exists: -> check infix/postfix
 		//   - C.1) value==Node: conflict ? split;insert-new-node;return-null : return Node
 		//   - C.2) value==obj:  conflict ? split;insert-new-node;return-null : return prevValue
@@ -97,46 +104,6 @@ public class BSTHandler {
 		// - C.2) set newNode return null || set T, return prev T
 		// A) is handled by BST.put(), B)/C) is handled by lambda
 		
-		//A)
-//		long localHcPos = NtNode.pos2LocalPos(hcPos, currentNode.getPostLen());
-//		int pin = currentNode.getPosition(localHcPos, NtNode.MAX_DIM);
-//		if (pin < 0) {
-//			//insert
-//			currentNode.localAddEntryPIN(pin, localHcPos, hcPos, kdKey, value);
-//			incCounter(phNode);
-//			return null;
-//		}
-//
-//
-//		//external postfix is not checked  
-//		if (phNode == null) {
-//			//B)
-//			return (T) currentNode.localReplaceEntry(pin, kdKey, value);
-//		} else {
-//			//What do we have to do?
-//			//We two entries in the same location (local hcPos).
-//			//Now we need to compare the kdKeys.
-//			//If they are identical, we either replace the VALUE or return the SUB-NODE
-//			// (that's actually the same, simply return the VALUE)
-//			//If the kdKey differs, we have to split, insert a newSubNode and return null.
-//
-//			//C)
-//			if (localVal instanceof Node) {
-//				Node subNode = (Node) localVal;
-//				long mask = phNode.calcInfixMask(subNode.getPostLen());
-//				return (T) insertSplitPH(kdKey, value, localVal, pin, 
-//						mask, currentNode, phNode);
-//			} else {
-//				if (phNode.getPostLen() > 0) {
-//					long mask = phNode.calcPostfixMask();
-//					return (T) insertSplitPH(kdKey, value, localVal, pin, 
-//							mask, currentNode, phNode);
-//				}
-//				//perfect match -> replace value
-//				currentNode.localReplaceValue(pin, value);
-//				return (T) value;
-//			}
-//		}
 	}
 
 	private static BSTEntry insertSplitPH(BSTEntry currentEntry, BSTEntry newEntry, long mask, Node phNode) {
@@ -165,6 +132,7 @@ public class BSTHandler {
 						localKdKey, currentValue, maxConflictingBits);
 
 		//replace value
+		//TODO When using BSTree for new subnodes, we need to copy the kdKey here! 
 		currentEntry.setValue(newNode);
 		//entry did not exist
         return null;
@@ -189,7 +157,24 @@ public class BSTHandler {
 		//Only remove value-entries, node-entries are simply returned without removing them
 		BSTEntry prev = ind.remove(hcPos, e -> {
 			if (matches(e, key, phNode)) {
-				return e.getValue() instanceof Node ? REMOVE_OP.KEEP_RETURN : REMOVE_OP.REMOVE_RETURN; 
+				if (e.getValue() instanceof Node) {
+					return REMOVE_OP.KEEP_RETURN;
+				}
+				if (newKey != null) {
+					//replace
+					int bitPosOfDiff = Node.calcConflictingBits(key, newKey, -1L);
+					if (bitPosOfDiff <= phNode.getPostLen()) {
+						//replace
+						//TODO simply replace kdKey!!
+						//Replacing the long[] should be correct (and fastest, and avoiding GC)
+						e.setKdKey(newKey);
+						//System.arraycopy(newKey, 0, e.getKdKey(), 0, newKey.length);
+						return REMOVE_OP.KEEP_RETURN;
+					} else {
+						insertRequired[0] = bitPosOfDiff;
+					}
+				}
+				return REMOVE_OP.REMOVE_RETURN;
 			}
 			return REMOVE_OP.KEEP_RETURN_NULL;
 		});
@@ -204,21 +189,6 @@ public class BSTHandler {
 		//  - No match: no delete, return null
 		//  - Match Node: no delete, return Node
 		//  - Match Value: delete, return value
-		if (newKey != null) {
-			if (prev != null && prev.getValue() != null && !(prev.getValue() instanceof Node)) {
-				//replace
-				int bitPosOfDiff = Node.calcConflictingBits(key, newKey, -1L);
-				if (bitPosOfDiff <= phNode.getPostLen()) {
-					//replace
-					//TODO simply replace kdKey!!
-//					return replacePost(pinToDelete, hcPos, newKey);
-//					return replaceEntry(ind, hcPos, kdKey, value);
-					return addEntry(ind, hcPos, newKey, prev.getValue(), phNode);
-				} else {
-					insertRequired[0] = bitPosOfDiff;
-				}
-			}
-		}
 		return prev == null ? null : prev.getValue();
 	}
 

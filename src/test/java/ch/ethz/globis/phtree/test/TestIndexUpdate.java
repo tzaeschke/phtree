@@ -155,7 +155,7 @@ public class TestIndexUpdate extends TestSuper {
 		
 		PhTree<long[]> tree = create(K, 64);
 		for (long[] r: data) {
-			//System.out.println("Inserting: " + r);
+			//System.out.println("Inserting: " + r + " / " + Arrays.toString(r));
 			tree.put(r, r);
 			assertTrue(tree.contains(r));
 		}
@@ -164,7 +164,7 @@ public class TestIndexUpdate extends TestSuper {
 		for (int repeat = 0; repeat < 10; repeat++) {
 			for (int i = 0; i < N; i++) {
 				long[] r = data[i];
-				//System.out.println("Updating: " + BitsLong.toBinary(r));
+				//System.out.println("Updating: " + Arrays.toString(r) + " / " + BitsLong.toBinary(r));
 				double delta = (R.nextDouble()*2*maxD-maxD) * MUL;
 				//double delta = R.nextDouble() * BOX_LEN/10.;
 				long[] rNew = new long[K];
