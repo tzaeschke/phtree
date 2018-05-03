@@ -51,6 +51,9 @@ public class BSTIteratorMinMax<T> {
 		this.minKey = minKey;
 		this.maxKey = maxKey;
 		this.currentPage = (BSTreePage) ind.getRoot();
+		this.currentPos = 0;
+		this.hasValue = false;
+		this.stack.clear();
 		findFirstPosInPage();
 		return this;
 	}
@@ -139,7 +142,6 @@ public class BSTIteratorMinMax<T> {
 		if (currentPos >= currentPage.getNKeys()) {
 			goToNextPage();
 			if (currentPage == null) {
-					hasValue = false;
 				return;
 			}
 		}

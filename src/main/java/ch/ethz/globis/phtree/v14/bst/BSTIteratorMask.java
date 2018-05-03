@@ -46,6 +46,9 @@ public class BSTIteratorMask<T> {
 		this.minMask = minMask;
 		this.maxMask = maxMask;
 		this.currentPage = (BSTreePage) ind.getRoot();
+		this.currentPos = 0;
+		this.hasValue = false;
+		this.stack.clear();
 		findFirstPosInPage();
 		return this;
 	}
@@ -134,7 +137,6 @@ public class BSTIteratorMask<T> {
 			if (currentPos >= currentPage.getNKeys()) {
 				goToNextPage();
 				if (currentPage == null) {
-					hasValue = false;
 					return;
 				}
 			}

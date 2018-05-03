@@ -11,6 +11,7 @@ import java.util.List;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v14.bst.BSTree;
+import ch.ethz.globis.phtree.v14.bst.BSTree.REMOVE_OP;
 import ch.ethz.globis.phtree.v14.bst.LLEntry;
 
 public class BSTHandler {
@@ -186,26 +187,36 @@ public class BSTHandler {
 	static Object removeEntry(BSTree<BSTEntry> ind, long hcPos, long[] key, 
 			long[] newKey, int[] insertRequired, Node phNode) {
 		//Only remove value-entries, node-entries are simply returned without removing them
-		BSTEntry prev = ind.remove(hcPos, e -> (e != null && !(e.value instanceof Node) && matches(e, key, phNode)) );
+		BSTEntry prev = ind.remove(hcPos, e -> {
+			if (matches(e, key, phNode)) {
+				return e.getValue() instanceof Node ? REMOVE_OP.KEEP_RETURN : REMOVE_OP.REMOVE_RETURN; 
+			}
+			return REMOVE_OP.KEEP_RETURN_NULL;
+		});
 		//return values: 
 		// - null -> not found / remove failed
 		// - Node -> recurse node
 		// - T -> remove success
-		//Node: removeing a node is never necessary: When values are removed from the PH-Tree, nodes are replaced
+		//Node: removing a node is never necessary: When values are removed from the PH-Tree, nodes are replaced
 		// with vales from sub-nodes, but they are never simply removed.
+		//-> The BST.remove() needs to do:
+		//  - Key not found: no delete, return null
+		//  - No match: no delete, return null
+		//  - Match Node: no delete, return Node
+		//  - Match Value: delete, return value
 		if (newKey != null) {
 			if (prev != null && prev.getValue() != null && !(prev.getValue() instanceof Node)) {
 				//replace
 				int bitPosOfDiff = Node.calcConflictingBits(key, newKey, -1L);
-				//TODO fixme
 				if (bitPosOfDiff <= phNode.getPostLen()) {
 					//replace
+					//TODO simply replace kdKey!!
 //					return replacePost(pinToDelete, hcPos, newKey);
+//					return replaceEntry(ind, hcPos, kdKey, value);
 					return addEntry(ind, hcPos, newKey, prev.getValue(), phNode);
 				} else {
 					insertRequired[0] = bitPosOfDiff;
 				}
-				//throw new UnsupportedOperationException();
 			}
 		}
 		return prev == null ? null : prev.getValue();

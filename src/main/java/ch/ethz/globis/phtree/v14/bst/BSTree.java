@@ -9,6 +9,7 @@ package ch.ethz.globis.phtree.v14.bst;
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
@@ -75,14 +76,11 @@ public class BSTree<T> {
 	 * @throws NoSuchElementException if key is not found
 	 */
 	@SuppressWarnings("unchecked")
-	public T remove(long key, Predicate<T> predicateRemove) {
+	public T remove(long key, Function<T, REMOVE_OP> predicateRemove) {
 		BSTreePage<T> page = getRoot();
 		Object result = null;
 		if (page != null) {
 			result = page.findAndRemove(key, predicateRemove);
-			if (result == null) {
-				throw new NoSuchElementException("Key not found: " + key);
-			}
 		}
 
 		return result == NULL ? null : (T) result;
@@ -204,5 +202,10 @@ public class BSTree<T> {
 		nEntries--;
 	}
 	
+	public enum REMOVE_OP {
+		REMOVE_RETURN,
+		KEEP_RETURN,
+		KEEP_RETURN_NULL;
+	}
 }
 

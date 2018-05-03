@@ -406,16 +406,16 @@ public class TestIndexDeletion extends TestSuper {
 					902882491532829926L, 303331575839660663L, 7449544573896043481L, 
 					3092090196943101957L, 4515887688766405296L,  },
 				{ -4062685296717429368L, -1458447326603816251L, 72520369377032730L, 
-					2504023206924321121L, 1315032411642037417L, -671118087238692233L, 
-					-5937697448152876824L, 2914069232554644162L, -122761879731138883L, 
-					-2704799728189953919L, -3595630054475699660L, -6904106471410655605L, 
-					5398810977192619702L, -6244681884589765467L, 3001783947703718265L, 
-					9096083008774451479L, 7106685045394120506L, 1612660455506562941L, 
-					-1602009131231155926L, 4674088701860260058L, 3523904087147023653L, 
-					-7471386555745361678L, 6434863598619692329L, 3519486867992011992L, 
-					2580325349084506629L, 1716045732687783621L, -7492979958698560176L, 
-					-4514641440177765589L, 3721608777574387356L, -1662765351114890487L, 
-					3457037762958540780L, -1786853829876224128L,  }};
+						2504023206924321121L, 1315032411642037417L, -671118087238692233L, 
+						-5937697448152876824L, 2914069232554644162L, -122761879731138883L, 
+						-2704799728189953919L, -3595630054475699660L, -6904106471410655605L, 
+						5398810977192619702L, -6244681884589765467L, 3001783947703718265L, 
+						9096083008774451479L, 7106685045394120506L, 1612660455506562941L, 
+						-1602009131231155926L, 4674088701860260058L, 3523904087147023653L, 
+						-7471386555745361678L, 6434863598619692329L, 3519486867992011992L, 
+						2580325349084506629L, 1716045732687783621L, -7492979958698560176L, 
+						-4514641440177765589L, 3721608777574387356L, -1662765351114890487L, 
+						3457037762958540780L, -1786853829876224128L,  }};
 		final int N = vals.length;
 		PhTree<long[]> ind = create(DIM, DEPTH);
 		for (int i = 0; i < N; i++) {
@@ -454,34 +454,34 @@ public class TestIndexDeletion extends TestSuper {
 		//TODO remove s?
 		for (int s = 0; s < 100; s++) {
 			Random R = new Random(s);
-		long[][] vals = new long[N][];
-		PhTree<long[]> ind = create(DIM, DEPTH);
-		for (int i = 0; i < N; i++) {
-			long[] v = new long[DIM];
-			for (int j = 0; j < DIM; j++) {
-				v[j] = R.nextLong();
+			long[][] vals = new long[N][];
+			PhTree<long[]> ind = create(DIM, DEPTH);
+			for (int i = 0; i < N; i++) {
+				long[] v = new long[DIM];
+				for (int j = 0; j < DIM; j++) {
+					v[j] = R.nextLong();
+				}
+				vals[i] = v;
+				assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
 			}
-			vals[i] = v;
-			assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
-		}
 
-		//delete all
-		for (long[] v: vals) {
-			assertTrue("DIM=" + DIM + " s=" + s +" v=" + Bits.toBinary(v, DEPTH), ind.contains(v));
-			assertNotNull(ind.remove(v));
-		}
+			//delete all
+			for (long[] v: vals) {
+				assertTrue("DIM=" + DIM + " s=" + s +" v=" + Bits.toBinary(v, DEPTH), ind.contains(v));
+				assertNotNull(ind.remove(v));
+			}
 
-		//check empty result
-		long[] min = new long[DIM];
-		long[] max = new long[DIM];
-		for (int i = 0; i < DIM; i++) {
-			min[i] = Long.MIN_VALUE;
-			max[i] = Long.MAX_VALUE;
-		}
-		Iterator<long[]> it = ind.query(min, max);
-		assertFalse(it.hasNext());
+			//check empty result
+			long[] min = new long[DIM];
+			long[] max = new long[DIM];
+			for (int i = 0; i < DIM; i++) {
+				min[i] = Long.MIN_VALUE;
+				max[i] = Long.MAX_VALUE;
+			}
+			Iterator<long[]> it = ind.query(min, max);
+			assertFalse(it.hasNext());
 
-		assertEquals(0, ind.size());
+			assertEquals(0, ind.size());
 		}
 	}
 

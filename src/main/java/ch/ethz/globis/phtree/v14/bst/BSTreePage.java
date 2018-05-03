@@ -9,9 +9,11 @@ package ch.ethz.globis.phtree.v14.bst;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
+import ch.ethz.globis.phtree.v14.bst.BSTree.REMOVE_OP;
 import ch.ethz.globis.phtree.v14.bst.BSTree.Stats;
 
 class BSTreePage<T> {
@@ -64,7 +66,7 @@ class BSTreePage<T> {
         return subPages[pos]; 
 	}
 	
-	Object findAndRemove(long key, Predicate<T> predicateRemove) {
+	Object findAndRemove(long key, Function<T, REMOVE_OP> predicateRemove) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -448,24 +450,34 @@ class BSTreePage<T> {
 	}
 	
 
-	private Object remove(long key, Predicate<T> predicateRemove) {
+	private Object remove(long key, Function<T, REMOVE_OP> predicateRemove) {
         int i = binarySearch(0, nEntries, key);
         if (i < 0) {
         	//key not found
-        	//TODO return null???
-        	throw new NoSuchElementException("Key not found: " + key);
+        	return null;
         }
         
         
         // first remove the element
         Object prevValue = values[i];
-        if (predicateRemove == null || predicateRemove.test((T)prevValue)) {
+        REMOVE_OP op = REMOVE_OP.REMOVE_RETURN;
+        if (predicateRemove != null) {
+        	op = predicateRemove.apply((T) prevValue); 
+        }
+        switch (op) {
+		case REMOVE_RETURN:
         	System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
         	System.arraycopy(values, i+1, values, i, nEntries-i-1);
         	nEntries--;
         	ind.decreaseEntries();
-        }
-        return prevValue;
+        	return prevValue;
+		case KEEP_RETURN:
+			return prevValue;
+		case KEEP_RETURN_NULL:
+			return null;
+		default:
+			throw new IllegalArgumentException();
+		}
 	}
 	
 	private void checkUnderflowSubpageLeaf(int pos) {
