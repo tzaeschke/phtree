@@ -25,27 +25,27 @@ public class TestHTable {
 		
 		//populate
 		for (int i = 0; i < N; i++) {
-			System.out.println(i); //TODO
+//			System.out.println(i); //TODO
 			int pos = ht.append(i);
 			assertEquals(i, pos);
 		}
 		
 		//lookup
 		for (int i = 0; i < N; i++) {
-			System.out.println("lookup: " + i); //TODO
+//			System.out.println("lookup: " + i); //TODO
 			Integer x = ht.get(i);
 			assertEquals("i=" + i, i, (int) x);
 		}
 		
 		//replace some
 		for (int i = 0; i < N/2; i++) {
-			System.out.println("replace: " + i); //TODO
+//			System.out.println("replace: " + i); //TODO
 			assertEquals(N - i - 1, (int) ht.replaceWithLast(i));
 		}
 		
 		//remove some
 		for (int i = 0; i < N/2; i++) {
-			System.out.println("remove: " + i); //TODO
+//			System.out.println("remove: " + i); //TODO
 			assertEquals(N/2 + i, (int) ht.replaceWithLast(0));
 		}
 		

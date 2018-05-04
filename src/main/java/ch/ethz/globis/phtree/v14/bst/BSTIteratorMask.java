@@ -137,6 +137,9 @@ public class BSTIteratorMask<T> {
 			if (currentPos >= currentPage.getNKeys()) {
 				goToNextPage();
 				if (currentPage == null) {
+					if (!check(nextKey)) {
+						hasValue = false;
+					}
 					return;
 				}
 			}

@@ -34,7 +34,7 @@ public class Node {
 	private static final int INN_HC_WIDTH = 0; //Index-NotNull: width of not-null flag for post/infix-hc
 	/** Bias towards using AHC. AHC is used if (sizeLHC*AHC_LHC_BIAS) greater than (sizeAHC)  */
 	public static final double AHC_LHC_BIAS = 2.0; 
-	public static final int NT_THRESHOLD = 2;//150; 
+	public static final int NT_THRESHOLD = 100; 
 
 	private Object[] values;
 	

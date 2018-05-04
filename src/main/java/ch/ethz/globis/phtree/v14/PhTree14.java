@@ -28,7 +28,7 @@ import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v14.nt.NtNode;
+import ch.ethz.globis.phtree.v14.bst.BSTree;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -329,7 +329,7 @@ public class PhTree14<T> implements PhTree<T> {
 				" AHC-on=" + AHC_ENABLED +  
 				" HCI-on=" + HCI_ENABLED +  
 				" NtLimit=" + Node.NT_THRESHOLD +  
-				" NtMaxDim=" + NtNode.MAX_DIM +  
+				" BstSize=" + BSTree.maxInnerN + "/" + BSTree.maxLeafN +  
 				" DEBUG=" + PhTreeHelper.DEBUG;
 	}
 

@@ -7,7 +7,6 @@
 package ch.ethz.globis.phtree.ht;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 import java.util.List;
@@ -19,8 +18,8 @@ import org.junit.Test;
 
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
-import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax.LLEntry;
 import ch.ethz.globis.phtree.v14.bst.BSTree;
+import ch.ethz.globis.phtree.v14.bst.LLEntry;
 
 public class TestBST {
 
@@ -128,8 +127,8 @@ public class TestBST {
 		long l41 = System.currentTimeMillis();
 		for (int i : list) {
 			//if (i%1000 == 0) 
-//			System.out.println("rem=" + i);
-			assertTrue(ht.remove(i));
+			//System.out.println("rem=" + i);
+			assertEquals(-i, (int) ht.remove(i));
 //			if (ht.size() % 100_000 == 0) {
 //				println(ht.getStats().toString());
 //			}
