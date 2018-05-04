@@ -6,6 +6,7 @@
  */
 package ch.ethz.globis.phtree.v14;
 
+@Deprecated
 public class HTable<T> {
 	
 	private static final int BITS_INNER = 3;

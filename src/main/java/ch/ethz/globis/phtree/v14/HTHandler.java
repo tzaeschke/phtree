@@ -7,8 +7,8 @@
 package ch.ethz.globis.phtree.v14;
 
 import ch.ethz.globis.phtree.util.Refs;
-import ch.ethz.globis.phtree.v14.nt.NtNode;
 
+@Deprecated
 public class HTHandler {
 
 	public static Object addEntry(long[] ba, HTable2<Object> ind, long hcPos, long[] kdKey, Object value, Node node) {
@@ -24,7 +24,7 @@ public class HTHandler {
 		//return null;
 	}
 
-	public static Object getEntry(long[] ba, NtNode<Object> ind, long hcPos, long[] outKey, long[] keyToMatch,
+	public static Object getEntry(long[] ba, HTable2<Object> ind, long hcPos, long[] outKey, long[] keyToMatch,
 			Node object2) {
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException();
