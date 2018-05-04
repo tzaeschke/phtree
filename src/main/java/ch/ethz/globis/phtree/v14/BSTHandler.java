@@ -165,10 +165,9 @@ public class BSTHandler {
 					int bitPosOfDiff = Node.calcConflictingBits(key, newKey, -1L);
 					if (bitPosOfDiff <= phNode.getPostLen()) {
 						//replace
-						//TODO simply replace kdKey!!
+						//simply replace kdKey!!
 						//Replacing the long[] should be correct (and fastest, and avoiding GC)
 						e.setKdKey(newKey);
-						//System.arraycopy(newKey, 0, e.getKdKey(), 0, newKey.length);
 						return REMOVE_OP.KEEP_RETURN;
 					} else {
 						insertRequired[0] = bitPosOfDiff;

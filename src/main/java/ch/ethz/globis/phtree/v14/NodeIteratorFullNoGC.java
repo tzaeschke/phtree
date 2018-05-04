@@ -123,7 +123,7 @@ public class NodeIteratorFullNoGC<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	private boolean readValue(long pos, long[] kdKey, Object value, PhEntry<T> result) {
+	private boolean readValue(long[] kdKey, Object value, PhEntry<T> result) {
 		if (value instanceof Node) {
 			Node sub = (Node) value;
 			if (checker != null && !checker.isValid(sub.postLenStored()+1, kdKey)) {
@@ -185,7 +185,7 @@ public class NodeIteratorFullNoGC<T> {
 		while (ntIterator.hasNextULL()) {
 			LLEntry le = ntIterator.nextEntryReuse();
 			BSTEntry be = (BSTEntry) le.getValue();
-			if (readValue(le.getKey(), be.getKdKey(), be.getValue(), result)) {
+			if (readValue(be.getKdKey(), be.getValue(), result)) {
 				next = le.getKey();
 				return;
 			}

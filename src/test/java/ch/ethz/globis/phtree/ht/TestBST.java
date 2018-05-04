@@ -27,7 +27,7 @@ public class TestBST {
 	private static final int N2 = 10*N1;
 	
 	private <T> BSTree<T> create() {
-		return new BSTree<>();
+		return new BSTree<>(100, 100);
 	}
 	
 	@Test

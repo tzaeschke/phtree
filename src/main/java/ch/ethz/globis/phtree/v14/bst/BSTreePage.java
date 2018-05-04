@@ -22,11 +22,11 @@ class BSTreePage<T> {
 	/** number of keys. There are nEntries+1 subPages in any leaf page. */
 	private short nEntries;
 
-	private final BSTree<T> ind;
 	private final boolean isLeaf;
 	private BSTreePage<T>[] subPages;
-	
-	
+
+
+	@SuppressWarnings("unchecked")
 	public BSTreePage(BSTree<T> ind, BSTreePage<T> parent, boolean isLeaf) {
 		this.parent = parent;
 		if (isLeaf) {
@@ -39,7 +39,6 @@ class BSTreePage<T> {
 			values = null;
 		}
 		
-		this.ind = ind;
 		if (!isLeaf) {	
 			subPages = new BSTreePage[ind.maxInnerN + 1];
 			BSTree.statNInner++;
@@ -50,6 +49,21 @@ class BSTreePage<T> {
 		this.isLeaf = isLeaf;
 	}
 
+	private int maxInnerN() {
+		return keys.length;
+	}
+	
+	private int maxLeafN() {
+		return keys.length;
+	}
+	
+	private final int minLeafN(int maxLeafN) { 
+		return maxLeafN >> 1; 
+	}
+	
+	private final int minInnerN(int maxInnerN) { 
+		return maxInnerN >> 1; 
+	}  
 	
 	BSTreePage<T> findSubPage(long key) {
 		//The stored value[i] is the min-values of the according page[i+1} 
@@ -64,7 +78,7 @@ class BSTreePage<T> {
         return subPages[pos]; 
 	}
 	
-	Object findAndRemove(long key, Function<T, REMOVE_OP> predicateRemove) {
+	Object findAndRemove(long key, Function<T, REMOVE_OP> predicateRemove, BSTree<T> ind) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -77,10 +91,10 @@ class BSTreePage<T> {
         BSTreePage<T> page = subPages[pos]; 
         Object result = null;
         if (page.isLeaf()) {
-        	result = page.remove(key, predicateRemove);
+        	result = page.remove(key, predicateRemove, ind);
             checkUnderflowSubpageLeaf(pos);
         } else {
-        	result = page.findAndRemove(key, predicateRemove);
+        	result = page.findAndRemove(key, predicateRemove, ind);
         	handleUnderflowSubInner(pos);
         }
         return result;
@@ -93,7 +107,7 @@ class BSTreePage<T> {
 	 * @return the page
 	 */
 	@SuppressWarnings("unchecked")
-	public Object put(long key, T value, BiFunction<T, T, Object> collisionHandler) {
+	public Object put(long key, T value, BiFunction<T, T, Object> collisionHandler, BSTree<T> ind) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -105,14 +119,14 @@ class BSTreePage<T> {
         //read page before that value
         BSTreePage<T> page = getPageByPos(pos);
         if (page == null) {
-        	page = createLeafPage(pos);
+        	page = createLeafPage(ind, pos);
         }
         if (page.isLeaf()) {
-    		Object o = page.put(key, value, this, pos, collisionHandler);
+    		Object o = page.put(key, value, this, pos, collisionHandler, ind);
     		if (o instanceof BSTreePage) {
     			//add page
     			BSTreePage<T> newPage = (BSTreePage<T>) o;
-    			addSubPage(newPage, newPage.getMinKey(), pos);
+    			addSubPage(newPage, newPage.getMinKey(), pos, ind);
     			return null;
     		}
     		return o;
@@ -166,7 +180,7 @@ class BSTreePage<T> {
      */
 	@SuppressWarnings("unchecked")
 	public final Object put(long key, T value, BSTreePage<T> parent, int posPageInParent, 
-			BiFunction<T, T, Object> collisionHandler) {
+			BiFunction<T, T, Object> collisionHandler, BSTree<T> ind) {
 		if (!isLeaf) {
 			throw new IllegalStateException("Tree inconsistency.");
 		}
@@ -189,7 +203,7 @@ class BSTreePage<T> {
     		collisionHandler.apply(null, null);
     	}
         
-        if (nEntries < ind.maxLeafN) {
+        if (nEntries < maxLeafN()) {
         	//okay so we add it locally
         	pos = -(pos+1);
         	if (pos < nEntries) {
@@ -214,14 +228,14 @@ class BSTreePage<T> {
         //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
         //loops, see iterator tests)
         BSTreePage<T> next = parent.getNextLeafPage(posPageInParent);
-        if (next != null && next.nEntries < ind.maxLeafN-1) {
+        if (next != null && next.nEntries < next.maxLeafN()-1) {
         	//merge
         	destP = next;
         	isPrev = false;
         } else {
         	//Merging with prev is not make a big difference, maybe we should remove it...
         	BSTreePage<T> prev = parent.getPrevLeafPage(posPageInParent);
-        	if (prev != null && prev.nEntries < ind.maxLeafN-1) {
+        	if (prev != null && prev.nEntries < prev.maxLeafN()-1) {
         		//merge
         		destP = prev;
         		isPrev = true;
@@ -259,15 +273,15 @@ class BSTreePage<T> {
        	if (isNew || !isPrev) {
        		if (destP.keys[0] > key) {
        			//posInParent=-2, because we won't need it there
-       			put(key, value, parent, -2, null);
+       			put(key, value, parent, -2, null, ind);
        		} else {
-       			destP.put(key, value, parent, -2, null);
+       			destP.put(key, value, parent, -2, null, ind);
        		}
        	} else {
        		if (keys[0] > key) {
-       			destP.put(key, value, parent, -2, null);
+       			destP.put(key, value, parent, -2, null, ind);
        		} else {
-       			put(key, value, parent, -2, null);
+       			put(key, value, parent, -2, null, ind);
        		}
        	}
        	if (isNew) {
@@ -299,12 +313,12 @@ class BSTreePage<T> {
 	@Deprecated
 	private static final int NO_POS = -1000;
 	
-	private void addSubPage(BSTreePage<T> newP, long minKey, int keyPos) {
+	private void addSubPage(BSTreePage<T> newP, long minKey, int keyPos, BSTree<T> ind) {
 		if (isLeaf) {
 			throw new IllegalStateException("Tree inconsistency");
 		}
 		
-		if (nEntries < ind.maxInnerN) {
+		if (nEntries < maxInnerN()) {
 			//add page here
 			
 			if (keyPos == NO_POS) {
@@ -352,9 +366,10 @@ class BSTreePage<T> {
 			BSTreePage<T> newInner = ind.createPage(parent, false);
 			
 			//TODO use optimized fill ration for unique values, just like for leaves?.
-			System.arraycopy(keys, ind.minInnerN+1, newInner.keys, 0, nEntries-ind.minInnerN-1);
-			System.arraycopy(subPages, ind.minInnerN+1, newInner.subPages, 0, nEntries-ind.minInnerN);
-			newInner.nEntries = (short) (nEntries-ind.minInnerN-1);
+			int minInnerN = minInnerN(keys.length);
+			System.arraycopy(keys, minInnerN+1, newInner.keys, 0, nEntries-minInnerN-1);
+			System.arraycopy(subPages, minInnerN+1, newInner.subPages, 0, nEntries-minInnerN);
+			newInner.nEntries = (short) (nEntries-minInnerN-1);
 			newInner.assignThisAsParentToLeaves();
 
 			if (parent == null) {
@@ -366,9 +381,9 @@ class BSTreePage<T> {
 				ind.updateRoot(newRoot);
 			}
 
-			parent.addSubPage(newInner, keys[ind.minInnerN], NO_POS);
+			parent.addSubPage(newInner, keys[minInnerN], NO_POS, ind);
 
-			nEntries = (short) (ind.minInnerN);
+			nEntries = (short) (minInnerN);
 			//finally add the leaf to the according page
 			BSTreePage<T> newHome;
 			long newInnerMinKey = newInner.getMinKey();
@@ -377,7 +392,7 @@ class BSTreePage<T> {
 			} else {
 				newHome = newInner;
 			}
-			newHome.addSubPage(newP, minKey, NO_POS);
+			newHome.addSubPage(newP, minKey, NO_POS, ind);
 			return;
 		}
 	}
@@ -451,7 +466,7 @@ class BSTreePage<T> {
 	
 
 	@SuppressWarnings("unchecked")
-	private Object remove(long key, Function<T, REMOVE_OP> predicateRemove) {
+	private Object remove(long key, Function<T, REMOVE_OP> predicateRemove, BSTree<T> ind) {
         int i = binarySearch(0, nEntries, key);
         if (i < 0) {
         	//key not found
@@ -471,6 +486,7 @@ class BSTreePage<T> {
         	System.arraycopy(values, i+1, values, i, nEntries-i-1);
         	nEntries--;
         	ind.decreaseEntries();
+        	//TODO merge with neighbors if to small
         	return prevValue;
 		case KEEP_RETURN:
 			return prevValue;
@@ -485,8 +501,8 @@ class BSTreePage<T> {
 		BSTreePage<T> subPage = getPageByPos(pos);
         if (subPage.nEntries == 0) {
         	BSTree.statNLeaves--;
-        	removePage3(pos);
-        } else if (subPage.nEntries < (ind.maxLeafN >> 1) && (subPage.nEntries % 8 == 0)) {
+        	removePage(pos);
+        } else if (subPage.nEntries < (subPage.maxLeafN() >> 1) && (subPage.nEntries % 8 == 0)) {
         	//The second term prevents frequent reading of previous and following pages.
         	//TODO Should we instead check for nEntries==MAx>>1 then == (MAX>>2) then <= (MAX>>3)?
 
@@ -496,20 +512,20 @@ class BSTreePage<T> {
          		//We merge only if they all fit on a single page. This means we may read
         		//the previous page unnecessarily, but we avoid writing it as long as 
         		//possible. TODO find a balance, and do no read prev page in all cases
-        		if (subPage.nEntries + prevPage.nEntries < ind.maxLeafN) {
+        		if (subPage.nEntries + prevPage.nEntries < subPage.maxLeafN()) {
         			//TODO for now this work only for leaves with the same root. We
         			//would need to update the min values in the inner nodes.
         			System.arraycopy(subPage.keys, 0, prevPage.keys, prevPage.nEntries, subPage.nEntries);
         			System.arraycopy(subPage.values, 0, prevPage.values, prevPage.nEntries, subPage.nEntries);
         			prevPage.nEntries += subPage.nEntries;
         			BSTree.statNLeaves--;
-        			removePage3(pos);
+        			removePage(pos);
         		}
         	}
         }
 	}
 
-	private void removePage3(int posToRemove) {
+	private void removePage(int posToRemove) {
 		BSTreePage<T> indexPage = getPageByPos(posToRemove);
 		
 		//remove sub page page from FSM.
@@ -524,19 +540,19 @@ class BSTreePage<T> {
 	
 	private void handleUnderflowSubInner(int pos) {
 		BSTreePage<T> sub = getPageByPos(pos);
-		if (sub.nEntries < ind.maxInnerN>>1) {
+		if (sub.nEntries < maxInnerN()>>1) {
 			if (sub.nEntries >= 0) {
 				BSTreePage<T> prev = getPrevInnerPage(pos);
 				if (prev != null && !prev.isLeaf) {
 					// this is only good for merging inside the same parent.
-					if ((sub.nEntries % 2 == 0) && (prev.nEntries + sub.nEntries < ind.maxInnerN)) {
+					if ((sub.nEntries % 2 == 0) && (prev.nEntries + sub.nEntries < maxInnerN())) {
 						System.arraycopy(sub.keys, 0, prev.keys, prev.nEntries+1, sub.nEntries);
 						System.arraycopy(sub.subPages, 0, prev.subPages, prev.nEntries+1, sub.nEntries+1);
 						//find key for the first appended page -> go up or go down????? Up!
 						prev.keys[prev.nEntries] = keys[pos - 1]; 
 						prev.nEntries += sub.nEntries + 1;  //for the additional key
 						prev.assignThisAsParentToLeaves();
-						removePage3(pos);
+						removePage(pos);
 					}
 					return;
 				}
@@ -634,7 +650,7 @@ class BSTreePage<T> {
 	}
 	
 	
-	private BSTreePage<T> createLeafPage(int pos) {
+	private BSTreePage<T> createLeafPage(BSTree<T> ind, int pos) {
 		if (subPages[pos] != null) {
 			throw new IllegalStateException();
 		}
@@ -758,7 +774,6 @@ class BSTreePage<T> {
 	boolean isLeaf() {
 		return isLeaf;
 	}
-
 
 	void getStats(Stats stats) {
 		if (isLeaf()) {

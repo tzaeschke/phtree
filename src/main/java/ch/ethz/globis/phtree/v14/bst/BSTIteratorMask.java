@@ -186,6 +186,22 @@ public class BSTIteratorMask<T> {
 				close();
 				return;
 			}
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO if check fails we could/should use inc() to find next valid page:
+			//TODO 1) in leaf: compare to page.max()
+			//TODO 2) in inner: (compare to max?, then:) compare to key of next-page (skip pages) 
 		} while (!check(nextKey));
 	}
 

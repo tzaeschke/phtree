@@ -21,11 +21,9 @@ public class BSTree<T> {
 	
 	static final Object NULL = new Object();
 	
-	public static final int maxLeafN = 100;//10;//340;
+	public final int maxLeafN;// = 100;//10;//340;
 	/** Max number of keys in inner page (there can be max+1 page-refs) */
-	public static final int maxInnerN = 100;//11;//509;
-	protected final int minLeafN = maxLeafN >> 1;  //254
-	protected final int minInnerN = maxInnerN >> 1;  //170
+	public final int maxInnerN;// = 100;//11;//509;
 	static int statNLeaves = 0;
 	static int statNInner = 0;
 	private int modCount = 0;
@@ -34,7 +32,30 @@ public class BSTree<T> {
 	
 	private transient BSTreePage<T> root;
 	
-	public BSTree() {
+	public BSTree(int dims) {
+		switch (dims) {
+		case 1: maxLeafN = 2; maxInnerN = 2; break;
+		case 2: maxLeafN = 4; maxInnerN = 2; break;
+		case 3: maxLeafN = 8; maxInnerN = 2; break;
+		case 4: maxLeafN = 16; maxInnerN = 2; break;
+		case 5: maxLeafN = 16; maxInnerN = 2+1; break;
+		case 6: maxLeafN = 16; maxInnerN = 4+1; break;
+		case 7: maxLeafN = 16; maxInnerN = 8+1; break;
+		case 8: maxLeafN = 16; maxInnerN = 16+1; break;
+		case 9: maxLeafN = 32; maxInnerN = 16+1; break;
+		case 10: maxLeafN = 32; maxInnerN = 32+1; break;
+		case 11: maxLeafN = 32; maxInnerN = 64+1; break;
+		case 12: maxLeafN = 64; maxInnerN = 64+1; break;
+		default: maxLeafN = 100; maxInnerN = 100; break;
+		}
+		//bootstrap index
+		root = createPage(null, false);
+	}
+
+	public BSTree(int pageSizeInner, int pageSizeLeaf) {
+		this.maxInnerN = pageSizeInner;
+		this.maxLeafN = pageSizeLeaf;
+
 		//bootstrap index
 		root = createPage(null, false);
 	}
@@ -50,7 +71,7 @@ public class BSTree<T> {
 		BSTreePage<T> page = getRoot();
 		Object o = page;
 		while (o instanceof BSTreePage && !((BSTreePage<T>)o).isLeaf()) {
-			o = ((BSTreePage<T>)o).put(key, (T)val, collisionHandler);
+			o = ((BSTreePage<T>)o).put(key, (T)val, collisionHandler, this);
 		}
 		if (o == null) {
 			//did not exist
@@ -80,7 +101,7 @@ public class BSTree<T> {
 		BSTreePage<T> page = getRoot();
 		Object result = null;
 		if (page != null) {
-			result = page.findAndRemove(key, predicateRemove);
+			result = page.findAndRemove(key, predicateRemove, this);
 		}
 
 		return result == NULL ? null : (T) result;

@@ -324,12 +324,13 @@ public class PhTree14<T> implements PhTree<T> {
 
 	@Override
 	public String toString() {
+		BSTree<T> bst = new BSTree<>(dims);
 		return this.getClass().getSimpleName() + 
 				" AHC/LHC=" + Node.AHC_LHC_BIAS +  
 				" AHC-on=" + AHC_ENABLED +  
 				" HCI-on=" + HCI_ENABLED +  
 				" NtLimit=" + Node.NT_THRESHOLD +  
-				" BstSize=" + BSTree.maxInnerN + "/" + BSTree.maxLeafN +  
+				" BstSize=" + bst.maxInnerN + "/" + bst.maxLeafN +  
 				" DEBUG=" + PhTreeHelper.DEBUG;
 	}
 
