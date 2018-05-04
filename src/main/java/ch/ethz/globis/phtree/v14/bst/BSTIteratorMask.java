@@ -6,7 +6,6 @@
  */
 package ch.ethz.globis.phtree.v14.bst;
 
-import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
 /**
@@ -16,27 +15,64 @@ import java.util.NoSuchElementException;
  */
 public class BSTIteratorMask<T> {
 
-	static class IteratorPos {
-		IteratorPos(BSTreePage page, short pos) {
+	static class IteratorPos<T> {
+		BSTreePage<T> page;
+		short pos;
+
+		void init(BSTreePage<T> page, short pos) {
 			this.page = page;
 			this.pos = pos;
 		}
-		BSTreePage page;
-		short pos;
+	}
+
+	static class IteratorPosStack<T> {
+		private final IteratorPos<T>[] stack;
+		private int size = 0;
+		
+		@SuppressWarnings("unchecked")
+		public IteratorPosStack(int depth) {
+			stack = new IteratorPos[depth];
+		}
+
+		public boolean isEmpty() {
+			return size == 0;
+		}
+
+		public IteratorPos<T> prepareAndPush(BSTreePage<T> page, short pos) {
+			IteratorPos<T> ni = stack[size++];
+			if (ni == null)  {
+				ni = new IteratorPos<T>();
+				stack[size-1] = ni;
+			}
+			ni.init(page, pos);
+			return ni;
+		}
+
+		public IteratorPos<T> peek() {
+			return stack[size-1];
+		}
+
+		public IteratorPos<T> pop() {
+			return stack[--size];
+		}
+
+		public void clear() {
+			size = 0;
+		}
 	}
 
 	private BSTree<T> ind;
 	private int modCount;
-	private BSTreePage currentPage = null;
+	private BSTreePage<T> currentPage = null;
 	private short currentPos = 0;
 	private long minMask;
 	private long maxMask;
-	private final ArrayList<IteratorPos> stack = new ArrayList<IteratorPos>(20);
+	private final IteratorPosStack<T> stack = new IteratorPosStack<>(20);
 	private long nextKey;
 	private Object nextValue;
 	private boolean hasValue = false;
 	
-	public BSTIteratorMask(int dims) {
+	public BSTIteratorMask() {
 		//nothing
 	}
 
@@ -45,7 +81,7 @@ public class BSTIteratorMask<T> {
 		this.modCount = ind.getModCount();
 		this.minMask = minMask;
 		this.maxMask = maxMask;
-		this.currentPage = (BSTreePage) ind.getRoot();
+		this.currentPage = ind.getRoot();
 		this.currentPos = 0;
 		this.hasValue = false;
 		this.stack.clear();
@@ -65,7 +101,7 @@ public class BSTIteratorMask<T> {
 
 	
 	private void goToNextPage() {
-		IteratorPos ip = stack.remove(stack.size()-1);
+		IteratorPos<T> ip = stack.pop();
 		currentPage = ip.page;
 		currentPos = ip.pos;
 		currentPos++;
@@ -75,7 +111,7 @@ public class BSTIteratorMask<T> {
 				close();
 				return;// false;
 			}
-			ip = stack.remove(stack.size()-1);
+			ip = stack.pop();
 			currentPage = ip.page;
 			currentPos = ip.pos;
 			currentPos++;
@@ -86,7 +122,7 @@ public class BSTIteratorMask<T> {
 			//start with
 
 			//read last page
-			stack.add(new IteratorPos(currentPage, currentPos));
+			stack.prepareAndPush(currentPage, currentPos);
 			currentPage = currentPage.getPageByPos(currentPos);
 			currentPos = 0;
 		}
@@ -108,13 +144,13 @@ public class BSTIteratorMask<T> {
 		    }
 	    	currentPos = (short)pos2;
 
-	    	BSTreePage newPage = currentPage.getPageByPos(currentPos);
+	    	BSTreePage<T> newPage = currentPage.getPageByPos(currentPos);
 			//are we on the correct branch?
 	    	//We are searching with LONG_MIN value. If the key[] matches exactly, then the
 	    	//selected page may not actually contain any valid elements.
 	    	//In any case this will be sorted out in findFirstPosInPage()
 	    	
-			stack.add(new IteratorPos(currentPage, currentPos));
+	    	stack.prepareAndPush(currentPage, currentPos);
 			currentPage = newPage;
 			currentPos = 0;
 		}
@@ -243,7 +279,6 @@ public class BSTIteratorMask<T> {
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();
 		}
-        checkValidity();
 
         long ret = nextKey;
 		if (currentPage == null) {

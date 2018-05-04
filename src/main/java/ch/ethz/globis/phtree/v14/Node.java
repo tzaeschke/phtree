@@ -1477,7 +1477,7 @@ public class Node {
     }
 
     BSTIteratorMask<BSTEntry> ntIteratorWithMask(int dims, long maskLower, long maskUpper) {
-    	return new BSTIteratorMask<BSTEntry>(dims).reset(ind, maskLower, maskUpper);
+    	return new BSTIteratorMask<BSTEntry>().reset(ind, maskLower, maskUpper);
 		//TODO reuse iterator???
 		//TODO
 		//TODO

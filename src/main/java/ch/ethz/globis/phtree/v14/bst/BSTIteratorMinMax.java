@@ -6,8 +6,10 @@
  */
 package ch.ethz.globis.phtree.v14.bst;
 
-import java.util.ArrayList;
 import java.util.NoSuchElementException;
+
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask.IteratorPos;
+import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask.IteratorPosStack;
 
 /**
  * 
@@ -16,32 +18,19 @@ import java.util.NoSuchElementException;
  */
 public class BSTIteratorMinMax<T> {
 
-	static class IteratorPos {
-		IteratorPos(BSTreePage page, short pos) {
-			this.page = page;
-			this.pos = pos;
-		}
-		BSTreePage page;
-		short pos;
-	}
 
 	private BSTree<T> ind;
 	private int modCount;
-	private BSTreePage currentPage = null;
+	private BSTreePage<T> currentPage = null;
 	private short currentPos = 0;
 	private long minKey;
 	private long maxKey;
-	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
-	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
-	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
-	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
-	//TODO stack !!!!!!!!!!!!!!!!!!!!!!!
-	private final ArrayList<IteratorPos> stack = new ArrayList<IteratorPos>(20);
+	private final IteratorPosStack<T> stack = new IteratorPosStack<>(20);
 	private long nextKey;
 	private Object nextValue;
 	private boolean hasValue = false;
 	
-	public BSTIteratorMinMax(int dims) {
+	public BSTIteratorMinMax() {
 		//nothing
 	}
 	
@@ -50,7 +39,7 @@ public class BSTIteratorMinMax<T> {
 		this.modCount = ind.getModCount();
 		this.minKey = minKey;
 		this.maxKey = maxKey;
-		this.currentPage = (BSTreePage) ind.getRoot();
+		this.currentPage = ind.getRoot();
 		this.currentPos = 0;
 		this.hasValue = false;
 		this.stack.clear();
@@ -66,7 +55,7 @@ public class BSTIteratorMinMax<T> {
 
 	
 	private void goToNextPage() {
-		IteratorPos ip = stack.remove(stack.size()-1);
+		IteratorPos<T> ip = stack.pop();
 		currentPage = ip.page;
 		currentPos = ip.pos;
 		currentPos++;
@@ -76,7 +65,7 @@ public class BSTIteratorMinMax<T> {
 				close();
 				return;// false;
 			}
-			ip = stack.remove(stack.size()-1);
+			ip = stack.pop();
 			currentPage = ip.page;
 			currentPos = ip.pos;
 			currentPos++;
@@ -87,7 +76,7 @@ public class BSTIteratorMinMax<T> {
 			//start with
 
 			//read last page
-			stack.add(new IteratorPos(currentPage, currentPos));
+			stack.prepareAndPush(currentPage, currentPos);
 			currentPage = currentPage.getPageByPos(currentPos);
 			currentPos = 0;
 		}
@@ -109,13 +98,13 @@ public class BSTIteratorMinMax<T> {
 		    }
 	    	currentPos = (short)pos2;
 
-	    	BSTreePage newPage = currentPage.getPageByPos(currentPos);
+	    	BSTreePage<T> newPage = currentPage.getPageByPos(currentPos);
 			//are we on the correct branch?
 	    	//We are searching with LONG_MIN value. If the key[] matches exactly, then the
 	    	//selected page may not actually contain any valid elements.
 	    	//In any case this will be sorted out in findFirstPosInPage()
 	    	
-			stack.add(new IteratorPos(currentPage, currentPos));
+			stack.prepareAndPush(currentPage, currentPos);
 			currentPage = newPage;
 			currentPos = 0;
 		}
@@ -233,7 +222,6 @@ public class BSTIteratorMinMax<T> {
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();
 		}
-        checkValidity();
 
         long ret = nextKey;
 		if (currentPage == null) {

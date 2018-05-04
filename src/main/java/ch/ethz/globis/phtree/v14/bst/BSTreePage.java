@@ -92,7 +92,8 @@ class BSTreePage<T> {
 	 * @param collisionHandler 
 	 * @return the page
 	 */
-	public Object put(long key, Object value, BiFunction<T, T, Object> collisionHandler) {
+	@SuppressWarnings("unchecked")
+	public Object put(long key, T value, BiFunction<T, T, Object> collisionHandler) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -102,7 +103,7 @@ class BSTreePage<T> {
             pos = -(pos+1);
         }
         //read page before that value
-        BSTreePage page = getPageByPos(pos);
+        BSTreePage<T> page = getPageByPos(pos);
         if (page == null) {
         	page = createLeafPage(pos);
         }
@@ -110,7 +111,7 @@ class BSTreePage<T> {
     		Object o = page.put(key, value, this, pos, collisionHandler);
     		if (o instanceof BSTreePage) {
     			//add page
-    			BSTreePage newPage = (BSTreePage) o;
+    			BSTreePage<T> newPage = (BSTreePage<T>) o;
     			addSubPage(newPage, newPage.getMinKey(), pos);
     			return null;
     		}
@@ -163,6 +164,7 @@ class BSTreePage<T> {
      * @param value
      * @param collisionHandler 
      */
+	@SuppressWarnings("unchecked")
 	public final Object put(long key, T value, BSTreePage<T> parent, int posPageInParent, 
 			BiFunction<T, T, Object> collisionHandler) {
 		if (!isLeaf) {
@@ -448,6 +450,7 @@ class BSTreePage<T> {
 	}
 	
 
+	@SuppressWarnings("unchecked")
 	private Object remove(long key, Function<T, REMOVE_OP> predicateRemove) {
         int i = binarySearch(0, nEntries, key);
         if (i < 0) {
@@ -479,7 +482,7 @@ class BSTreePage<T> {
 	}
 	
 	private void checkUnderflowSubpageLeaf(int pos) {
-		BSTreePage subPage = getPageByPos(pos);
+		BSTreePage<T> subPage = getPageByPos(pos);
         if (subPage.nEntries == 0) {
         	BSTree.statNLeaves--;
         	removePage3(pos);
@@ -488,7 +491,7 @@ class BSTreePage<T> {
         	//TODO Should we instead check for nEntries==MAx>>1 then == (MAX>>2) then <= (MAX>>3)?
 
         	//now attempt merging this page
-        	BSTreePage prevPage = getPrevLeafPage(pos);
+        	BSTreePage<T> prevPage = getPrevLeafPage(pos);
         	if (prevPage != null) {
          		//We merge only if they all fit on a single page. This means we may read
         		//the previous page unnecessarily, but we avoid writing it as long as 
@@ -507,7 +510,7 @@ class BSTreePage<T> {
 	}
 
 	private void removePage3(int posToRemove) {
-		BSTreePage indexPage = getPageByPos(posToRemove);
+		BSTreePage<T> indexPage = getPageByPos(posToRemove);
 		
 		//remove sub page page from FSM.
 		BTPool.reportFreePage(indexPage);
@@ -520,10 +523,10 @@ class BSTreePage<T> {
 	}
 	
 	private void handleUnderflowSubInner(int pos) {
-		BSTreePage sub = getPageByPos(pos);
+		BSTreePage<T> sub = getPageByPos(pos);
 		if (sub.nEntries < ind.maxInnerN>>1) {
 			if (sub.nEntries >= 0) {
-				BSTreePage prev = getPrevInnerPage(pos);
+				BSTreePage<T> prev = getPrevInnerPage(pos);
 				if (prev != null && !prev.isLeaf) {
 					// this is only good for merging inside the same parent.
 					if ((sub.nEntries % 2 == 0) && (prev.nEntries + sub.nEntries < ind.maxInnerN)) {
@@ -540,7 +543,7 @@ class BSTreePage<T> {
 		
 				if (sub.nEntries == 0) {
 					//only one element left, no merging occurred -> move sub-page up to parent
-					BSTreePage child = sub.getPageByPos(0);
+					BSTreePage<T> child = sub.getPageByPos(0);
 					replaceChildPage2(sub, child, pos);
 					BSTree.statNInner--;
 					BTPool.reportFreePage(sub);
@@ -585,7 +588,7 @@ class BSTreePage<T> {
 	 * Replacing sub-pages occurs when the sub-page shrinks down to a single sub-sub-page, in which
 	 * case we pull up the sub-sub-page to the local page, replacing the sub-page.
 	 */
-	private void replaceChildPage2(BSTreePage indexPage, BSTreePage subChild, int pos) {
+	private void replaceChildPage2(BSTreePage<T> indexPage, BSTreePage<T> subChild, int pos) {
 		//remove page from FSM.
 		BTPool.reportFreePage(indexPage);
 		subPages[pos] = subChild;
@@ -595,7 +598,7 @@ class BSTreePage<T> {
 		subChild.setParent(this);
 	}
 	
-	void setParent(BSTreePage parent) {
+	void setParent(BSTreePage<T> parent) {
 		this.parent = parent;
 	}
 	
@@ -610,8 +613,7 @@ class BSTreePage<T> {
 		if (nEntries == -1) {
 			return Long.MIN_VALUE;
 		}
-		long max = ((BSTreePage)getPageByPos(nEntries)).getMax();
-		return max;
+		return getPageByPos(nEntries).getMax();
 	}
 
 
@@ -632,13 +634,13 @@ class BSTreePage<T> {
 	}
 	
 	
-	private BSTreePage createLeafPage(int pos) {
+	private BSTreePage<T> createLeafPage(int pos) {
 		if (subPages[pos] != null) {
 			throw new IllegalStateException();
 		}
 
 		//create new page
-		BSTreePage page = ind.createPage(this, true);
+		BSTreePage<T> page = ind.createPage(this, true);
 		incrementNEntries();
 		subPages[pos] = page;
 		return page;
@@ -738,7 +740,7 @@ class BSTreePage<T> {
 	final void clear() {
 		if (!isLeaf) {
 			for (int i = 0; i < getNKeys()+1; i++) {
-				BSTreePage p = getPageByPos(i);
+				BSTreePage<T> p = getPageByPos(i);
 				p.clear();
 				//0-IDs are automatically ignored.
 				BTPool.reportFreePage(p);

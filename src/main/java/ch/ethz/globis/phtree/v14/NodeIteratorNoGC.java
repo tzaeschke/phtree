@@ -95,7 +95,7 @@ public class NodeIteratorNoGC<T> {
 		
 		if (isNI && !useNiHcIncrementer) {
 			if (niIterator == null) {
-				niIterator = new BSTIteratorMask<>(dims);
+				niIterator = new BSTIteratorMask<>();
 			}
 			niIterator.reset(node.ind(), maskLower, maskUpper);
 		}

@@ -78,7 +78,7 @@ public class NodeIteratorFullNoGC<T> {
 		//Position of the current entry
 		if (isNI) {
 			if (ntIterator == null) {
-				ntIterator = new BSTIteratorMinMax<>(dims);
+				ntIterator = new BSTIteratorMinMax<>();
 			}
 			ntIterator.reset(node.ind(), 0, Long.MAX_VALUE);
 		} else {

@@ -43,13 +43,14 @@ public class BSTree<T> {
 		return put(key, value, null);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public final T put(long key, T value, BiFunction<T, T, Object> collisionHandler) {
 		Object val = value == null ? NULL : value;
 		//Depth as log(nEntries) 
 		BSTreePage<T> page = getRoot();
 		Object o = page;
 		while (o instanceof BSTreePage && !((BSTreePage<T>)o).isLeaf()) {
-			o = ((BSTreePage<T>)o).put(key, val, collisionHandler);
+			o = ((BSTreePage<T>)o).put(key, (T)val, collisionHandler);
 		}
 		if (o == null) {
 			//did not exist
@@ -105,11 +106,11 @@ public class BSTree<T> {
 	}
 
 	public BSTIteratorMinMax<T> iterator(long min, long max) {
-		return new BSTIteratorMinMax<T>(-1).reset(this, min, max);
+		return new BSTIteratorMinMax<T>().reset(this, min, max);
 	}
 
 	public BSTIteratorMask<T> iteratorMask(long minMask, long maxMask) {
-		return new BSTIteratorMask<T>(-1).reset(this, minMask, maxMask);
+		return new BSTIteratorMask<T>().reset(this, minMask, maxMask);
 	}
 
 	void updateRoot(BSTreePage<T> newRoot) {
