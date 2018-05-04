@@ -168,8 +168,8 @@ public class NodeIteratorNoGC<T> {
 		return true;
 	}
 
-	private boolean readValue(long pos, Object value, PhEntry<T> result) {
-		if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
+	private boolean readValue(Object value, PhEntry<T> result) {
+		if (!node.checkAndGetEntryNt(value, result, valTemplate, rangeMin, rangeMax)) {
 			return false;
 		}
 		
@@ -275,7 +275,7 @@ public class NodeIteratorNoGC<T> {
 			//TODO copy only if match!!!!!!!! Or do not copy at all?????
 			//TODO copy only if match!!!!!!!! Or do not copy at all?????
 			System.arraycopy(be.getKdKey(), 0, result.getKey(), 0, dims);
-			if (readValue(le.getKey(), be.getValue(), result)) {
+			if (readValue(be.getValue(), result)) {
 				next = le.getKey(); //This is required for kNN-adjusting of iterators
 				return true;
 			}
@@ -302,7 +302,7 @@ public class NodeIteratorNoGC<T> {
 				}
 			}
 
-			Object v = node.ntGetEntry(currentPos, result.getKey(), valTemplate);
+			Object v = node.ntGetEntry(currentPos, result.getKey());
 			if (v == null) {
 				continue;
 			}
@@ -310,7 +310,7 @@ public class NodeIteratorNoGC<T> {
 			next = currentPos;
 
 			//read and check post-fix
-			if (readValue(currentPos, v, result)) {
+			if (readValue(v, result)) {
 				return true;
 			}
 		} while (true);

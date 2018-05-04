@@ -551,7 +551,7 @@ public class Node {
 
 		//okay, at his point we have a post that matches and (since it matches) we need to remove
 		//the local node because it contains at most one other entry and it is not the root node.
-		PhIterator64<Object> iter = ntIterator(dims);
+		PhIterator64<Object> iter = ntIterator();
 		NtEntry<Object> nte = iter.nextEntryReuse();
 
 		long posInParent = PhTreeHelper.posInArray(key, parent.getPostLen());
@@ -582,7 +582,7 @@ public class Node {
 	Object getEntryByPIN(int posInNode, long hcPos, long[] postBuf) {
 		if (isNT()) {
 			//For example for knnSearches!!!!!
-			return ntGetEntry(hcPos, postBuf, null);
+			return ntGetEntry(hcPos, postBuf);
 		}
 		
 		Object o = values[posInNode];
@@ -799,7 +799,7 @@ public class Node {
     	return BSTHandler.removeEntry(ind, hcPos, key, newKey, insertRequired, this);
 	}
 
-	Object ntGetEntry(long hcPos, long[] outKey, long[] valTemplate) {
+	Object ntGetEntry(long hcPos, long[] outKey) {
 		return BSTHandler.getEntry(ind(), hcPos, outKey, null, null);
 	}
 
@@ -929,7 +929,7 @@ public class Node {
 		}
 	}
 
-	void postToNI(int startBit, long[] outKey, long hcPos, long[] prefix, long mask) {
+	void postToNI(int startBit, long[] outKey, long[] prefix, long mask) {
 		for (int d = 0; d < outKey.length; d++) {
 			outKey[d] = Bits.readArray(ba, startBit, postLenStored()) | (prefix[d] & mask);
 			startBit += postLenStored();
@@ -957,7 +957,7 @@ public class Node {
 	 * WARNING: This is overloaded in subclasses of Node.
 	 * @return Index.
 	 */
-	BSTree<BSTEntry> createNiIndex(int dims) {
+	BSTree<BSTEntry> createNiIndex() {
 		return new BSTree<>();
 	}
 	
@@ -966,7 +966,7 @@ public class Node {
 		if (ind != null || isNT()) {
 			throw new IllegalStateException();
 		}
-		ind = createNiIndex(dims);
+		ind = createNiIndex();
 
 		long prefixMask = mask1100(postLenStored());
 		
@@ -982,7 +982,7 @@ public class Node {
 				} 
 				int dataOffs = oldPostBitsVal + i*postLenTotal;
 				final long[] buffer = new long[dims];
-				postToNI(dataOffs, buffer, i, prefix, prefixMask);
+				postToNI(dataOffs, buffer, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
 				BSTHandler.addEntry(ind, i, buffer, o, null);
@@ -996,7 +996,7 @@ public class Node {
 				dataOffs += IK_WIDTH(dims);
 				Object e = values[i];
 				final long[] buffer = new long[dims];
-				postToNI(dataOffs, buffer, p2, prefix, prefixMask);
+				postToNI(dataOffs, buffer, prefix, prefixMask);
 				//We use 'null' as parameter to indicate that we want 
 				//to skip checking for splitNode or increment of entryCount
 				BSTHandler.addEntry(ind, p2, buffer, e, null);
@@ -1042,7 +1042,7 @@ public class Node {
 			//HC mode
 			Object[] v2 = Refs.arrayCreate(1<<dims);
 			int startBitData = posToOffsBitsDataAHC(0, offsIndex, dims);
-			PhIterator64<Object> it = ntIterator(dims);
+			PhIterator64<Object> it = ntIterator();
 			while (it.hasNext()) {
 				NtEntry<Object> e = it.nextEntryReuse();
 				long pos = e.key();
@@ -1069,7 +1069,7 @@ public class Node {
 			//LHC mode
 			Object[] v2 = Refs.arrayCreate(entryCountNew);
 			int n=0;
-			PhIterator64<Object> it = ntIterator(dims);
+			PhIterator64<Object> it = ntIterator();
 			int entryPosLHC = offsIndex;
 			while (it.hasNext()) {
 				NtEntry<Object> e = it.nextEntryReuse();
@@ -1223,6 +1223,23 @@ public class Node {
 			return true;
 		}
 
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
+		
 		//assign infix
 		//Shift in two steps in case they add up to 64.
 		long maskClean = mask1100(postLenStored());
@@ -1256,7 +1273,7 @@ public class Node {
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	@SuppressWarnings("unchecked")
-	<T>  boolean checkAndGetEntryNt(long hcPos, Object value, PhEntry<T> result, 
+	<T>  boolean checkAndGetEntryNt(Object value, PhEntry<T> result, 
 			long[] valTemplate, long[] rangeMin, long[] rangeMax) {
 		if (value instanceof Node) {
 			Node sub = (Node) value;
@@ -1467,7 +1484,7 @@ public class Node {
 		return ind;
 	}
 
-    PhIterator64<Object> ntIterator(int dims) {
+    PhIterator64<Object> ntIterator() {
 		//TODO
 		//TODO
 		//TODO
@@ -1476,7 +1493,7 @@ public class Node {
 //      return new NtIteratorMinMax<>(dims).reset(ind, Long.MIN_VALUE, Long.MAX_VALUE);
     }
 
-    BSTIteratorMask<BSTEntry> ntIteratorWithMask(int dims, long maskLower, long maskUpper) {
+    BSTIteratorMask<BSTEntry> ntIteratorWithMask(long maskLower, long maskUpper) {
     	return new BSTIteratorMask<BSTEntry>().reset(ind, maskLower, maskUpper);
 		//TODO reuse iterator???
 		//TODO

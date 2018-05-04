@@ -92,7 +92,7 @@ public class NodeIteratorListReuse<T, R> {
 
 			useHcIncrementer = false;
 			if (isNI && niIterator == null) {
-				niIterator = node.ntIteratorWithMask(dims, maskLower, maskUpper);
+				niIterator = node.ntIteratorWithMask(maskLower, maskUpper);
 			}
 
 			if (dims > 6) {
@@ -159,8 +159,8 @@ public class NodeIteratorListReuse<T, R> {
 			checkAndAddResult(resultBuffer);
 		}
 
-		private void readValue(long pos, Object value, PhEntry<T> result) {
-			if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
+		private void readValue(Object value, PhEntry<T> result) {
+			if (!node.checkAndGetEntryNt(value, result, valTemplate, rangeMin, rangeMax)) {
 				results.phReturnTemp(result);
 				return;
 			}
@@ -266,7 +266,7 @@ public class NodeIteratorListReuse<T, R> {
 				} else {
 					PhEntry<T> resultBuffer = results.phGetTempEntry();
 					System.arraycopy(be.getKdKey(), 0, resultBuffer.getKey(), 0, dims);
-					readValue(le.getKey(), v, resultBuffer);
+					readValue(v, resultBuffer);
 				}
 			}
 			return;
@@ -278,7 +278,7 @@ public class NodeIteratorListReuse<T, R> {
 			long currentPos = maskLower; 
 			while (results.size() < maxResults) {
 				PhEntry<T> resultBuffer = results.phGetTempEntry();
-				Object v = node.ntGetEntry(currentPos, resultBuffer.getKey(), valTemplate);
+				Object v = node.ntGetEntry(currentPos, resultBuffer.getKey());
 				//sub-node?
 				if (v instanceof Node) {
 					Node sub = (Node) v;
@@ -288,7 +288,7 @@ public class NodeIteratorListReuse<T, R> {
 					}
 				} else if (v != null) { 
 					//read and check post-fix
-					readValue(currentPos, v, resultBuffer);
+					readValue(v, resultBuffer);
 				}
 
 				currentPos = PhTree14.inc(currentPos, maskLower, maskUpper);
