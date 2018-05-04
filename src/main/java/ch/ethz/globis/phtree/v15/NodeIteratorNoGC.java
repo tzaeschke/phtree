@@ -34,7 +34,6 @@ public class NodeIteratorNoGC<T> {
 	private long next;
 	private Node node;
 	private BSTIteratorMask<BSTEntry> niIterator;
-	private final long[] valTemplate;
 	private long maskLower;
 	private long maskUpper;
 	private long[] rangeMin;
@@ -48,9 +47,8 @@ public class NodeIteratorNoGC<T> {
 	 * @param dims dimensions
 	 * @param valTemplate A null indicates that no values are to be extracted.
 	 */
-	public NodeIteratorNoGC(int dims, long[] valTemplate) {
+	public NodeIteratorNoGC(int dims) {
 		this.dims = dims;
-		this.valTemplate = valTemplate;
 	}
 	
 	/**
@@ -63,7 +61,7 @@ public class NodeIteratorNoGC<T> {
 	 * @param upper
 	 * @param checker result verifier, can be null.
 	 */
-	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker) {
+	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker, long[] prefix) {
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
 		next = START;
@@ -113,7 +111,7 @@ public class NodeIteratorNoGC<T> {
 	}
 
 	private boolean readValue(Object value, PhEntry<T> result) {
-		if (!node.checkAndGetEntryNt(value, result, valTemplate, rangeMin, rangeMax)) {
+		if (!node.checkAndGetEntryNt(value, result, rangeMin, rangeMax)) {
 			return false;
 		}
 		
@@ -122,7 +120,7 @@ public class NodeIteratorNoGC<T> {
 			Node sub = (Node) value;
 			//skip this for postLen>=63
 			if (checker != null && sub.getPostLen() < (PhTree15.DEPTH_64-1) &&
-					!checker.isValid(sub.getPostLen()+1, valTemplate)) {
+					!checker.isValid(sub.getPostLen()+1, result.getKey())) {
 				return false;
 			}
 			return true;
@@ -209,7 +207,7 @@ public class NodeIteratorNoGC<T> {
 	 * @param valTemplate
 	 * @param postLen
 	 */
-	private void calcLimits(long[] rangeMin, long[] rangeMax) {
+	private void calcLimits(long[] rangeMin, long[] rangeMax, long[] prefix) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -230,10 +228,10 @@ public class NodeIteratorNoGC<T> {
 		long upperLimit = 0;
 		//to prevent problems with signed long when using 64 bit
 		if (maskHcBit >= 0) { //i.e. postLen < 63
-			for (int i = 0; i < valTemplate.length; i++) {
+			for (int i = 0; i < rangeMin.length; i++) {
 				lowerLimit <<= 1;
 				upperLimit <<= 1;
-				long nodeBisection = (valTemplate[i] | maskHcBit) & maskVT; 
+				long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
 				if (rangeMin[i] >= nodeBisection) {
 					//==> set to 1 if lower value should not be queried 
 					lowerLimit |= 1L;
@@ -250,7 +248,7 @@ public class NodeIteratorNoGC<T> {
 			//The hypercube assumes that a leading '0' indicates a lower value.
 			//Solution: We leave HC as it is.
 
-			for (int i = 0; i < valTemplate.length; i++) {
+			for (int i = 0; i < rangeMin.length; i++) {
 				lowerLimit <<= 1;
 				upperLimit <<= 1;
 				if (rangeMin[i] < 0) {
@@ -304,10 +302,10 @@ public class NodeIteratorNoGC<T> {
 		return true;
 	}
 
-	void init(long[] rangeMin, long[] rangeMax, Node node, PhFilter checker) {
+	void init(long[] rangeMin, long[] rangeMax, Node node, PhFilter checker, long[] prefix) {
 		this.node = node; //for calcLimits
-		calcLimits(rangeMin, rangeMax);
-		reinit(node, rangeMin, rangeMax, checker);
+		calcLimits(rangeMin, rangeMax, prefix);
+		reinit(node, rangeMin, rangeMax, checker, prefix);
 	}
 
 	boolean verifyMinMax() {

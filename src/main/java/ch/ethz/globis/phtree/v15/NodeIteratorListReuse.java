@@ -54,7 +54,6 @@ public class NodeIteratorListReuse<T, R> {
 	private final int dims;
 	private final PhResultList<T,R> results;
 	private int maxResults;
-	private final long[] valTemplate;
 	private long[] rangeMin;
 	private long[] rangeMax;
 
@@ -118,18 +117,18 @@ public class NodeIteratorListReuse<T, R> {
 			results.phOffer(e);
 		}
 
-		private void checkAndRunSubnode(Node sub, PhEntry<T> e) {
+		private void checkAndRunSubnode(Node sub, PhEntry<T> e, long[] subPrefix) {
 			if (e != null) {
 				results.phReturnTemp(e);
 			}
-			if (results.phIsPrefixValid(valTemplate, sub.getPostLen()+1)) {
-				run(sub);
+			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
+				run(sub, subPrefix);
 			}
 		}
 
 
 		private void readValue(Object value, PhEntry<T> result) {
-			if (!node.checkAndGetEntryNt(value, result, valTemplate, rangeMin, rangeMax)) {
+			if (!node.checkAndGetEntryNt(value, result, rangeMin, rangeMax)) {
 				results.phReturnTemp(result);
 				return;
 			}
@@ -160,9 +159,8 @@ public class NodeIteratorListReuse<T, R> {
 				Object v = be.getValue();
 				if (v instanceof Node) {
 					Node nextSubNode = (Node) v; 
-					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), be.getKdKey(),
-							valTemplate, rangeMin, rangeMax)) {
-						checkAndRunSubnode(nextSubNode, null);
+					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), be.getKdKey(), rangeMin, rangeMax)) {
+						checkAndRunSubnode(nextSubNode, null, be.getKdKey());
 					}
 				} else {
 					PhEntry<T> resultBuffer = results.phGetTempEntry();
@@ -183,9 +181,8 @@ public class NodeIteratorListReuse<T, R> {
 				//sub-node?
 				if (v instanceof Node) {
 					Node sub = (Node) v;
-					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(), 
-							valTemplate, rangeMin, rangeMax)) {
-						checkAndRunSubnode(sub, resultBuffer);
+					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(), rangeMin, rangeMax)) {
+						checkAndRunSubnode(sub, resultBuffer, resultBuffer.getKey());
 					}
 				} else if (v != null) { 
 					//read and check post-fix
@@ -202,7 +199,6 @@ public class NodeIteratorListReuse<T, R> {
 	
 	NodeIteratorListReuse(int dims, PhResultList<T, R> results) {
 		this.dims = dims;
-		this.valTemplate = new long[dims];
 		this.results = results;
 		this.pool = new PhIteratorStack();
 	}
@@ -212,11 +208,11 @@ public class NodeIteratorListReuse<T, R> {
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
 		this.maxResults = maxResults;
-		run(node);
+		run(node, null);
 		return results;
 	}
 	
-	void run(Node node) {
+	void run(Node node, long[] prefix) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
 		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -236,10 +232,10 @@ public class NodeIteratorListReuse<T, R> {
 		long upperLimit = 0;
 		//to prevent problems with signed long when using 64 bit
 		if (maskHcBit >= 0) { //i.e. postLen < 63
-			for (int i = 0; i < valTemplate.length; i++) {
+			for (int i = 0; i < rangeMin.length; i++) {
 				lowerLimit <<= 1;
 				upperLimit <<= 1;
-				long nodeBisection = (valTemplate[i] | maskHcBit) & maskVT; 
+				long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
 				if (rangeMin[i] >= nodeBisection) {
 					//==> set to 1 if lower value should not be queried 
 					lowerLimit |= 1L;
@@ -256,7 +252,7 @@ public class NodeIteratorListReuse<T, R> {
 			//The hypercube assumes that a leading '0' indicates a lower value.
 			//Solution: We leave HC as it is.
 
-			for (int i = 0; i < valTemplate.length; i++) {
+			for (int i = 0; i < rangeMin.length; i++) {
 				lowerLimit <<= 1;
 				upperLimit <<= 1;
 				if (rangeMin[i] < 0) {

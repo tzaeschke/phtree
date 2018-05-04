@@ -342,17 +342,16 @@ public class Node {
 	private static int N_GOOD = 0;
 	private static int N = 0;
 	
-	boolean checkAndApplyInfixNt(int infixLen, long[] postFix, long[] valTemplate, 
-			long[] rangeMin, long[] rangeMax) {
+	boolean checkAndApplyInfixNt(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
 		//first check if node-prefix allows sub-node to contain any useful values
 
 		if (PhTreeHelper.DEBUG) {
 			N_GOOD++;
 			//Ensure that we never enter this method if the node cannot possibly contain a match.
 			long maskClean = mask1100(getPostLen());
-			for (int dim = 0; dim < valTemplate.length; dim++) {
-				if ((valTemplate[dim] & maskClean) > rangeMax[dim] || 
-						(valTemplate[dim] | ~maskClean) < rangeMin[dim]) {
+			for (int dim = 0; dim < keyToTest.length; dim++) {
+				if ((keyToTest[dim] & maskClean) > rangeMax[dim] || 
+						(keyToTest[dim] | ~maskClean) < rangeMin[dim]) {
 					if (getPostLen() < 63) {
 						System.out.println("N-CAAI: " + ++N + " / " + N_GOOD);
 						throw new IllegalStateException();
@@ -363,7 +362,7 @@ public class Node {
 			}
 		}
 		
-		if (!hasSubInfixNI(postFix)) {
+		if (!hasSubInfixNI(keyToTest)) {
 			return true;
 		}
 
@@ -383,22 +382,16 @@ public class Node {
 		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
 		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
 		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		
-		//assign infix
-		//Shift in two steps in case they add up to 64.
-		long maskClean = mask1100(postLenStored());
 
 		//first, clean trailing bits
 		//Mask for comparing the tempVal with the ranges, except for bit that have not been
 		//extracted yet.
 		long compMask = mask1100(postLenStored() - infixLen);
-		for (int dim = 0; dim < valTemplate.length; dim++) {
-			long inFull = (valTemplate[dim] & maskClean) | postFix[dim];
-			long in = inFull & compMask;
+		for (int dim = 0; dim < keyToTest.length; dim++) {
+			long in = keyToTest[dim] & compMask;
 			if (in > rangeMax[dim] || in < (rangeMin[dim]&compMask)) {
 				return false;
 			}
-			valTemplate[dim] = inFull;
 		}
 
 		return true;
@@ -417,11 +410,10 @@ public class Node {
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	@SuppressWarnings("unchecked")
-	<T>  boolean checkAndGetEntryNt(Object value, PhEntry<T> result, 
-			long[] valTemplate, long[] rangeMin, long[] rangeMax) {
+	<T>  boolean checkAndGetEntryNt(Object value, PhEntry<T> result, long[] rangeMin, long[] rangeMax) {
 		if (value instanceof Node) {
 			Node sub = (Node) value;
-			if (!checkAndApplyInfixNt(sub.getInfixLen(), result.getKey(), valTemplate, 
+			if (!checkAndApplyInfixNt(sub.getInfixLen(), result.getKey(), 
 					rangeMin, rangeMax)) {
 				return false;
 			}
