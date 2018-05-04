@@ -14,8 +14,6 @@ import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.util.Refs;
-import ch.ethz.globis.phtree.util.RefsLong;
 import ch.ethz.globis.phtree.v15.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v15.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v15.bst.BSTree;
@@ -89,11 +87,6 @@ public class Node {
 		ind = null;
 	}
 	
-	int calcArraySizeTotalBits(int entryCount, final int dims) {
-		//TODO 
-		return 64;
-	}
-
 
 	/**
 	 * Returns the value (T or Node) if the entry exists and matches the key.
@@ -201,8 +194,6 @@ public class Node {
     
     
 	private void mergeIntoParentNt(long[] key, Node parent) {
-		int dims = key.length;
-
 		//check if merging is necessary (check children count || isRootNode)
 		if (parent == null || getEntryCount() > 2) {
 			//no merging required
@@ -234,16 +225,6 @@ public class Node {
 		discardNode();
 	}
 
-	/**
-	 * @param posInNode
-	 * @param pos The position of the node when mapped to a vector.
-	 * @return The sub node or null.
-	 */
-	Object getEntryByPIN(long hcPos, long[] postBuf) {
-		//For example for knnSearches!!!!!
-		return ntGetEntry(hcPos, postBuf);
-	}
-
 
 	/**
 	 * @param posInNode
@@ -251,7 +232,7 @@ public class Node {
 	 * @return The sub node or null.
 	 */
 	Object getEntry(long hcPos, long[] postBuf) {
-		return getEntryByPIN(hcPos, postBuf);
+		return ntGetEntry(hcPos, postBuf);
 	}
 
 
@@ -270,7 +251,7 @@ public class Node {
 		return;
 	}
 
-	void replaceEntryWithSub(long hcPos, long[] infix, Node newSub) {
+	private void replaceEntryWithSub(long hcPos, long[] infix, Node newSub) {
 		ntReplaceEntry(hcPos, infix, newSub);
 		return;
 	}
@@ -366,151 +347,6 @@ public class Node {
 		return new BSTree<>(dims);
 	}
 	
-	private void ntBuild(int bufEntryCnt, int dims, long[] prefix) {
-		//Migrate node to node-index representation
-		if (ind != null || isNT()) {
-			throw new IllegalStateException();
-		}
-		ind = createNiIndex(dims);
-
-		long prefixMask = mask1100(postLenStored());
-		
-		//read posts 
-		if (isAHC()) {
-			int oldOffsIndex = getBitPosIndex();
-			int oldPostBitsVal = posToOffsBitsDataAHC(0, oldOffsIndex, dims);
-			int postLenTotal = dims*postLenStored();
-			for (int i = 0; i < (1L<<dims); i++) {
-				Object o = values[i];
-				if (o == null) {
-					continue;
-				} 
-				int dataOffs = oldPostBitsVal + i*postLenTotal;
-				final long[] buffer = new long[dims];
-				postToNI(dataOffs, buffer, prefix, prefixMask);
-				//We use 'null' as parameter to indicate that we want 
-				//to skip checking for splitNode or increment of entryCount
-				BSTHandler.addEntry(ind, i, buffer, o, null);
-			}
-		} else {
-			int offsIndex = getBitPosIndex();
-			int dataOffs = pinToOffsBitsLHC(0, offsIndex, dims);
-			int postLenTotal = dims*postLenStored();
-			for (int i = 0; i < bufEntryCnt; i++) {
-				long p2 = Bits.readArray(ba, dataOffs, IK_WIDTH(dims));
-				dataOffs += IK_WIDTH(dims);
-				Object e = values[i];
-				final long[] buffer = new long[dims];
-				postToNI(dataOffs, buffer, prefix, prefixMask);
-				//We use 'null' as parameter to indicate that we want 
-				//to skip checking for splitNode or increment of entryCount
-				BSTHandler.addEntry(ind, p2, buffer, e, null);
-				dataOffs += postLenTotal;
-			}
-		}
-
-		setAHC(false);
-		ba = Bits.arrayTrim(ba, calcArraySizeTotalBitsNt());
-		values = Refs.arrayReplace(values, null); 
-	}
-
-	/**
-	 * 
-	 * @param bufSubCnt
-	 * @param bufPostCnt
-	 * @param dims
-	 * @param posToRemove
-	 * @param removeSub Remove sub or post?
-	 * @return Previous value if post was removed
-	 */
-	private Object ntDeconstruct(int dims, long posToRemove) {
-		//Migrate node to node-index representation
-		if (ind == null || !isNT()) {
-			throw new IllegalStateException();
-		}
-
-		int entryCountNew = ntGetSize() - 1;
-		decEntryCount();
-
-		//calc node mode.
-		boolean shouldBeAHC = useAHC(entryCountNew, dims);
-		setAHC(shouldBeAHC);
-
-
-		Object oldValue = null;
-		int offsIndex = getBitPosIndex();
-		long[] bia2 = Bits.arrayCreate(calcArraySizeTotalBits(entryCountNew, dims));
-		//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
-		Bits.copyBitsLeft(ba, 0, bia2, 0, offsIndex);
-		int postLenTotal = dims*postLenStored();
-		if (shouldBeAHC) {
-			//HC mode
-			Object[] v2 = Refs.arrayCreate(1<<dims);
-			int startBitData = posToOffsBitsDataAHC(0, offsIndex, dims);
-			PhIterator64<Object> it = ntIterator();
-			while (it.hasNext()) {
-				NtEntry<Object> e = it.nextEntryReuse();
-				long pos = e.key();
-				if (pos == posToRemove) {
-					//skip the item that should be deleted.
-					oldValue = e.value();
-					v2[(int) pos] = null;
-					continue;
-				}
-				int p2 = (int) pos;
-				int offsBitData = startBitData + postLenStored() * dims * p2;
-				if (e.value() instanceof Node) {
-					//subnode
-					Node node = (Node) e.value();
-					infixFromNI(bia2, offsBitData, e.getKdKey(), node.requiresInfix());
-				} else {
-					postFromNI(bia2, offsBitData, e.getKdKey());
-				}
-				v2[p2] = e.value();
-			}
-			ba = Bits.arrayReplace(ba, bia2);
-			values = Refs.arrayReplace(values, v2);
-		} else {
-			//LHC mode
-			Object[] v2 = Refs.arrayCreate(entryCountNew);
-			int n=0;
-			PhIterator64<Object> it = ntIterator();
-			int entryPosLHC = offsIndex;
-			while (it.hasNext()) {
-				NtEntry<Object> e = it.nextEntryReuse();
-				long pos = e.key();
-				if (pos == posToRemove) {
-					//skip the item that should be deleted.
-					oldValue = e.value();
-					continue;
-				}
-				//write hc-key
-				Bits.writeArray(bia2, entryPosLHC, IK_WIDTH(dims), pos);
-				entryPosLHC += IK_WIDTH(dims);
-				v2[n] = e.value();
-				if (e.value() instanceof Node) {
-					Node node = (Node) e.getValue();
-					infixFromNI(bia2, entryPosLHC, e.getKdKey(), node.requiresInfix());
-				} else {
-					postFromNI(bia2, entryPosLHC, e.getKdKey());
-				}
-				entryPosLHC += postLenTotal;
-				n++;
-			}
-			ba = Bits.arrayReplace(ba, bia2);
-			values = Refs.arrayReplace(values, v2);
-		}			
-
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		throw new UnsupportedOperationException();
-//		NtNodePool.offer(ind);
-//		ind = null;
-//		return oldValue;
-	}
-
 
 	private static int N_GOOD = 0;
 	private static int N = 0;
@@ -612,17 +448,6 @@ public class Node {
 		return true;
 	}
 
-	private void applyHcPos(long hcPos, long[] valTemplate) {
-		PhTreeHelper.applyHcPos(hcPos, getPostLen(), valTemplate);
-	}
-	
-	
-	Object removeEntry(long hcPos, int posInNode, final int dims) {
-		Object o = ntRemoveAnything(hcPos, dims);
-		decEntryCount();
-		return o;
-	}
-
 
 	/**
 	 * @return entry counter
@@ -646,10 +471,6 @@ public class Node {
 		return infixLenStored() - 1;
 	}
 	
-	private boolean requiresInfix() {
-		return getInfixLen() > 0;
-	}
-
 	int infixLenStored() {
 		return infixLenStored;
 	}
