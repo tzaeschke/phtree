@@ -49,37 +49,38 @@ public class HTHandler {
 		pin = -(pin+1);
 
 		//resize array
-		node.setBa( Bits.arrayEnsureSize(node.ba(), calcArraySizeTotalBits(bufEntryCnt+1, dims)) );
-		long[] ia = node.ba();
-		int offs = pinToOffsBitsLHC(pin, dims);
-		Bits.insertBits(ia, offs, ENTRY_WIDTH(dims));
-		//insert key
-		Bits.writeArray(ia, offs, IK_WIDTH(dims), hcPos);
-		//insert value:
-		offs += IK_WIDTH(dims); 
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-/*		lsdflsadjlf;jsl;djfl;sajdl;jsf;l
-		for (int i = 0; i < key.length; i++) {
-			Bits.writeArray(ia, offs, postLenStored(), key[i]);
-			offs += postLenStored();
-		}
-		*/
-		node.setValues( Refs.insertSpaceAtPos(node.values(), pin, bufEntryCnt+1) );
-		node.values()[pin] = value;
+		if (true) throw new UnsupportedOperationException();
+//		node.setBa( Bits.arrayEnsureSize(node.ba(), calcArraySizeTotalBits(bufEntryCnt+1, dims)) );
+//		long[] ia = node.ba();
+//		int offs = pinToOffsBitsLHC(pin, dims);
+//		Bits.insertBits(ia, offs, ENTRY_WIDTH(dims));
+//		//insert key
+//		Bits.writeArray(ia, offs, IK_WIDTH(dims), hcPos);
+//		//insert value:
+//		offs += IK_WIDTH(dims); 
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+//		//TODO
+///*		lsdflsadjlf;jsl;djfl;sajdl;jsf;l
+//		for (int i = 0; i < key.length; i++) {
+//			Bits.writeArray(ia, offs, postLenStored(), key[i]);
+//			offs += postLenStored();
+//		}
+//		*/
+//		node.setValues( Refs.insertSpaceAtPos(node.values(), pin, bufEntryCnt+1) );
+//		node.values()[pin] = value;
 	}
 
 	@Deprecated
