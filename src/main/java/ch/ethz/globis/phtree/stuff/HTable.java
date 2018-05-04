@@ -4,7 +4,7 @@
  * This software is the proprietary information of Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v14;
+package ch.ethz.globis.phtree.stuff;
 
 @Deprecated
 public class HTable<T> {

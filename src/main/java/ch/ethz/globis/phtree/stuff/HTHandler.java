@@ -4,9 +4,11 @@
  * This software is the proprietary information of Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v14;
+package ch.ethz.globis.phtree.stuff;
 
 import ch.ethz.globis.phtree.util.Refs;
+import ch.ethz.globis.phtree.v14.Bits;
+import ch.ethz.globis.phtree.v14.Node;
 
 @Deprecated
 public class HTHandler {

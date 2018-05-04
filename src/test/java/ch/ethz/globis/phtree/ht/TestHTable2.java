@@ -10,7 +10,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import ch.ethz.globis.phtree.v14.HTable2;
+import ch.ethz.globis.phtree.stuff.HTable2;
 
 public class TestHTable2 {
 
