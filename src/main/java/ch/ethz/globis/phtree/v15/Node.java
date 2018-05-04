@@ -36,45 +36,31 @@ public class Node {
 	private byte postLenStored = 0;
 	private byte infixLenStored = 0; //prefix size
 
-	//Hierarchical tree index: a hierarchy of long[]
 	//Nested tree index
 	private BSTree<BSTEntry> ind = null;
+	private long[] prefix;
 
 	
     private Node() {
 		// For ZooDB only
 	}
 
-	protected Node(Node original) {
-        this.entryCnt = original.entryCnt;
-        this.infixLenStored = original.infixLenStored;
-        this.postLenStored = original.postLenStored;
-        this.infixLenStored = original.infixLenStored;
-        if (original.ind != null) {
-        	//copy NT tree
-        	throw new UnsupportedOperationException();
-        }
-    }
-
 	static Node createEmpty() {
 		return new Node();
 	}
 
-	private void initNode(int infixLenClassic, int postLenClassic, int dims) {
+	private void initNode(int infixLenClassic, int postLenClassic, int dims, long[] prefix) {
 		this.infixLenStored = (byte) (infixLenClassic + 1);
 		this.postLenStored = (byte) (postLenClassic + 1);
 		this.entryCnt = 0;
 		this.ind = createNiIndex(dims);
+		this.prefix = prefix;
 	}
 
-	static Node createNode(int dims, int infixLenClassic, int postLenClassic) {
+	static Node createNode(int dims, int infixLenClassic, int postLenClassic, long[] prefix) {
 		Node n = NodePool.getNode();
-		n.initNode(infixLenClassic, postLenClassic, dims);
+		n.initNode(infixLenClassic, postLenClassic, dims, prefix);
 		return n;
-	}
-
-	static Node createNode(Node original) {
-		return new Node(original);
 	}
 
 	<T> PhEntry<T> createNodeEntry(long[] key, T value) {
@@ -159,7 +145,7 @@ public class Node {
         //determine length of infix
         int newLocalInfLen = getPostLen() - mcb;
         int newPostLen = mcb-1;
-        Node newNode = createNode(key1.length, newLocalInfLen, newPostLen);
+        Node newNode = createNode(key1.length, newLocalInfLen, newPostLen, Bits.arrayClone(key1));
 
         long posSub1 = posInArray(key1, newPostLen);
         long posSub2 = posInArray(key2, newPostLen);
@@ -247,6 +233,11 @@ public class Node {
 	 * @param newSubInfixLen -infix len for sub-nodes. This is ignored for post-fixes.
 	 */
 	private void writeEntry(int pin, long hcPos, long[] newKey, Object value) {
+		if (value instanceof Node) {
+			Node node = (Node) value;
+			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;  
+			node.setInfixLen(newSubInfixLen);
+		} 
 		ntPut(hcPos, newKey, value);
 		return;
 	}

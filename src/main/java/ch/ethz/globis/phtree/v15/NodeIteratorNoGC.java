@@ -8,6 +8,8 @@
  */
 package ch.ethz.globis.phtree.v15;
 
+import java.util.Arrays;
+
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.v15.BSTHandler.BSTEntry;

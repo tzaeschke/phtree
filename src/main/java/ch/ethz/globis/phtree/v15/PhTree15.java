@@ -159,6 +159,10 @@ public class PhTree15<T> implements PhTree<T> {
 		BSTHandler.getStats(node.ind(), stats, dims, entries);
 		for (Object child: entries) {
 			if (child instanceof Node) {
+				Node sub = (Node) child;
+				if (sub.getInfixLen() + 1 + sub.getPostLen() != node.getPostLen()) {
+					throw new IllegalStateException();
+				}
 				getStats(currentDepth + 1, (Node) child, stats);
 			} else if (child != null) {
 				stats.q_nPostFixN[currentDepth]++;
@@ -210,7 +214,7 @@ public class PhTree15<T> implements PhTree<T> {
     }
 
     void insertRoot(long[] key, Object value) {
-        root = Node.createNode(dims, 0, DEPTH_64-1);
+        root = Node.createNode(dims, 0, DEPTH_64-1, null);
         long pos = posInArray(key, root.getPostLen());
         root.addPostPIN(pos, -1, key, value);
         increaseNrEntries();
