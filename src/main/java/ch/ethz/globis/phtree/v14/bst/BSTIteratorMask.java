@@ -71,6 +71,7 @@ public class BSTIteratorMask<T> {
 	private long nextKey;
 	private Object nextValue;
 	private boolean hasValue = false;
+    private final LLEntry tempEntry = new LLEntry(-1, null);
 	
 	public BSTIteratorMask() {
 		//nothing
@@ -228,40 +229,23 @@ public class BSTIteratorMask<T> {
 		gotoPosInPage();
 	}
 	
-	
 
 	public LLEntry nextEntryReuse() {
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
-		//TODO reuse !!!
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();
 		}
 
-        LLEntry e = new LLEntry(nextKey, nextValue);
+        tempEntry.set(nextKey, nextValue);
 		if (currentPage == null) {
 			hasValue = false;
 		} else {
 			gotoPosInPage();
 		}
-		return e;
+		return tempEntry;
 	}
 
-	/**
-	 * Dirty trick to avoid delays from finding the correct method.
-	 */
-	public LLEntry nextULL() {
+
+	public LLEntry nextEntry() {
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();
 		}

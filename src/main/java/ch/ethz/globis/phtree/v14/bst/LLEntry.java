@@ -1,8 +1,10 @@
 package ch.ethz.globis.phtree.v14.bst;
 
 public class LLEntry {
-	private final long key;
-	private final Object value;
+	
+	private long key;
+	private Object value;
+	
 	public LLEntry(long k, Object v) {
 		key = k;
 		value = v;
@@ -12,5 +14,9 @@ public class LLEntry {
 	}
 	public Object getValue() {
 		return value;
+	}
+	public void set(long key, Object value) {
+		this.key = key;
+		this.value = value;
 	}
 }

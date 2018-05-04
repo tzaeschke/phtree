@@ -249,7 +249,7 @@ public class BSTHandler {
 	static void getStats(BSTree<BSTEntry> ind, PhTreeStats stats, int dims, List<Object> entries) {
 		BSTIteratorMinMax<BSTEntry> iter = ind.iterator();
 		while (iter.hasNextULL()) {
-			entries.add(iter.nextULL().getValue());
+			entries.add(iter.nextEntryReuse().getValue());
 		}
 	}
 	

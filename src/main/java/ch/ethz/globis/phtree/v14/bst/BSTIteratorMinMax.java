@@ -29,6 +29,7 @@ public class BSTIteratorMinMax<T> {
 	private long nextKey;
 	private Object nextValue;
 	private boolean hasValue = false;
+    private final LLEntry tempEntry = new LLEntry(-1, null);
 	
 	public BSTIteratorMinMax() {
 		//nothing
@@ -182,29 +183,17 @@ public class BSTIteratorMinMax<T> {
 			throw new NoSuchElementException();
 		}
 
-		//TODO resuse
-		//TODO resuse
-		//TODO resuse
-		//TODO resuse
-		//TODO resuse
-		//TODO resuse
-		//TODO resuse
-		//TODO resuse
-		//TODO resuse
-		//TODO resuse
-        LLEntry e = new LLEntry(nextKey, nextValue);
+        tempEntry.set(nextKey, nextValue);
 		if (currentPage == null) {
 			hasValue = false;
 		} else {
 			gotoPosInPage();
 		}
-		return e;
+		return tempEntry;
 	}
 
-	/**
-	 * Dirty trick to avoid delays from finding the correct method.
-	 */
-	public LLEntry nextULL() {
+
+	public LLEntry nextEntry() {
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();
 		}
