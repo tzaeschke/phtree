@@ -14,6 +14,7 @@ import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.v15.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v15.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v15.bst.BSTree;
@@ -38,7 +39,6 @@ public class Node {
 
 	//Nested tree index
 	private BSTree<BSTEntry> ind = null;
-	private long[] prefix;
 
 	
     private Node() {
@@ -49,17 +49,16 @@ public class Node {
 		return new Node();
 	}
 
-	private void initNode(int infixLenClassic, int postLenClassic, int dims, long[] prefix) {
+	private void initNode(int infixLenClassic, int postLenClassic, int dims) {
 		this.infixLenStored = (byte) (infixLenClassic + 1);
 		this.postLenStored = (byte) (postLenClassic + 1);
 		this.entryCnt = 0;
 		this.ind = createNiIndex(dims);
-		this.prefix = prefix;
 	}
 
-	static Node createNode(int dims, int infixLenClassic, int postLenClassic, long[] prefix) {
+	static Node createNode(int dims, int infixLenClassic, int postLenClassic) {
 		Node n = NodePool.getNode();
-		n.initNode(infixLenClassic, postLenClassic, dims, prefix);
+		n.initNode(infixLenClassic, postLenClassic, dims);
 		return n;
 	}
 
@@ -145,7 +144,7 @@ public class Node {
         //determine length of infix
         int newLocalInfLen = getPostLen() - mcb;
         int newPostLen = mcb-1;
-        Node newNode = createNode(key1.length, newLocalInfLen, newPostLen, Bits.arrayClone(key1));
+        Node newNode = createNode(key1.length, newLocalInfLen, newPostLen);
 
         long posSub1 = posInArray(key1, newPostLen);
         long posSub2 = posInArray(key2, newPostLen);
@@ -208,6 +207,8 @@ public class Node {
 			parent.replaceSubWithPost(posInParent, nte.getKdKey(), nte.getValue());
 		}
 
+		//TODO return old key/BSTEntry to pool
+		
 		discardNode();
 	}
 
@@ -217,8 +218,8 @@ public class Node {
 	 * @param pos The position of the node when mapped to a vector.
 	 * @return The sub node or null.
 	 */
-	Object getEntry(long hcPos, long[] postBuf) {
-		return ntGetEntry(hcPos, postBuf);
+	BSTEntry getEntry(long hcPos) {
+		return ntGetEntry(hcPos);
 	}
 
 
@@ -306,12 +307,13 @@ public class Node {
     	return BSTHandler.removeEntry(ind, hcPos, key, newKey, insertRequired, this);
 	}
 
-	Object ntGetEntry(long hcPos, long[] outKey) {
-		return BSTHandler.getEntry(ind(), hcPos, outKey, null, null);
+	BSTEntry ntGetEntry(long hcPos) {
+		return BSTHandler.getEntry(ind(), hcPos, null, null);
 	}
 
 	Object ntGetEntryIfMatches(long hcPos, long[] keyToMatch) {
-		return BSTHandler.getEntry(ind(), hcPos, null, keyToMatch, this);
+		BSTEntry e =  BSTHandler.getEntry(ind(), hcPos, keyToMatch, this);
+		return e != null ? e.getValue() : null;
 	}
 
 	int ntGetSize() {
@@ -342,7 +344,7 @@ public class Node {
 	private static int N_GOOD = 0;
 	private static int N = 0;
 	
-	boolean checkAndApplyInfixNt(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
+	boolean checkInfixNt(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
 		//first check if node-prefix allows sub-node to contain any useful values
 
 		if (PhTreeHelper.DEBUG) {
@@ -362,7 +364,7 @@ public class Node {
 			}
 		}
 		
-		if (!hasSubInfixNI(keyToTest)) {
+		if (!hasSubInfixNI(keyToTest) || infixLen == 0) {
 			return true;
 		}
 
@@ -410,25 +412,25 @@ public class Node {
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	@SuppressWarnings("unchecked")
-	<T>  boolean checkAndGetEntryNt(Object value, PhEntry<T> result, long[] rangeMin, long[] rangeMax) {
+	<T> boolean checkAndGetEntryNt(BSTEntry candidate, PhEntry<T> result, long[] rangeMin, long[] rangeMax) {
+		Object value = candidate.getValue();
 		if (value instanceof Node) {
 			Node sub = (Node) value;
-			if (!checkAndApplyInfixNt(sub.getInfixLen(), result.getKey(), 
-					rangeMin, rangeMax)) {
+			if (!checkInfixNt(sub.getInfixLen(), candidate.getKdKey(), rangeMin, rangeMax)) {
 				return false;
 			}
+			//TODO we only need to set the key..
+			//TODO do we need to set anything at all????
+			result.setKeyInternal(candidate.getKdKey());
 			result.setNodeInternal(sub);
-		} else {
-			long[] inKey = result.getKey();
-			for (int i = 0; i < inKey.length; i++) {
-				long k = inKey[i];
-				if (k < rangeMin[i] || k > rangeMax[i]) {
-					return false;
-				}
-			}
+			return true;
+		} else if (BitsLong.checkRange(candidate.getKdKey(), rangeMin, rangeMax)) {
+			result.setKeyInternal(candidate.getKdKey());
 			result.setValueInternal((T) value);
+			return true;
+		} else {
+			return false;
 		}
-		return true;
 	}
 
 

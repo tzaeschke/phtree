@@ -11,6 +11,7 @@ package ch.ethz.globis.phtree.v15;
 import java.util.List;
 
 import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.v15.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v15.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v15.bst.LLEntry;
@@ -115,6 +116,7 @@ public class NodeIteratorListReuse<T, R> {
 		
 		private void checkAndAddResult(PhEntry<T> e) {
 			results.phOffer(e);
+			//TODO when accepted, adapt min/max?!?!?!?!
 		}
 
 		private void checkAndRunSubnode(Node sub, PhEntry<T> e, long[] subPrefix) {
@@ -127,15 +129,15 @@ public class NodeIteratorListReuse<T, R> {
 		}
 
 
-		private void readValue(Object value, PhEntry<T> result) {
-			if (!node.checkAndGetEntryNt(value, result, rangeMin, rangeMax)) {
-				results.phReturnTemp(result);
-				return;
+		@SuppressWarnings("unchecked")
+		private void readValue(BSTEntry candidate) {
+			if (BitsLong.checkRange(candidate.getKdKey(), rangeMin, rangeMax)) {
+				PhEntry<T> result = results.phGetTempEntry();
+				result.setKeyInternal(candidate.getKdKey());
+				result.setValueInternal((T) candidate.getValue());
+				checkAndAddResult(result);
 			}
-			
-			checkAndAddResult(result);
 		}
-
 
 		private void getAll() {
 			niAllNext();
@@ -159,15 +161,14 @@ public class NodeIteratorListReuse<T, R> {
 				Object v = be.getValue();
 				if (v instanceof Node) {
 					Node nextSubNode = (Node) v; 
-					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), be.getKdKey(), rangeMin, rangeMax)) {
+					if (node.checkInfixNt(nextSubNode.getInfixLen(), be.getKdKey(), rangeMin, rangeMax)) {
 						checkAndRunSubnode(nextSubNode, null, be.getKdKey());
 					}
 				} else {
-					PhEntry<T> resultBuffer = results.phGetTempEntry();
-					System.arraycopy(be.getKdKey(), 0, resultBuffer.getKey(), 0, dims);
-					readValue(v, resultBuffer);
+					readValue(be);
 				}
 			}
+			//TODO Adapt BST-Iterator to skip sub-nodes if check(current)==false -> searchNext(inc(current))  
 			return;
 		}
 
@@ -176,19 +177,20 @@ public class NodeIteratorListReuse<T, R> {
 			//repeat until we found a value inside the given range
 			long currentPos = maskLower; 
 			while (results.size() < maxResults) {
-				PhEntry<T> resultBuffer = results.phGetTempEntry();
-				Object v = node.ntGetEntry(currentPos, resultBuffer.getKey());
+				BSTEntry be = node.ntGetEntry(currentPos);
 				//sub-node?
-				if (v instanceof Node) {
-					Node sub = (Node) v;
-					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(), rangeMin, rangeMax)) {
-						checkAndRunSubnode(sub, resultBuffer, resultBuffer.getKey());
+				if (be != null) {
+					Object v = be.getValue();
+					if (v instanceof Node) {
+						Node sub = (Node) v;
+						if (node.checkInfixNt(sub.getInfixLen(), be.getKdKey(), rangeMin, rangeMax)) {
+							checkAndRunSubnode(sub, null, be.getKdKey());
+						}
+					} else if (v != null) { 
+						readValue(be);
 					}
-				} else if (v != null) { 
-					//read and check post-fix
-					readValue(v, resultBuffer);
 				}
-
+				
 				currentPos = PhTree15.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					break;

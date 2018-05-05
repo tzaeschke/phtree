@@ -8,6 +8,7 @@ package ch.ethz.globis.phtree.v15;
 
 import java.util.List;
 
+import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.v15.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v15.bst.BSTree;
@@ -133,6 +134,7 @@ public class BSTHandler {
 
 		//replace value
 		//TODO When using BSTree for new subnodes, we need to copy the kdKey here! 
+		currentEntry.setKdKey(BitsLong.arrayClone(localKdKey));
 		currentEntry.setValue(newNode);
 		//entry did not exist
         return null;
@@ -191,7 +193,7 @@ public class BSTHandler {
 		return prev == null ? null : prev.getValue();
 	}
 
-	static Object getEntry(BSTree<BSTEntry> ind, long hcPos, long[] outKey, long[] keyToMatch, Node node) {
+	static BSTEntry getEntry(BSTree<BSTEntry> ind, long hcPos, long[] keyToMatch, Node node) {
 		LLEntry e = ind.get(hcPos);
 		if (e == null) {
 			return null;
@@ -202,41 +204,34 @@ public class BSTHandler {
 				return null;
 			}
 		}
-		if (outKey != null) {  //TODO de we need outkey?
-			System.arraycopy(be.getKdKey(), 0, outKey, 0, outKey.length);
-		}
-		return be.getValue(); 
+		return be; 
 	}
 
 	private static boolean matches(BSTEntry be, long[] keyToMatch, Node node) {
 		//This is always 0, unless we decide to put several keys into a single array
-		final int offs = 0;
 		if (be.getValue() instanceof Node) {
 			Node sub = (Node) be.getValue();
 			//TODO we are currently nmot setting this, so we can't read it...
 //TODO				if (node.hasSubInfix(offs, dims)) {
 				final long mask = node.calcInfixMask(sub.getPostLen());
-				if (!readAndCheckKdKey(be.getKdKey(), offs, keyToMatch, mask, node.postLenStored())) {
+				if (!readAndCheckKdKey(be.getKdKey(), keyToMatch, mask)) {
 					return false;
 				}
 //			}
 		} else {
-			final long mask = node.calcPostfixMask();
-			if (!readAndCheckKdKey(be.getKdKey(), offs, keyToMatch, mask, node.postLenStored())) {
-				return false;
+			long[] candidate = be.getKdKey();
+			for (int i = 0; i < keyToMatch.length; i++) {
+				if (candidate[i] != keyToMatch[i]) {
+					return false;
+				}
 			}
 		}
 		return true;
 	}
 	
-	private static boolean readAndCheckKdKey(long[] allKeys, int offs, long[] keyToMatch, long mask, int postLen) {
+	private static boolean readAndCheckKdKey(long[] allKeys, long[] keyToMatch, long mask) {
 		//TODO do we reallly need these masks?
 		for (int i = 0; i < keyToMatch.length; i++) {
-//			long k = Bits.readArray(allKeys, offs, postLen);
-//			if (((k ^ keyToMatch[i]) & mask) != 0) {
-//				return false;
-//			}
-//			offs += postLen;
 			if (((allKeys[i] ^ keyToMatch[i]) & mask) != 0) {
 				return false;
 			}

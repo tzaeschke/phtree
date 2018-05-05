@@ -644,7 +644,18 @@ public class BitsLong {
     	return cb > rangeMin; 
     }
 
-    
+	
+    public static boolean checkRange(long[] candidate, long[] rangeMin, long[] rangeMax) {
+		for (int i = 0; i < candidate.length; i++) {
+			long k = candidate[i];
+			if (k < rangeMin[i] || k > rangeMax[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	
     /**
      * Calculate array size for given number of bits.
      * This takes into account JVM memory management, which allocates multiples of 8 bytes.

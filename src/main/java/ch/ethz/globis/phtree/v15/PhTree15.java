@@ -29,6 +29,7 @@ import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v14.bst.BSTree;
+import ch.ethz.globis.phtree.v15.BSTHandler.BSTEntry;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -214,7 +215,7 @@ public class PhTree15<T> implements PhTree<T> {
     }
 
     void insertRoot(long[] key, Object value) {
-        root = Node.createNode(dims, 0, DEPTH_64-1, null);
+        root = Node.createNode(dims, 0, DEPTH_64-1);
         long pos = posInArray(key, root.getPostLen());
         root.addPostPIN(pos, -1, key, value);
         increaseNrEntries();
@@ -317,23 +318,23 @@ public class PhTree15<T> implements PhTree<T> {
 	public String toStringPlain() {
 		StringBuilderLn sb = new StringBuilderLn();
 		if (getRoot() != null) {
-			toStringPlain(sb, getRoot(), new long[dims]);
+			toStringPlain(sb, getRoot());
 		}
 		return sb.toString();
 	}
 
-	private void toStringPlain(StringBuilderLn sb, Node node, long[] key) {
+	private void toStringPlain(StringBuilderLn sb, Node node) {
 		for (int i = 0; i < 1L << dims; i++) {
-			Object o = node.getEntry(i, key);
+			BSTEntry o = node.getEntry(i);
 			if (o == null) {
 				continue;
 			}
 			//inner node?
-			if (o instanceof Node) {
-				toStringPlain(sb, (Node) o, key);
+			if (o.getValue() instanceof Node) {
+				toStringPlain(sb, (Node) o.getValue());
 			} else {
-				sb.append(Bits.toBinary(key, DEPTH_64));
-				sb.appendLn("  v=" + o);
+				sb.append(Bits.toBinary(o.getKdKey(), DEPTH_64));
+				sb.appendLn("  v=" + o.getValue());
 			}
 		}
 	}
@@ -348,8 +349,7 @@ public class PhTree15<T> implements PhTree<T> {
 		return sb.toString();
 	}
 
-	private void toStringTree(StringBuilderLn sb, int currentDepth, Node node, long[] key, 
-			boolean printValue) {
+	private void toStringTree(StringBuilderLn sb, int currentDepth, Node node, long[] prefix, boolean printValue) {
 		String ind = "*";
 		for (int i = 0; i < currentDepth; i++) {
 			ind += "-";
@@ -363,7 +363,7 @@ public class PhTree15<T> implements PhTree<T> {
 			mask = ~mask;
 			mask <<= node.getPostLen()+1;
 			for (int i = 0; i < dims; i++) {
-				sb.append(Bits.toBinary(key[i] & mask) + ",");
+				sb.append(Bits.toBinary(prefix[i] & mask) + ",");
 			}
 		}
 		currentDepth += node.getInfixLen();
@@ -371,19 +371,19 @@ public class PhTree15<T> implements PhTree<T> {
 
 		//To clean previous postfixes.
 		for (int i = 0; i < 1L << dims; i++) {
-			Object o = node.getEntry(i, key);
+			BSTEntry o = node.getEntry(i);
 			if (o == null) {
 				continue;
 			}
-			if (o instanceof Node) {
+			if (o.getValue() instanceof Node) {
 				sb.appendLn(ind + "# " + i + "  +");
-				toStringTree(sb, currentDepth + 1, (Node) o, key, printValue);
+				toStringTree(sb, currentDepth + 1, (Node) o.getValue(), o.getKdKey(), printValue);
 			}  else {
 				//post-fix
-				sb.append(ind + Bits.toBinary(key, DEPTH_64));
+				sb.append(ind + Bits.toBinary(o.getKdKey(), DEPTH_64));
 				sb.append("  hcPos=" + i);
 				if (printValue) {
-					sb.append("  v=" + o);
+					sb.append("  v=" + o.getValue());
 				}
 				sb.appendLn("");
 			}

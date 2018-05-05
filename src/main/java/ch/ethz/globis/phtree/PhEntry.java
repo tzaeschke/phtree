@@ -44,6 +44,10 @@ public class PhEntry<T> {
 		this.value = value;
 	}
 	
+	public void setKeyInternal(long[] key) {
+		this.key = key;
+	}
+	
 	public static final class KeyComparator<T> implements Comparator<PhEntry<T>> {
 
 		private final long[] val;

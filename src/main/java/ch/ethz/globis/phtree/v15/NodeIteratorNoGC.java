@@ -8,8 +8,6 @@
  */
 package ch.ethz.globis.phtree.v15;
 
-import java.util.Arrays;
-
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.v15.BSTHandler.BSTEntry;
@@ -45,7 +43,6 @@ public class NodeIteratorNoGC<T> {
 	/**
 	 * 
 	 * @param dims dimensions
-	 * @param valTemplate A null indicates that no values are to be extracted.
 	 */
 	public NodeIteratorNoGC(int dims) {
 		this.dims = dims;
@@ -61,7 +58,7 @@ public class NodeIteratorNoGC<T> {
 	 * @param upper
 	 * @param checker result verifier, can be null.
 	 */
-	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker, long[] prefix) {
+	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker) {
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
 		next = START;
@@ -110,23 +107,23 @@ public class NodeIteratorNoGC<T> {
 		return getNext(result);
 	}
 
-	private boolean readValue(Object value, PhEntry<T> result) {
-		if (!node.checkAndGetEntryNt(value, result, rangeMin, rangeMax)) {
+	private boolean readValue(BSTEntry candidate, PhEntry<T> result) {
+		if (!node.checkAndGetEntryNt(candidate, result, rangeMin, rangeMax)) {
 			return false;
 		}
 		
 		//subnode ?
-		if (value instanceof Node) {
-			Node sub = (Node) value;
+		if (candidate.getValue() instanceof Node) {
+			Node sub = (Node) candidate.getValue();
 			//skip this for postLen>=63
 			if (checker != null && sub.getPostLen() < (PhTree15.DEPTH_64-1) &&
-					!checker.isValid(sub.getPostLen()+1, result.getKey())) {
+					!checker.isValid(sub.getPostLen()+1, candidate.getKdKey())) {
 				return false;
 			}
 			return true;
 		}
 		
-		return checker == null || checker.isValid(result.getKey());
+		return checker == null || checker.isValid(candidate.getKdKey());
 	}
 
 
@@ -143,13 +140,7 @@ public class NodeIteratorNoGC<T> {
 		while (niIterator.hasNextULL()) {
 			LLEntry le = niIterator.nextEntryReuse();
 			BSTEntry be = (BSTEntry) le.getValue();
-			//TODO copy only if match!!!!!!!! Or do not copy at all?????
-			//TODO copy only if match!!!!!!!! Or do not copy at all?????
-			//TODO copy only if match!!!!!!!! Or do not copy at all?????
-			//TODO copy only if match!!!!!!!! Or do not copy at all?????
-			//TODO copy only if match!!!!!!!! Or do not copy at all?????
-			System.arraycopy(be.getKdKey(), 0, result.getKey(), 0, dims);
-			if (readValue(be.getValue(), result)) {
+			if (readValue(be, result)) {
 				next = le.getKey(); //This is required for kNN-adjusting of iterators
 				return true;
 			}
@@ -176,15 +167,15 @@ public class NodeIteratorNoGC<T> {
 				}
 			}
 
-			Object v = node.ntGetEntry(currentPos, result.getKey());
-			if (v == null) {
+			BSTEntry be = node.ntGetEntry(currentPos);
+			if (be == null) {
 				continue;
 			}
 
 			next = currentPos;
 
 			//read and check post-fix
-			if (readValue(v, result)) {
+			if (readValue(be, result)) {
 				return true;
 			}
 		} while (true);
@@ -270,8 +261,8 @@ public class NodeIteratorNoGC<T> {
 		this.maskUpper = upperLimit;
 	}
 	
-	boolean adjustMinMax(long[] rangeMin, long[] rangeMax) {
-		calcLimits(rangeMin, rangeMax);
+	boolean adjustMinMax(long[] rangeMin, long[] rangeMax, long[] prefix) {
+		calcLimits(rangeMin, rangeMax, prefix);
 
 		if (next >= this.maskUpper) {
 			//we already fully traversed this node
@@ -305,14 +296,14 @@ public class NodeIteratorNoGC<T> {
 	void init(long[] rangeMin, long[] rangeMax, Node node, PhFilter checker, long[] prefix) {
 		this.node = node; //for calcLimits
 		calcLimits(rangeMin, rangeMax, prefix);
-		reinit(node, rangeMin, rangeMax, checker, prefix);
+		reinit(node, rangeMin, rangeMax, checker);
 	}
 
-	boolean verifyMinMax() {
+	boolean verifyMinMax(long[] prefix) {
 		long mask = (-1L) << node.getPostLen()+1;
-		for (int i = 0; i < valTemplate.length; i++) {
-			if ((valTemplate[i] | ~mask) < rangeMin[i] ||
-					(valTemplate[i] & mask) > rangeMax[i]) {
+		for (int i = 0; i < prefix.length; i++) {
+			if ((prefix[i] | ~mask) < rangeMin[i] ||
+					(prefix[i] & mask) > rangeMax[i]) {
 				return false;
 			}
 		}
