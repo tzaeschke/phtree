@@ -49,6 +49,17 @@ class BSTreePage<T> {
 		this.isLeaf = isLeaf;
 	}
 
+	public BSTreePage(BSTree<T> ind, BSTreePage<T> parent, BSTreePage<T> firstSubpage, BSTreePage<T> secondSubpage) {
+		this(ind, parent, false);
+		nEntries++;
+		subPages[0] = firstSubpage;
+		nEntries++;
+		subPages[1] = secondSubpage;
+		keys[0] = secondSubpage.getMinKey();
+		firstSubpage.setParent(this);
+		secondSubpage.setParent(this);
+	}
+
 	private int maxInnerN() {
 		return keys.length;
 	}
@@ -225,24 +236,29 @@ class BSTreePage<T> {
         //is previous page?
         boolean isPrev = false;
         
-        //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
-        //loops, see iterator tests)
-        BSTreePage<T> next = parent.getNextLeafPage(posPageInParent);
-        if (next != null && next.nEntries < next.maxLeafN()-1) {
-        	//merge
-        	destP = next;
-        	isPrev = false;
+        if (parent == null) {
+    		destP = new BSTreePage<>(ind, null, true);
+    		isNew = true;
         } else {
-        	//Merging with prev is not make a big difference, maybe we should remove it...
-        	BSTreePage<T> prev = parent.getPrevLeafPage(posPageInParent);
-        	if (prev != null && prev.nEntries < prev.maxLeafN()-1) {
-        		//merge
-        		destP = prev;
-        		isPrev = true;
-        	} else {
-        		destP = new BSTreePage<>(ind, parent, true);
-        		isNew = true;
-        	}
+	        //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
+	        //loops, see iterator tests)
+	        BSTreePage<T> next = parent.getNextLeafPage(posPageInParent);
+	        if (next != null && next.nEntries < next.maxLeafN()-1) {
+	        	//merge
+	        	destP = next;
+	        	isPrev = false;
+	        } else {
+	        	//Merging with prev is not make a big difference, maybe we should remove it...
+	        	BSTreePage<T> prev = parent.getPrevLeafPage(posPageInParent);
+	        	if (prev != null && prev.nEntries < prev.maxLeafN()-1) {
+	        		//merge
+	        		destP = prev;
+	        		isPrev = true;
+	        	} else {
+	        		destP = new BSTreePage<>(ind, parent, true);
+	        		isNew = true;
+	        	}
+	        }
         }
 
         //TODO during bulkloading, keep 95% or so in old page. 100%?
@@ -465,8 +481,7 @@ class BSTreePage<T> {
 	}
 	
 
-	@SuppressWarnings("unchecked")
-	private Object remove(long key, Function<T, REMOVE_OP> predicateRemove, BSTree<T> ind) {
+	@SuppressWarnings("unchecked") Object remove(long key, Function<T, REMOVE_OP> predicateRemove, BSTree<T> ind) {
         int i = binarySearch(0, nEntries, key);
         if (i < 0) {
         	//key not found

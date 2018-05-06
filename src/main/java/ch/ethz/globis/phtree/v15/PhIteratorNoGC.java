@@ -183,25 +183,44 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 	 * with the new MBBs.  
 	 */
 	public void adjustMinMax() {
-		
-		//First check: does the node still intersect with the query rectangle?
-		while (stack.size > 1 && !stack.peek().verifyMinMax()) {
-			stack.pop();
-		}
-		
-		//Second: does the node still intersect with the checked range? 
-		if (checker != null) {
-			while (!stack.isEmpty() && 
-					!checker.isValid(stack.peek().node().getPostLen()+1, valTemplate)) {
-				stack.pop();
-			}
-		}
-
-		//Third: So if the node is still important, lets's adjust the internal masks
-		//       and pop up if the local iterator is already outside the intersection.
-		while (!stack.isEmpty() && !stack.peek().adjustMinMax(rangeMin, rangeMax)) {
-			stack.pop();
-		}
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		throw new UnsupportedOperationException();
+//		
+//		//First check: does the node still intersect with the query rectangle?
+//		while (stack.size > 1 && !stack.peek().verifyMinMax()) {
+//			stack.pop();
+//		}
+//		
+//		//Second: does the node still intersect with the checked range? 
+//		if (checker != null) {
+//			while (!stack.isEmpty() && 
+//					!checker.isValid(stack.peek().node().getPostLen()+1, valTemplate)) {
+//				stack.pop();
+//			}
+//		}
+//
+//		//Third: So if the node is still important, lets's adjust the internal masks
+//		//       and pop up if the local iterator is already outside the intersection.
+//		while (!stack.isEmpty() && !stack.peek().adjustMinMax(rangeMin, rangeMax)) {
+//			stack.pop();
+//		}
 	}
 	
 }

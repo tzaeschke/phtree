@@ -16,12 +16,12 @@ import java.util.stream.IntStream;
 
 import org.junit.Test;
 
-import ch.ethz.globis.phtree.v14.bst.BSTIteratorMask;
-import ch.ethz.globis.phtree.v14.bst.BSTIteratorMinMax;
-import ch.ethz.globis.phtree.v14.bst.BSTree;
-import ch.ethz.globis.phtree.v14.bst.LLEntry;
+import ch.ethz.globis.phtree.v15.bst.BSTIteratorMask;
+import ch.ethz.globis.phtree.v15.bst.BSTIteratorMinMax;
+import ch.ethz.globis.phtree.v15.bst.BSTree;
+import ch.ethz.globis.phtree.v15.bst.LLEntry;
 
-public class TestBST {
+public class TestBST15 {
 
 	private static final int N1 = 1_00_000;
 	private static final int N2 = 10*N1;

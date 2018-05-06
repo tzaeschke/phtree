@@ -35,8 +35,7 @@ public class NtNodeIteratorFull<T> {
 	private final long[] prefix;
 	private final long maxPos;
 
-	/**
-	 */
+
 	public NtNodeIteratorFull(int keyBitWidth) {
 		//TODO?!?!? Reuse valTemplate???
 		this.prefix = BitsHD.newArray(keyBitWidth);
@@ -45,11 +44,8 @@ public class NtNodeIteratorFull<T> {
 	
 	/**
 	 * 
-	 * @param node
-	 * @param globalMinMask The minimum value that any found value should have. If the found value is
-	 *  lower, the search continues.
-	 * @param globalMaxMask
-	 * @param prefix
+	 * @param node Node
+	 * @param valTemplate valTemplate
 	 */
 	private void reinit(NtNode<T> node, long[] valTemplate) {
 		BitsHD.set(prefix, valTemplate); //TODO

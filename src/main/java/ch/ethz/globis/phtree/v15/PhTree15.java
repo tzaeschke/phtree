@@ -156,22 +156,22 @@ public class PhTree15<T> implements PhTree<T> {
 		currentDepth += node.getInfixLen();
 		stats.q_totalDepth += currentDepth;
 
-		List<Object> entries = new ArrayList<>();
+		List<BSTEntry> entries = new ArrayList<>();
 		BSTHandler.getStats(node.ind(), stats, dims, entries);
-		for (Object child: entries) {
-			if (child instanceof Node) {
-				Node sub = (Node) child;
+		for (BSTEntry child: entries) {
+			if (child.getValue() instanceof Node) {
+				Node sub = (Node) child.getValue();
 				if (sub.getInfixLen() + 1 + sub.getPostLen() != node.getPostLen()) {
 					throw new IllegalStateException();
 				}
-				getStats(currentDepth + 1, (Node) child, stats);
+				getStats(currentDepth + 1, sub, stats);
 			} else if (child != null) {
 				stats.q_nPostFixN[currentDepth]++;
 			}
 		}
 		if (entries.size() != node.ntGetSize()) {
 			System.err.println("WARNING: entry count mismatch: a-found/ec=" + 
-					entries.size() + "/" + node.getEntryCount());
+					entries.size() + "/" + node.getEntryCount() + " / " + node.ind().size());
 		}
 		
 		final int REF = 4;//bytes for a reference

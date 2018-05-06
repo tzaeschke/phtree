@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
-import ch.ethz.globis.phtree.v11hd2.BitsHD;
+import ch.ethz.globis.phtree.v11hd.BitsHD;
 
 /**
  * High-dimensional unsigned bitstrings (actually, simply unsigned bitstrings). 
@@ -236,9 +236,9 @@ public class BitsHD {
 	
 	/**
 	 * Best HC incrementer ever.
-	 * @param v
-	 * @param min
-	 * @param max
+	 * @param v value
+	 * @param min min
+	 * @param max max
 	 * @return 'false' if an overflow occurred, otherwise true (meaning the return value is 
 	 * larger than the input value).
 	 */

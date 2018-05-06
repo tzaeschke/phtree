@@ -133,7 +133,9 @@ public class BSTHandler {
 						localKdKey, currentValue, maxConflictingBits);
 
 		//replace value
-		//TODO When using BSTree for new subnodes, we need to copy the kdKey here! 
+		//TODO Do we really need to clone the KEY here? We could just keep it, because it is never modified???
+		//     --> This is a little bit dangerous, after an entry is deleted from the tree, a user may think its okay
+		//         to modify it again....
 		currentEntry.setKdKey(BitsLong.arrayClone(localKdKey));
 		currentEntry.setValue(newNode);
 		//entry did not exist
@@ -240,10 +242,10 @@ public class BSTHandler {
 	}
 
 
-	static void getStats(BSTree<BSTEntry> ind, PhTreeStats stats, int dims, List<Object> entries) {
+	static void getStats(BSTree<BSTEntry> ind, PhTreeStats stats, int dims, List<BSTEntry> entries) {
 		BSTIteratorMinMax<BSTEntry> iter = ind.iterator();
 		while (iter.hasNextULL()) {
-			entries.add(iter.nextEntryReuse().getValue());
+			entries.add((BSTEntry) iter.nextEntryReuse().getValue());
 		}
 	}
 	

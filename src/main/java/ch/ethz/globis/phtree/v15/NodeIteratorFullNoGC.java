@@ -30,17 +30,14 @@ public class NodeIteratorFullNoGC<T> {
 	
 	private long next = -1;
 	private BSTIteratorMinMax<BSTEntry> ntIterator;
-	private final long[] valTemplate;
 	private PhFilter checker;
 
 
 	/**
 	 * 
-	 * @param dims dimensions
-	 * @param valTemplate A null indicates that no values are to be extracted.
 	 */
-	public NodeIteratorFullNoGC(int dims, long[] valTemplate) {
-		this.valTemplate = valTemplate;
+	public NodeIteratorFullNoGC() {
+		// nothing
 	}
 	
 	/**
@@ -75,19 +72,21 @@ public class NodeIteratorFullNoGC<T> {
 
 
 	@SuppressWarnings("unchecked")
-	private boolean readValue(long[] kdKey, Object value, PhEntry<T> result) {
+	private boolean readValue(BSTEntry entry, PhEntry<T> result) {
+		long[] kdKey = entry.getKdKey();
+		Object value = entry.getValue();
 		if (value instanceof Node) {
 			Node sub = (Node) value;
 			if (checker != null && !checker.isValid(sub.postLenStored()+1, kdKey)) {
 				return false;
 			}
-			System.arraycopy(kdKey, 0, valTemplate, 0, kdKey.length);
+			result.setKeyInternal(kdKey);
 			result.setNodeInternal(sub);
 		} else {
 			if (checker != null && !checker.isValid(kdKey)) {
 				return false;
 			}
-			System.arraycopy(kdKey, 0, result.getKey(), 0, kdKey.length);
+			result.setKeyInternal(kdKey);
 			//ensure that 'node' is set to null
 			result.setValueInternal((T) value);
 		}
@@ -103,8 +102,7 @@ public class NodeIteratorFullNoGC<T> {
 	private void niFindNext(PhEntry<T> result) {
 		while (ntIterator.hasNextULL()) {
 			LLEntry le = ntIterator.nextEntryReuse();
-			BSTEntry be = (BSTEntry) le.getValue();
-			if (readValue(be.getKdKey(), be.getValue(), result)) {
+			if (readValue((BSTEntry) le.getValue(), result)) {
 				next = le.getKey();
 				return;
 			}

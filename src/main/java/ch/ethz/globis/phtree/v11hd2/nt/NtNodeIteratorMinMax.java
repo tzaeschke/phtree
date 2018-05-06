@@ -38,8 +38,7 @@ public class NtNodeIteratorMinMax<T> {
 	private final long[] globalMin;
 	private final long[] globalMax;
 
-	/**
-	 */
+
 	public NtNodeIteratorMinMax(long[] globalMin, long[] globalMax) {
 		this.globalMin = globalMin;
 		this.globalMax = globalMax;

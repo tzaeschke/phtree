@@ -56,6 +56,11 @@ public class BSTIteratorMinMax<T> {
 
 	
 	private void goToNextPage() {
+		if (stack.isEmpty()) {
+			//root->leaf
+			currentPage = null;
+			return;
+		}
 		IteratorPos<T> ip = stack.pop();
 		currentPage = ip.page;
 		currentPos = ip.pos;

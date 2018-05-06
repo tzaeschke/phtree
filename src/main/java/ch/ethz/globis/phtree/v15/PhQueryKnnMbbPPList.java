@@ -64,7 +64,6 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	private final PhFilterDistance checker;
 	private final KnnResultList results; 
 	private final NodeIteratorFullNoGC<T> ni;
-	private final long[] niBuffer; 
 
 
 	/**
@@ -79,8 +78,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		this.checker = new PhFilterDistance();
 		this.results = new KnnResultList(dims);
 		this.iter = new NodeIteratorListReuse<>(dims, results);
-		this.niBuffer = new long[dims];
-		ni = new NodeIteratorFullNoGC<>(dims, niBuffer);
+		ni = new NodeIteratorFullNoGC<>();
 	}
 
 	@Override
@@ -157,21 +155,26 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	private double getDistanceToClosest(long[] key, Node node) {
 		//This is a hack.
 		//calcDiagonal() is problematic when applied to IEEE encoded
-		//floating point values, especially when it the node is at the
+		//floating point values, especially when the node is at the
 		//level of the exponent bits.
 		if (node.getPostLen() <= 52) { 
 			return calcDiagonal(key, node);
 		}
-
-		//First, get correct prefix.
-		long mask = (-1L) << (node.getPostLen()+1);
-		for (int i = 0; i < dims; i++) {
-			niBuffer[i] = key[i] & mask;
-		}
 		
 		//This allows writing the result directly into 'ret'
-		PhEntry<T> result = new PhEntry<>(niBuffer, null);
+		PhEntry<T> result = new PhEntry<>(null, null);
 		ni.init(node, null);
+		//TODO instead of iterator, just get first element!!!!!!! -> Implement special BST function
+		//TODO instead of iterator, just get first element!!!!!!! -> Implement special BST function
+		//TODO instead of iterator, just get first element!!!!!!! -> Implement special BST function
+		//TODO instead of iterator, just get first element!!!!!!! -> Implement special BST function
+		
+		
+		//TODO General KNN in high-dim:  
+		//     - if node-size > 10*dim, first iterate over bordering quadrants (just 1 bit different)
+		//       -> This serves as good annealling KNN
+		//     - If precise kNN is required, use best distance to exclude other quadrants in min/max-mask!!
+		//       -> Calculate how many bits can differ in a mask, then generate min/max-masks with that!
 		while (ni.increment(result)) {
 			if (result.hasNodeInternal()) {
 				//traverse sub node
@@ -179,12 +182,17 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 			} else {
 				//Never return closest key if we look for nMin>1 keys!
 				if (nMin > 1 && Arrays.equals(key, result.getKey())) {
+					//TODO why do we need this?????
+					//TODO why do we need this?????
+					//TODO why do we need this????? Should we always just use the diameter of the node?
+					//TODO why do we need this?????
+					
 					//Never return a perfect match if we look for nMin>1 keys!
 					//otherwise the distance is too small.
 					//This check should be cheap and will not be executed more than once anyway.
 					continue;
 				}
-				double dist = distance.dist(key, niBuffer);
+				double dist = distance.dist(key, result.getKey());
 				//Problem: for rectangles with EDGE distance, the distance
 				//may calculate to '0.0', which will not yield a useful search MBB
 				//(unless there are more than 'k' rectangles with distance 0).

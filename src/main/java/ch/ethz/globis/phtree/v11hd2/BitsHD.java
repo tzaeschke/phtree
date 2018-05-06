@@ -230,9 +230,9 @@ public class BitsHD {
 	
 	/**
 	 * Best HC incrementer ever.
-	 * @param v
-	 * @param min
-	 * @param max
+	 * @param v value
+	 * @param min min 
+	 * @param max max
 	 * @return 'false' if an overflow occurred, otherwise true (meaning the return value is 
 	 * larger than the input value).
 	 */

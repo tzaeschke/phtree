@@ -39,9 +39,7 @@ public class NtNodeIteratorMask<T> {
 	private final long[] globalMaxMask;
 	private boolean useHcIncrementer;
 
-	/**
-	 * 
-	 */
+
 	public NtNodeIteratorMask(long[] globalMinMask, long[] globalMaxMask) {
 		this.prefix = new long[globalMinMask.length];
 		this.globalMinMask = globalMinMask;
@@ -50,11 +48,8 @@ public class NtNodeIteratorMask<T> {
 	
 	/**
 	 * 
-	 * @param node
-	 * @param globalMinMask The minimum value that any found value should have. If the found value is
-	 *  lower, the search continues.
-	 * @param globalMaxMask
-	 * @param prefix
+	 * @param node node
+	 * @param prefix prefix
 	 */
 	private void reinit(NtNode<T> node, long[] prefix) {
 		//this.prefix = prefix;
@@ -313,12 +308,31 @@ public class NtNodeIteratorMask<T> {
 
 	//TODO use maskLower/upper here?
 	boolean verifyMinMax(long[] globalMinMask, long[] globalMaxMask) {
-		long mask = (-1L) << node.getPostLen()+1;
-		if ((prefix | ~mask) < globalMinMask ||
-				(prefix & mask) > globalMaxMask) {
-			return false;
-		}
-		return true;
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		//TODO
+		throw new UnsupportedOperationException();
+//		long mask = (-1L) << node.getPostLen()+1;
+//		if ((prefix | ~mask) < globalMinMask ||
+//				(prefix & mask) > globalMaxMask) {
+//			return false;
+//		}
+//		return true;
 	}
 
 	public long[] getPrefix() {

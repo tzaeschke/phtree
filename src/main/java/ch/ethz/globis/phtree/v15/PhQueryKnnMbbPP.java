@@ -156,7 +156,11 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 			ret[i] = key[i] & mask;
 		}
 		
-		NodeIteratorFullNoGC<T> ni = new NodeIteratorFullNoGC<>(dims, ret);
+		//TODO can we avoid this?!?!?!?
+		//TODO can we avoid this?!?!?!? Or at least assign it to a local field?
+		//TODO can we avoid this?!?!?!?
+		//TODO can we avoid this?!?!?!?
+		NodeIteratorFullNoGC<T> ni = new NodeIteratorFullNoGC<>();
 		//This allows writing the result directly into 'ret'
 		PhEntry<T> result = new PhEntry<>(ret, null);
 		ni.init(node, null);

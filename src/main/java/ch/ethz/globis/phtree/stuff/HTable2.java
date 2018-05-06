@@ -37,7 +37,7 @@ package ch.ethz.globis.phtree.stuff;
  * - Insertion-ordered list, becomes Bag (unsorted list) after first removal.
  * 
  * Invariants:
- * - Every inner node has hat least two children and level>0.
+ * - Every inner node has hat least two children and level above 0.
  * - Very leaf node has at least one entry and level=0.
  * - Leaf nodes have level=0, root-node has the highest level. On the 'right' part of the tree, levels are
  *   not necessarily consecutive, for example, the root node with level=5 can reference an inner node with
@@ -47,7 +47,7 @@ package ch.ethz.globis.phtree.stuff;
  * 
  * @author Tilmann Zäschke
  *
- * @param <T>
+ * @param <T> Value type
  */
 @Deprecated
 public class HTable2<T> {

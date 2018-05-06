@@ -155,8 +155,8 @@ public class Node {
         	newNode.writeEntry(0, posSub2, key2, val2);
         	newNode.writeEntry(1, posSub1, key1, val1);
         }
-        newNode.incEntryCount();
-        newNode.incEntryCount();
+//        newNode.incEntryCount();
+//        newNode.incEntryCount();
         return newNode;
     }
 
@@ -186,6 +186,8 @@ public class Node {
 			return;
 		}
 
+		//TODO this is apparently never called (ntIterator() would fail), why???. 
+		
 		//okay, at his point we have a post that matches and (since it matches) we need to remove
 		//the local node because it contains at most one other entry and it is not the root node.
 		PhIterator64<Object> iter = ntIterator();

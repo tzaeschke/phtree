@@ -39,9 +39,7 @@ public class NtNodeIteratorMask<T> {
 	private final long[] globalMaxMask;
 	private boolean useHcIncrementer;
 
-	/**
-	 * 
-	 */
+
 	public NtNodeIteratorMask(long[] globalMinMask, long[] globalMaxMask) {
 		this.prefix = new long[globalMinMask.length];
 		this.globalMinMask = globalMinMask;

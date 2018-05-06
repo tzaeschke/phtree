@@ -49,7 +49,7 @@ public class BSTree<T> {
 		default: maxLeafN = 100; maxInnerN = 100; break;
 		}
 		//bootstrap index
-		root = createPage(null, false);
+		root = createPage(null, true);
 	}
 
 	public BSTree(int pageSizeInner, int pageSizeLeaf) {
@@ -57,7 +57,7 @@ public class BSTree<T> {
 		this.maxLeafN = pageSizeLeaf;
 
 		//bootstrap index
-		root = createPage(null, false);
+		root = createPage(null, true);
 	}
 
 	public final T put(long key, T value) {
@@ -70,8 +70,18 @@ public class BSTree<T> {
 		//Depth as log(nEntries) 
 		BSTreePage<T> page = getRoot();
 		Object o = page;
-		while (o instanceof BSTreePage && !((BSTreePage<T>)o).isLeaf()) {
-			o = ((BSTreePage<T>)o).put(key, (T)val, collisionHandler, this);
+		if (page.isLeaf()) {
+			o = page.put(key, value, null, -1, collisionHandler, this);
+			if (o instanceof BSTreePage) {
+				root = createPage(null, false);
+    			BSTreePage<T> newPage = (BSTreePage<T>) o;
+				root = new BSTreePage<T>(this, null, page, newPage);
+				o = null;
+			}
+		} else {
+			while (o instanceof BSTreePage && !((BSTreePage<T>)o).isLeaf()) {
+				o = ((BSTreePage<T>)o).put(key, (T)val, collisionHandler, this);
+			}
 		}
 		if (o == null) {
 			//did not exist
@@ -101,7 +111,11 @@ public class BSTree<T> {
 		BSTreePage<T> page = getRoot();
 		Object result = null;
 		if (page != null) {
-			result = page.findAndRemove(key, predicateRemove, this);
+	        if (page.isLeaf()) {
+	        	result = page.remove(key, predicateRemove, this);
+	        } else {
+	        	result = page.findAndRemove(key, predicateRemove, this);
+	        }
 		}
 
 		return result == NULL ? null : (T) result;
