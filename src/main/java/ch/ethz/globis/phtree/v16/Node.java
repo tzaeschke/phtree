@@ -10,10 +10,9 @@ package ch.ethz.globis.phtree.v16;
 
 import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
@@ -22,6 +21,7 @@ import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
+import ch.ethz.globis.phtree.v16.PhTree16.UpdateInfo;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v16.bst.BSTPool;
@@ -131,15 +131,14 @@ public class Node {
 	 * @param tree
 	 * @return The sub node or null.
 	 */
-	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent,
-			long[] newKey, int[] insertRequired, PhTree16<?> tree) {
+	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent, UpdateInfo insertRequired, PhTree16<?> tree) {
 		
 		long hcPos = posInArray(keyToMatch, getPostLen());
 		
 		if (getOnly) {
 			return ntGetEntryIfMatches(hcPos, keyToMatch);
 		}			
-		Object v = ntRemoveEntry(hcPos, keyToMatch, newKey, insertRequired);
+		Object v = ntRemoveEntry(hcPos, keyToMatch, insertRequired);
 		if (v != null && !(v instanceof Node)) {
 			//Found and removed entry.
 			tree.decreaseNrEntries();
@@ -332,11 +331,11 @@ public class Node {
 	 * @return
 	 */
 	Object ntRemoveAnything(long hcPos, int dims) {
-    	return removeEntry(hcPos, null, null, null, null);
+    	return removeEntry(hcPos, null, null);
 	}
 
-	Object ntRemoveEntry(long hcPos, long[] key, long[] newKey, int[] insertRequired) {
-    	return removeEntry(hcPos, key, newKey, insertRequired, this);
+	Object ntRemoveEntry(long hcPos, long[] key, UpdateInfo ui) {
+    	return removeEntry(hcPos, key, ui);
 	}
 
 	BSTEntry ntGetEntry(long hcPos) {
@@ -509,14 +508,12 @@ public class Node {
     	return new BSTIteratorMask().reset(getRoot(), maskLower, maskUpper);
 	}
     
+    
     // ************************************
     // ************************************
     // BSTree
     // ************************************
     // ************************************
-    
-    @Deprecated
-	public static final BSTEntry NULL = new BSTEntry(null, null);
 	
     public static int statNLeaves = 0;
 	public static int statNInner = 0;
@@ -528,8 +525,6 @@ public class Node {
 	}
 
 	public final BSTEntry bstPut(long key, BSTEntry value) {
-		BSTEntry val = value == null ? NULL : value;
-		//Depth as log(nEntries) 
 		BSTreePage page = getRoot();
 		Object o = page;
 		if (page.isLeaf()) {
@@ -541,7 +536,7 @@ public class Node {
 			}
 		} else {
 			while (o instanceof BSTreePage && !((BSTreePage)o).isLeaf()) {
-				o = ((BSTreePage)o).put(key, val, this);
+				o = ((BSTreePage)o).put(key, value, this);
 			}
 		}
 		if (o == null) {
@@ -551,37 +546,23 @@ public class Node {
 		return (BSTEntry)o;
 	}
 
-	/**
-	 * @param key The key to remove
-	 * @return the previous value
-	 * @throws NoSuchElementException if key is not found
-	 */
-	public BSTEntry bstRemove(long key) {
-		return bstRemove(key, null);
-	}
-	
-	/**
-	 * @param key The key to remove
-	 * @param predicateRemove Whether to remove the entry. This methods will always return T, even if
-	 * the 'predicate' returns false. 
-	 * @return the previous value
-	 * @throws NoSuchElementException if key is not found
-	 */
-	public BSTEntry bstRemove(long key, Function<BSTEntry, REMOVE_OP> predicateRemove) {
+
+	public BSTEntry bstRemove(long key, long[] kdKey, PhTree16.UpdateInfo ui) {
 		BSTreePage page = getRoot();
 		BSTEntry result = null;
 		if (page != null) {
 	        if (page.isLeaf()) {
-	        	result = page.remove(key, predicateRemove);
+	        	result = page.remove(key, kdKey, this, ui);
 	        } else {
-	        	result = page.findAndRemove(key, predicateRemove);
+	        	result = page.findAndRemove(key, kdKey, this, ui);
 	        }
 		}
 
-		return result == NULL ? null : result;
+		return result;
 	}
 
-	public LLEntry bstGet(long key) {
+
+	public BSTEntry bstGet(long key) {
 		BSTreePage page = getRoot();
 		while (page != null && !page.isLeaf()) {
 			page = page.findSubPage(key);
@@ -673,9 +654,13 @@ public class Node {
 	// BST handler
 	// *****************************************
 	
-	@Deprecated //remove phNode
 	private Object addEntry(long hcPos, long[] kdKey, Object value) {
 		//TODO for replace, can we reuse the existing key???
+		
+		//TODO Implement bstGetOrCreate() -> 
+		//- get or create entry
+		//- if value==null -> new entry, just set key,value
+		//- if not null: decide to replacePos (exact match) or replaceWithSub 
 		BSTEntry be = bstPut(hcPos, new BSTEntry(kdKey, value));
 		return be == null ? null : be.getValue();
 	}
@@ -717,38 +702,16 @@ public class Node {
 	}
 	
 	private Object replaceEntry(long hcPos, long[] kdKey, Object value) {
-		BSTEntry be = bstGet(hcPos).getValue();
+		BSTEntry be = bstGet(hcPos);
 		Object prev = be.getValue();
 		be.setKdKey(kdKey);
 		be.setValue(value);
 		return prev;
 	}
 
-	private Object removeEntry(long hcPos, long[] key, 
-			long[] newKey, int[] insertRequired, Node phNode) {
+	private Object removeEntry(long hcPos, long[] key, UpdateInfo ui) {
 		//Only remove value-entries, node-entries are simply returned without removing them
-		BSTEntry prev = bstRemove(hcPos, e -> {
-			if (phNode.matches(e, key)) {
-				if (e.getValue() instanceof Node) {
-					return REMOVE_OP.KEEP_RETURN;
-				}
-				if (newKey != null) {
-					//replace
-					int bitPosOfDiff = Node.calcConflictingBits(key, newKey, -1L);
-					if (bitPosOfDiff <= phNode.getPostLen()) {
-						//replace
-						//simply replace kdKey!!
-						//Replacing the long[] should be correct (and fastest, and avoiding GC)
-						e.setKdKey(newKey);
-						return REMOVE_OP.KEEP_RETURN;
-					} else {
-						insertRequired[0] = bitPosOfDiff;
-					}
-				}
-				return REMOVE_OP.REMOVE_RETURN;
-			}
-			return REMOVE_OP.KEEP_RETURN_NULL;
-		});
+		BSTEntry prev = bstRemove(hcPos, key, ui);
 		//return values: 
 		// - null -> not found / remove failed
 		// - Node -> recurse node
@@ -763,22 +726,22 @@ public class Node {
 		return prev == null ? null : prev.getValue();
 	}
 
-	REMOVE_OP bstInternalRemoveCallback(BSTEntry e, long[] key, long[] newKey, int[] insertRequired) {
-		if (matches(e, key)) {
-			if (e.getValue() instanceof Node) {
+	public REMOVE_OP bstInternalRemoveCallback(BSTEntry currentEntry, long[] key, UpdateInfo ui) {
+		if (matches(currentEntry, key)) {
+			if (currentEntry.getValue() instanceof Node) {
 				return REMOVE_OP.KEEP_RETURN;
 			}
-			if (newKey != null) {
+			if (ui != null) {
 				//replace
-				int bitPosOfDiff = Node.calcConflictingBits(key, newKey, -1L);
+				int bitPosOfDiff = Node.calcConflictingBits(key, ui.newKey, -1L);
 				if (bitPosOfDiff <= getPostLen()) {
 					//replace
 					//simply replace kdKey!!
 					//Replacing the long[] should be correct (and fastest, and avoiding GC)
-					e.setKdKey(newKey);
+					currentEntry.setKdKey(ui.newKey);
 					return REMOVE_OP.KEEP_RETURN;
 				} else {
-					insertRequired[0] = bitPosOfDiff;
+					ui.insertRequired = bitPosOfDiff;
 				}
 			}
 			return REMOVE_OP.REMOVE_RETURN;
@@ -786,22 +749,12 @@ public class Node {
 		return REMOVE_OP.KEEP_RETURN_NULL;
 	}
 	
-	REMOVE_OP bstInternalRemoveCallback(BSTEntry e, long[] key) {
-		if (matches(e, key)) {
-			if (e.getValue() instanceof Node) {
-				return REMOVE_OP.KEEP_RETURN;
-			}
-			return REMOVE_OP.REMOVE_RETURN;
-		}
-		return REMOVE_OP.KEEP_RETURN_NULL;
-	}
 	
 	private BSTEntry getEntry(long hcPos, long[] keyToMatch) {
-		LLEntry e = bstGet(hcPos);
-		if (e == null) {
+		BSTEntry be = bstGet(hcPos);
+		if (be == null) {
 			return null;
 		}
-		BSTEntry be = e.getValue();
 		if (keyToMatch != null) {
 			if (!matches(be, keyToMatch)) {
 				return null;
@@ -833,7 +786,7 @@ public class Node {
 	}
 	
 	private static boolean readAndCheckKdKey(long[] allKeys, long[] keyToMatch, long mask) {
-		//TODO do we reallly need these masks?
+		//TODO do we really need these masks?
 		for (int i = 0; i < keyToMatch.length; i++) {
 			if (((allKeys[i] ^ keyToMatch[i]) & mask) != 0) {
 				return false;
@@ -877,6 +830,10 @@ public class Node {
 		public void setKdKey(long[] key) {
 			this.kdKey = key;
 			
+		}
+		@Override
+		public String toString() {
+			return (kdKey == null ? null : Arrays.toString(kdKey)) + "->" + value;
 		}
 	}
 

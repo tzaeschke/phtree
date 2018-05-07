@@ -7,13 +7,14 @@
 package ch.ethz.globis.phtree.v16.bst;
 
 import java.util.Arrays;
-import java.util.function.Function;
 
+import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v16.Node;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.Node.BSTStats;
 import ch.ethz.globis.phtree.v16.Node.REMOVE_OP;
+import ch.ethz.globis.phtree.v16.PhTree16;
 
 
 public class BSTreePage {
@@ -90,7 +91,7 @@ public class BSTreePage {
         return subPages[pos]; 
 	}
 	
-	public BSTEntry findAndRemove(long key, Function<BSTEntry, REMOVE_OP> predicateRemove) {
+	public BSTEntry findAndRemove(long key, long[] kdKey, Node node, PhTree16.UpdateInfo ui) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -103,10 +104,10 @@ public class BSTreePage {
         BSTreePage page = subPages[pos]; 
         BSTEntry result = null;
         if (page.isLeaf()) {
-        	result = page.remove(key, predicateRemove);
+        	result = page.remove(key, kdKey, node, ui);
             checkUnderflowSubpageLeaf(pos);
         } else {
-        	result = page.findAndRemove(key, predicateRemove);
+        	result = page.findAndRemove(key, kdKey, node, ui);
         	handleUnderflowSubInner(pos);
         }
         return result;
@@ -145,13 +146,14 @@ public class BSTreePage {
         return page;
 	}
 	
-	public LLEntry getValueFromLeaf(long key) {
-		if (!isLeaf) {
+
+	public BSTEntry getValueFromLeaf(long key) {
+		if (PhTreeHelper.DEBUG && !isLeaf) {
 			throw new IllegalStateException("Leaf inconsistency.");
 		}
 		int pos = binarySearch(0, nEntries, key);
 		if (pos >= 0) {
-            return new LLEntry( key, values[pos] == Node.NULL ? null : values[pos]);
+            return values[pos];
 		}
 		//If the value could is not on this page, it does not exist.
 		return null;
@@ -493,7 +495,7 @@ public class BSTreePage {
 	}
 	
 
-	public BSTEntry remove(long key, Function<BSTEntry, REMOVE_OP> predicateRemove) {
+	public BSTEntry remove(long key, long[] kdKey, Node node, PhTree16.UpdateInfo ui) {
         int i = binarySearch(0, nEntries, key);
         if (i < 0) {
         	//key not found
@@ -503,10 +505,15 @@ public class BSTreePage {
         
         // first remove the element
         BSTEntry prevValue = values[i];
-        REMOVE_OP op = REMOVE_OP.REMOVE_RETURN;
-        if (predicateRemove != null) {
-        	op = predicateRemove.apply(prevValue); 
-        }
+        REMOVE_OP op;
+        //TODO
+//        = REMOVE_OP.REMOVE_RETURN;
+//        if (predicateRemove != null) {
+//        	op = predicateRemove.apply(prevValue); 
+//        }
+        
+        op = node.bstInternalRemoveCallback(prevValue, kdKey, ui);
+        
         switch (op) {
 		case REMOVE_RETURN:
         	System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
@@ -522,6 +529,7 @@ public class BSTreePage {
 			throw new IllegalArgumentException();
 		}
 	}
+	
 	
 	private void checkUnderflowSubpageLeaf(int pos) {
 		BSTreePage subPage = getPageByPos(pos);

@@ -131,7 +131,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	}
 
 	private double estimateDistance(long[] key, Node node) {
-		Object v = node.doIfMatching(key, true, null, null, null, pht);
+		Object v = node.doIfMatching(key, true, null, null, pht);
 		if (v == null) {
 			//Okay, there is no perfect match:
 			//just perform a query on the current node and return the first value that we find.

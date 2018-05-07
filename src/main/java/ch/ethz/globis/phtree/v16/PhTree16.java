@@ -246,7 +246,7 @@ public class PhTree16<T> implements PhTree<T> {
 		Object o = getRoot();
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
-			o = currentNode.doIfMatching(key, true, null, null, null, this);
+			o = currentNode.doIfMatching(key, true, null, null, this);
 		}
 		return (T) o != null;
 	}
@@ -258,7 +258,7 @@ public class PhTree16<T> implements PhTree<T> {
 		Object o = getRoot();
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
-			o = currentNode.doIfMatching(key, true, null, null, null, this);
+			o = currentNode.doIfMatching(key, true, null, null, this);
 		}
 		return o == PhTreeHelper.NULL ? null : (T) o;
 	}
@@ -276,12 +276,21 @@ public class PhTree16<T> implements PhTree<T> {
 		Node parentNode = null;
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
-			o = currentNode.doIfMatching(key, false, parentNode, null, null, this);
+			o = currentNode.doIfMatching(key, false, parentNode, null, this);
 			parentNode = currentNode;
 		}
 		return (T) o;
 	}
 
+	//TODO create pool?
+	public static class UpdateInfo {
+		final long[] newKey;
+		int insertRequired = NO_INSERT_REQUIRED;
+		public UpdateInfo(long[] newKey) {
+			this.newKey = newKey;
+		}
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public T update(long[] oldKey, long[] newKey) {
@@ -290,11 +299,12 @@ public class PhTree16<T> implements PhTree<T> {
 		
 		Object o = getRoot();
 		Node parentNode = null;
-		final int[] insertRequired = new int[]{NO_INSERT_REQUIRED};
+		final UpdateInfo ui = new UpdateInfo(newKey);
+		
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
 			stack[stackSize++] = currentNode;
-			o = currentNode.doIfMatching(oldKey, false, parentNode, newKey, insertRequired, this);
+			o = currentNode.doIfMatching(oldKey, false, parentNode, ui, this);
 			parentNode = currentNode;
 		}
 		
@@ -302,20 +312,20 @@ public class PhTree16<T> implements PhTree<T> {
 
 		//traverse the tree from bottom to top
 		//this avoids extracting and checking infixes.
-		if (insertRequired[0] != NO_INSERT_REQUIRED) {
+		if (ui.insertRequired != NO_INSERT_REQUIRED) {
 			//ignore lowest node, except if it is the root node
 			if (stack[stackSize-1].getEntryCount() == 0 && stackSize > 1) {
 				//The node may have been deleted
 				stackSize--;
 			}
 			while (stackSize > 0) {
-				if (stack[--stackSize].getPostLen()+1 >= insertRequired[0]) {
+				if (stack[--stackSize].getPostLen()+1 >= ui.insertRequired) {
 					o = stack[stackSize];
 					while (o instanceof Node) {
 						Node currentNode = (Node) o;
 						o = currentNode.doInsertIfMatching(newKey, value, this);
 					}
-					insertRequired[0] = NO_INSERT_REQUIRED;
+					ui.insertRequired = NO_INSERT_REQUIRED;
 					break;
 				}
 			}

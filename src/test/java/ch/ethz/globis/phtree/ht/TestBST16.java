@@ -20,11 +20,10 @@ import ch.ethz.globis.phtree.v16.Node;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMinMax;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
 public class TestBST16 {
 
-	private static final int N1 = 1_00_000;
+	private static final int N1 = 1_0;
 	private static final int N2 = 10*N1;
 	
 	private static final int DIM = 10;
@@ -57,9 +56,14 @@ public class TestBST16 {
 		runTest(createDataRND(0, N2), "R-");
 	}
 	
+	private static BSTEntry createEntry(int i) {
+		BSTEntry e = new BSTEntry(new long[DIM], i);
+		e.getKdKey()[0] = i;
+		return e;
+	}
 	
 	private List<BSTEntry> createData(int n) {
-		return IntStream.range(0, n).boxed().map(i -> new BSTEntry(new long[DIM], i)).collect(Collectors.toList());
+		return IntStream.range(0, n).boxed().map(i -> createEntry(i)).collect(Collectors.toList());
 	}
 	
 	private List<BSTEntry> createDataRND(int seed, int n) {
@@ -79,8 +83,8 @@ public class TestBST16 {
 			//	System.out.println("ins=" + i);
 			ht.bstPut((Integer)i.getValue(), i);
 			//Check
-			LLEntry le = ht.bstGet((Integer)i.getValue());
-			assertEquals((int)i.getValue(), (long)le.getKey());
+			BSTEntry be = ht.bstGet((Integer)i.getValue());
+			assertEquals((int)i.getValue(), (int)be.getValue());
 		}
 		long l12 = System.currentTimeMillis();
 		assertEquals(list.size(), ht.getEntryCount());
@@ -90,9 +94,9 @@ public class TestBST16 {
 		//lookup
 		long l21 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
-			LLEntry e = ht.bstGet((Integer)i.getValue());
+			BSTEntry e = ht.bstGet((Integer)i.getValue());
 			//assertNotNull("i=" + i, e);
-			int x = (int) e.getValue().getValue();
+			int x = (int) e.getValue();
 			assertEquals(i.getValue(), (int) x);
 		}
 		long l22 = System.currentTimeMillis();
@@ -131,9 +135,12 @@ public class TestBST16 {
 		//remove some
 		long l41 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
+			System.out.println(ht.toStringTree());
+			
 			//if (i%1000 == 0) 
-			//System.out.println("rem=" + i);
-			assertEquals(-(Integer)i.getValue(), (int) ht.bstRemove((Integer)i.getValue()).getValue());
+			System.out.println("rem=" + i.getValue());
+//			System.out.println("rem2=" + ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null));
+			assertEquals(-(Integer)i.getValue(), ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null).getValue());
 //			if (ht.size() % 100_000 == 0) {
 //				println(ht.getStats().toString());
 //			}

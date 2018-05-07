@@ -261,20 +261,6 @@ public class BSTIteratorMask {
 	}
 
 
-	public LLEntry nextEntry() {
-		if (!hasNextULL()) {
-			throw new NoSuchElementException();
-		}
-
-        LLEntry e = new LLEntry(nextKey, nextValue);
-		if (currentPage == null) {
-			hasValue = false;
-		} else {
-			gotoPosInPage();
-		}
-		return e;
-	}
-	
 	public long nextKey() {
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();
