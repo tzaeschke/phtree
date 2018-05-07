@@ -7,12 +7,11 @@
 package ch.ethz.globis.phtree.v16.bst;
 
 import java.util.Arrays;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v16.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v16.Node;
+import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.Node.BSTStats;
 import ch.ethz.globis.phtree.v16.Node.REMOVE_OP;
 
@@ -91,7 +90,7 @@ public class BSTreePage {
         return subPages[pos]; 
 	}
 	
-	public BSTEntry findAndRemove(long key, Function<BSTEntry, REMOVE_OP> predicateRemove, Node ind) {
+	public BSTEntry findAndRemove(long key, Function<BSTEntry, REMOVE_OP> predicateRemove) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -104,10 +103,10 @@ public class BSTreePage {
         BSTreePage page = subPages[pos]; 
         BSTEntry result = null;
         if (page.isLeaf()) {
-        	result = page.remove(key, predicateRemove, ind);
+        	result = page.remove(key, predicateRemove);
             checkUnderflowSubpageLeaf(pos);
         } else {
-        	result = page.findAndRemove(key, predicateRemove, ind);
+        	result = page.findAndRemove(key, predicateRemove);
         	handleUnderflowSubInner(pos);
         }
         return result;
@@ -116,10 +115,10 @@ public class BSTreePage {
 	/**
 	 * 
 	 * @param key the lookup key
-	 * @param collisionHandler 
+	 * @param ind the Node 
 	 * @return the page
 	 */
-	public Object put(long key, BSTEntry value, BiFunction<BSTEntry, BSTEntry, Object> collisionHandler, Node ind) {
+	public Object put(long key, BSTEntry value, Node ind) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(0, nEntries, key);
         if (pos >= 0) {
@@ -134,7 +133,7 @@ public class BSTreePage {
         	page = createLeafPage(ind, pos);
         }
         if (page.isLeaf()) {
-    		Object o = page.put(key, value, this, pos, collisionHandler, ind);
+    		Object o = page.put(key, value, this, pos, ind);
     		if (o instanceof BSTreePage) {
     			//add page
     			BSTreePage newPage = (BSTreePage) o;
@@ -184,14 +183,8 @@ public class BSTreePage {
 		return -(low + 1);  // key not found.
 	}
 
-    /**
-     * Overwrite the entry at 'key'.
-     * @param key
-     * @param value
-     * @param collisionHandler 
-     */
-	public final Object put(long key, BSTEntry value, BSTreePage parent, int posPageInParent, 
-			BiFunction<BSTEntry, BSTEntry, Object> collisionHandler, Node ind) {
+
+	public final Object put(long key, BSTEntry value, BSTreePage parent, int posPageInParent, Node ind) {
 		if (!isLeaf) {
 			throw new IllegalStateException("Tree inconsistency.");
 		}
@@ -201,18 +194,11 @@ public class BSTreePage {
         //key found? -> pos >=0
         if (pos >= 0) {
         	BSTEntry oldVal = values[pos];
-        	if (collisionHandler != null) {
-        		//Collision -> use collision handler (this will retain BSTEntry but may update it's value T
-        		return collisionHandler.apply(oldVal, value);
-        	}
-        	values[pos] = value;
-            return oldVal;
+       		//Collision -> use collision handler (this will retain BSTEntry but may update it's value T
+       		return bstInternalPutCallback(oldVal, value.getKdKey(), value.getValue(), value, ind);
+//        	values[pos] = value;
+//            return oldVal;
         } 
-
-    	if (collisionHandler != null) {
-    		//No collision, call handler, but no need to return anything (except null)
-    		collisionHandler.apply(null, null);
-    	}
         
         if (nEntries < maxLeafN()) {
         	//okay so we add it locally
@@ -224,6 +210,7 @@ public class BSTreePage {
         	keys[pos] = key;
         	values[pos] = value;
         	nEntries++;
+        	ind.incEntryCount();
         	return null;
         } 
 
@@ -237,7 +224,7 @@ public class BSTreePage {
         boolean isPrev = false;
         
         if (parent == null) {
-    		destP = ind.createPage(null, true);
+    		destP = ind.bstCreatePage(null, true);
     		isNew = true;
         } else {
 	        //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
@@ -255,7 +242,7 @@ public class BSTreePage {
 	        		destP = prev;
 	        		isPrev = true;
 	        	} else {
-	        		destP = ind.createPage(parent, true);
+	        		destP = ind.bstCreatePage(parent, true);
 	        		isNew = true;
 	        	}
 	        }
@@ -289,15 +276,15 @@ public class BSTreePage {
        	if (isNew || !isPrev) {
        		if (destP.keys[0] > key) {
        			//posInParent=-2, because we won't need it there
-       			put(key, value, parent, -2, null, ind);
+       			put(key, value, parent, -2, ind);
        		} else {
-       			destP.put(key, value, parent, -2, null, ind);
+       			destP.put(key, value, parent, -2, ind);
        		}
        	} else {
        		if (keys[0] > key) {
-       			destP.put(key, value, parent, -2, null, ind);
+       			destP.put(key, value, parent, -2, ind);
        		} else {
-       			put(key, value, parent, -2, null, ind);
+       			put(key, value, parent, -2, ind);
        		}
        	}
        	if (isNew) {
@@ -316,6 +303,31 @@ public class BSTreePage {
        	}
 	}
 
+	private BSTEntry bstInternalPutCallback(BSTEntry oldEntry, long[] newKdKey, Object newValue, BSTEntry newEntry, Node phNode) {
+		//We have two entries in the same location (local hcPos).
+		//Now we need to compare the kdKeys.
+		//If they are identical, we either replace the VALUE or return the SUB-NODE
+		// (that's actually the same, simply return the VALUE)
+		//If the kdKey differs, we have to split, insert a newSubNode and return null.
+
+		Object localVal = oldEntry.getValue();
+		if (localVal instanceof Node) {
+			Node subNode = (Node) localVal;
+			long mask = phNode.calcInfixMask(subNode.getPostLen());
+			return phNode.insertSplitPH(oldEntry, newEntry, mask);
+		} else {
+			if (phNode.getPostLen() > 0) {
+				long mask = phNode.calcPostfixMask();
+				return phNode.insertSplitPH(oldEntry, newEntry, mask);
+			}
+			//perfect match -> replace value
+			//TODO is this swapping good/sensible???
+			oldEntry.setValue(newValue);
+			oldEntry.setKdKey(newKdKey);
+			newEntry.setValue(localVal);
+			return newEntry;
+		}
+	}
 
 	private void updateKey(long key, int keyPos) {
 		if (keyPos < 0 || keys[keyPos] == key) {
@@ -379,7 +391,7 @@ public class BSTreePage {
 			return;
 		} else {
 			//treat page overflow
-			BSTreePage newInner = ind.createPage(parent, false);
+			BSTreePage newInner = ind.bstCreatePage(parent, false);
 			
 			//TODO use optimized fill ration for unique values, just like for leaves?.
 			int minInnerN = minInnerN(keys.length);
@@ -390,11 +402,11 @@ public class BSTreePage {
 
 			if (parent == null) {
 				//create a parent
-				BSTreePage newRoot = ind.createPage(null, false);
+				BSTreePage newRoot = ind.bstCreatePage(null, false);
 				newRoot.subPages[0] = this;
 				newRoot.nEntries = 0;  // 0: indicates one leaf / zero keys
 				this.setParent( newRoot );
-				ind.updateRoot(newRoot);
+				ind.bstUpdateRoot(newRoot);
 			}
 
 			parent.addSubPage(newInner, keys[minInnerN], NO_POS, ind);
@@ -481,7 +493,7 @@ public class BSTreePage {
 	}
 	
 
-	public BSTEntry remove(long key, Function<BSTEntry, REMOVE_OP> predicateRemove, Node ind) {
+	public BSTEntry remove(long key, Function<BSTEntry, REMOVE_OP> predicateRemove) {
         int i = binarySearch(0, nEntries, key);
         if (i < 0) {
         	//key not found
@@ -500,7 +512,6 @@ public class BSTreePage {
         	System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
         	System.arraycopy(values, i+1, values, i, nEntries-i-1);
         	nEntries--;
-        	ind.decreaseEntries();
         	//TODO merge with neighbors if to small
         	return prevValue;
 		case KEEP_RETURN:

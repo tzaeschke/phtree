@@ -8,7 +8,7 @@ package ch.ethz.globis.phtree.v16.bst;
 
 import java.util.NoSuchElementException;
 
-import ch.ethz.globis.phtree.v16.BSTHandler.BSTEntry;
+import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 
 /**
  * 

@@ -16,8 +16,8 @@ import java.util.stream.IntStream;
 
 import org.junit.Test;
 
-import ch.ethz.globis.phtree.v16.BSTHandler.BSTEntry;
 import ch.ethz.globis.phtree.v16.Node;
+import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v16.bst.LLEntry;
@@ -77,20 +77,20 @@ public class TestBST16 {
 		for (BSTEntry i : list) {
 			//if (i%1000 == 0) 
 			//	System.out.println("ins=" + i);
-			ht.put((Integer)i.getValue(), i);
+			ht.bstPut((Integer)i.getValue(), i);
 			//Check
-			LLEntry le = ht.get((Integer)i.getValue());
+			LLEntry le = ht.bstGet((Integer)i.getValue());
 			assertEquals((int)i.getValue(), (long)le.getKey());
 		}
 		long l12 = System.currentTimeMillis();
-		assertEquals(list.size(), ht.size());
+		assertEquals(list.size(), ht.getEntryCount());
 		
 		println(ht.getStats().toString());
 		
 		//lookup
 		long l21 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
-			LLEntry e = ht.get((Integer)i.getValue());
+			LLEntry e = ht.bstGet((Integer)i.getValue());
 			//assertNotNull("i=" + i, e);
 			int x = (int) e.getValue().getValue();
 			assertEquals(i.getValue(), (int) x);
@@ -122,24 +122,24 @@ public class TestBST16 {
 		//replace some
 		long l31 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
-			ht.put((Integer)i.getValue(), new BSTEntry(i.getKdKey(), -(Integer)i.getValue()));
+			ht.bstPut((Integer)i.getValue(), new BSTEntry(i.getKdKey(), -(Integer)i.getValue()));
 			//if (i%1000 == 0) System.out.println("rep=" + i);
 		}
 		long l32 = System.currentTimeMillis();
-		assertEquals(list.size(), ht.size());
+		assertEquals(list.size(), ht.getEntryCount());
 		
 		//remove some
 		long l41 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
 			//if (i%1000 == 0) 
 			//System.out.println("rem=" + i);
-			assertEquals(-(Integer)i.getValue(), (int) ht.remove((Integer)i.getValue()).getValue());
+			assertEquals(-(Integer)i.getValue(), (int) ht.bstRemove((Integer)i.getValue()).getValue());
 //			if (ht.size() % 100_000 == 0) {
 //				println(ht.getStats().toString());
 //			}
 		}
 		long l42 = System.currentTimeMillis();
-		assertEquals(0, ht.size());
+		assertEquals(0, ht.getEntryCount());
 		
 		println(prefix + "Load: " + (l12-l11));
 		println(prefix + "Get:  " + (l22-l21));

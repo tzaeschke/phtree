@@ -28,7 +28,7 @@ import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v16.BSTHandler.BSTEntry;
+import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -176,7 +176,7 @@ public class PhTree16<T> implements PhTree<T> {
 		stats.q_totalDepth += currentDepth;
 
 		List<BSTEntry> entries = new ArrayList<>();
-		BSTHandler.getStats(node, stats, dims, entries);
+		node.getStats(stats, dims, entries);
 		for (BSTEntry child: entries) {
 			if (child.getValue() instanceof Node) {
 				Node sub = (Node) child.getValue();

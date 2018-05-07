@@ -12,7 +12,7 @@ import java.util.List;
 
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.util.BitsLong;
-import ch.ethz.globis.phtree.v16.BSTHandler.BSTEntry;
+import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
@@ -157,7 +157,7 @@ public class NodeIteratorListReuse<T, R> {
 			//ITERATOR is used for DIM>6 or if results are dense 
 			while (niIterator.hasNextULL() && results.size() < maxResults) {
 				LLEntry le = niIterator.nextEntryReuse();
-				BSTEntry be = (BSTEntry) le.getValue();
+				BSTEntry be = le.getValue();
 				Object v = be.getValue();
 				if (v instanceof Node) {
 					Node nextSubNode = (Node) v; 
