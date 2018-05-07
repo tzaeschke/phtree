@@ -12,7 +12,6 @@ import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
@@ -26,7 +25,6 @@ import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v16.bst.BSTPool;
 import ch.ethz.globis.phtree.v16.bst.BSTreePage;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
 
 /**
@@ -216,6 +214,7 @@ public class Node {
 		}
 
 		//TODO this is apparently never called (ntIterator() would fail), why???. 
+		if (true) throw new UnsupportedOperationException();
 		
 		//okay, at his point we have a post that matches and (since it matches) we need to remove
 		//the local node because it contains at most one other entry and it is not the root node.
@@ -524,24 +523,25 @@ public class Node {
 		return bstCreatePage(null, true);
 	}
 
-	public final BSTEntry bstPut(long key, BSTEntry value) {
+
+	public final BSTEntry bstGetOrCreate(long key) {
 		BSTreePage page = getRoot();
-		Object o = page;
 		if (page.isLeaf()) {
-			o = page.put(key, value, null, -1, this);
-			if (o instanceof BSTreePage) {
-    			BSTreePage newPage = (BSTreePage) o;
+			BSTEntry e = page.getOrCreate(key, null, -1, this);
+			if (e.getKdKey() == null && e.getValue() instanceof BSTreePage) {
+    			BSTreePage newPage = (BSTreePage) e.getValue();
 				root = new BSTreePage(this, null, page, newPage);
-				o = null;
+				e.setValue(null);
 			}
-		} else {
-			while (o instanceof BSTreePage && !((BSTreePage)o).isLeaf()) {
-				o = ((BSTreePage)o).put(key, value, this);
-			}
+			return e;
+		} 
+		
+		Object o = page;
+		while (o instanceof BSTreePage && !((BSTreePage)o).isLeaf()) {
+			o = ((BSTreePage)o).getOrCreate(key, this);
 		}
 		if (o == null) {
 			//did not exist
-			//nEntries++;
 		}
 		return (BSTEntry)o;
 	}
@@ -657,35 +657,65 @@ public class Node {
 	private Object addEntry(long hcPos, long[] kdKey, Object value) {
 		//TODO for replace, can we reuse the existing key???
 		
-		//TODO Implement bstGetOrCreate() -> 
+		//Uses bstGetOrCreate() -> 
 		//- get or create entry
 		//- if value==null -> new entry, just set key,value
 		//- if not null: decide to replacePos (exact match) or replaceWithSub 
-		BSTEntry be = bstPut(hcPos, new BSTEntry(kdKey, value));
-		return be == null ? null : be.getValue();
+		BSTEntry be = bstGetOrCreate(hcPos);
+		if (be.getKdKey() == null) {
+			//new!
+			be.setKdKey(kdKey);
+			be.setValue(value);
+			return null;
+		} 
+		
+		//exists!!
+		return handleCollision(be, kdKey, value);
 	}
 
+	
+	private Object handleCollision(BSTEntry existingE, long[] kdKey, Object value) {
+		//We have two entries in the same location (local hcPos).
+		//Now we need to compare the kdKeys.
+		//If they are identical, we either replace the VALUE or return the SUB-NODE
+		// (that's actually the same, simply return the VALUE)
+		//If the kdKey differs, we have to split, insert a newSubNode and return null.
 
-	public BSTEntry insertSplitPH(BSTEntry currentEntry, BSTEntry newEntry, long mask) {
+		Object localVal = existingE.getValue();
+		if (localVal instanceof Node) {
+			Node subNode = (Node) localVal;
+			long mask = calcInfixMask(subNode.getPostLen());
+			return insertSplitPH(existingE, kdKey, value, mask);
+		} else {
+			if (getPostLen() > 0) {
+				long mask = calcPostfixMask();
+				return insertSplitPH(existingE, kdKey, value, mask);
+			}
+			//perfect match -> replace value
+			existingE.setValue(value);
+			existingE.setKdKey(kdKey);
+			return localVal;
+		}
+	}
+	
+
+	public Object insertSplitPH(BSTEntry currentEntry, long[] newKey, Object newValue, long mask) {
 		//TODO do we really need these masks?
 		if (mask == 0) {
 			//There won't be any split, no need to check.
-			return currentEntry;
+			return currentEntry.getValue();
 		}
 		long[] localKdKey = currentEntry.getKdKey();
-		long[] newKey = newEntry.getKdKey();
 		Object currentValue = currentEntry.getValue();
-		Object newValue = newEntry.getValue();
 		int maxConflictingBits = Node.calcConflictingBits(newKey, localKdKey, mask);
 		if (maxConflictingBits == 0) {
+			//TODO swap 'if'
 			if (!(currentValue instanceof Node)) {
 				//replace value
 				currentEntry.setValue(newValue);
-				newEntry.setValue(currentValue);
-				//newEntry now contains the previous value
-				return newEntry;
 			}
-			return currentEntry;
+			//return previous value
+			return currentValue;
 		}
 		
 		Node newNode = createNode(newKey, newValue, 
@@ -801,6 +831,13 @@ public class Node {
 		while (iter.hasNextULL()) {
 			entries.add((BSTEntry) iter.nextEntryReuse().getValue());
 		}
+		BSTStats bstStats = getStats();
+		//nInner
+		stats.nAHC += bstStats.nNodesInner;
+		//nLeaf
+		stats.nNT += bstStats.nNodesLeaf;
+		//Capacity inner
+		stats.nNtNodes += bstStats.capacityLeaf;
 	}
 	
 		
