@@ -345,9 +345,10 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		void phOffer(PhEntry<T> entry) {
 			//TODO we don;t really need PhEntryDist anymore, do we? Maybe for external access of d?
 			PhEntryDist<T> e = (PhEntryDist<T>) entry;
-			double d = distance.dist(center, e.getKey());
+			double d = distance.dist(center, e.getKey(), maxDistance);
 			e.setDist( d );
 			if (d < maxDistance || (d <= maxDistance && size < data.length)) {
+				NodeIteratorListReuse.AMM5++;
 				boolean needsAdjustment = internalAdd(e);
 				
 				if (needsAdjustment) {
@@ -481,7 +482,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 			}
 			//TODO if buf==center -> no need to check distance 
 			//TODO return true for dim < 3????
-			return distance.dist(center, buf) <= maxDistance;
+			return distance.dist(center, buf, maxDistance) <= maxDistance;
 			//return checker.isValid(bitsToIgnore, prefix);
 //			return true;
 		}

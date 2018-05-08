@@ -36,6 +36,20 @@ public class PhDistanceF implements PhDistance {
 	}
 
 	@Override
+	public double dist(long[] v1, long[] v2, double maxValue) {
+		double max2 = maxValue * maxValue;
+		double d = 0;
+		for (int i = 0; i < v1.length; i++) {
+			double dl = BitTools.toDouble(v1[i]) - BitTools.toDouble(v2[i]);
+			d += dl*dl;
+			if (d > max2) {
+				return Double.POSITIVE_INFINITY;
+			}
+		}
+		return Math.sqrt(d);
+	}
+
+	@Override
 	public void toMBB(double distance, long[] center, long[] outMin,
 			long[] outMax) {
 		for (int i = 0; i < center.length; i++) {

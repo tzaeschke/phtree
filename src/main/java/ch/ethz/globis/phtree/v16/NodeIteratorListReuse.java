@@ -11,7 +11,6 @@ package ch.ethz.globis.phtree.v16;
 import java.util.List;
 
 import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 
@@ -51,6 +50,25 @@ public class NodeIteratorListReuse<T, R> {
 		}
 	}
 
+	@Deprecated
+	public static long AMM1;
+	@Deprecated
+	public static long AMM2;
+	@Deprecated
+	public static long AMM3;
+	@Deprecated
+	public static long AMM4;
+	@Deprecated
+	public static long AMM5;
+
+	@Deprecated
+	public static long AMMN2;
+	@Deprecated
+	public static long AMMN3;
+	@Deprecated
+	public static long AMMN4;
+
+	
 	private final int dims;
 	private final PhResultList<T,R> results;
 	private int maxResults;
@@ -118,11 +136,9 @@ public class NodeIteratorListReuse<T, R> {
 			//TODO when accepted, adapt min/max?!?!?!?!
 		}
 
-		private void checkAndRunSubnode(Node sub, PhEntry<T> e, long[] subPrefix) {
-			if (e != null) {
-				results.phReturnTemp(e);
-			}
+		private void checkAndRunSubnode(Node sub, long[] subPrefix) {
 			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
+				AMMN4++;
 				run(sub, subPrefix);
 			}
 		}
@@ -130,11 +146,24 @@ public class NodeIteratorListReuse<T, R> {
 
 		@SuppressWarnings("unchecked")
 		private void readValue(BSTEntry candidate) {
-			if (BitsLong.checkRange(candidate.getKdKey(), rangeMin, rangeMax)) {
-				PhEntry<T> result = results.phGetTempEntry();
-				result.setKeyInternal(candidate.getKdKey());
-				result.setValueInternal((T) candidate.getValue());
-				checkAndAddResult(result);
+			AMM3++;
+			//TODO avoid getting/assigning element? -> Most entries fail!
+			PhEntry<T> result = results.phGetTempEntry();
+			result.setKeyInternal(candidate.getKdKey());
+			result.setValueInternal((T) candidate.getValue());
+			checkAndAddResult(result);
+		}
+		
+		private void checkEntry(BSTEntry be) {
+			Object v = be.getValue();
+			AMM1++;
+			if (v instanceof Node) {
+				AMMN2++;
+				AMMN3++;
+				checkAndRunSubnode((Node) v, be.getKdKey());
+			} else if (v != null) { 
+				AMM2++;
+				readValue(be);
 			}
 		}
 
@@ -177,18 +206,6 @@ public class NodeIteratorListReuse<T, R> {
 				if (currentPos <= maskLower) {
 					break;
 				}
-			}
-		}
-		
-		private void checkEntry(BSTEntry be) {
-			Object v = be.getValue();
-			if (v instanceof Node) {
-				Node sub = (Node) v;
-				if (node.checkInfixNt(sub.getInfixLen(), be.getKdKey(), rangeMin, rangeMax)) {
-					checkAndRunSubnode(sub, null, be.getKdKey());
-				}
-			} else if (v != null) { 
-				readValue(be);
 			}
 		}
 		
