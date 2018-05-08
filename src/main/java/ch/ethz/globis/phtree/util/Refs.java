@@ -108,6 +108,21 @@ public class Refs {
     }
     
     /**
+     * Resize an array to exactly the given size.
+     * @param oldA old array
+     * @param newSize size
+     * @return New array larger array.
+     * @param <T> array type
+     */
+	@SuppressWarnings("unchecked")
+	public static <T> T[] arrayExpandPrecise(T[] oldA, int newSize) {
+		T[] newA = (T[]) POOL.getArray(newSize);
+    	System.arraycopy(oldA, 0, newA, 0, oldA.length);
+    	POOL.offer(oldA);
+    	return newA;
+	}
+
+	/**
      * Create an array.
      * @param size size
      * @return a new array

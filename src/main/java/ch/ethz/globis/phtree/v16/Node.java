@@ -93,7 +93,7 @@ public class Node {
 	void discardNode() {
 		entryCnt = 0;
 		getRoot().clear();
-		BSTPool.reportFreePage(root);
+		BSTPool.reportFreeNode(root);
 		root = null;
 		NodePool.offer(this);
 	}
@@ -521,7 +521,7 @@ public class Node {
 			BSTEntry e = page.getOrCreate(key, null, -1, this);
 			if (e.getKdKey() == null && e.getValue() instanceof BSTreePage) {
     			BSTreePage newPage = (BSTreePage) e.getValue();
-				root = new BSTreePage(this, null, page, newPage);
+				root = BSTreePage.create(this, null, page, newPage);
 				e.setValue(null);
 			}
 			return e;
@@ -547,7 +547,7 @@ public class Node {
 		BSTEntry result = rootPage.findAndRemove(key, kdKey, this, ui);
 		if (rootPage.getNKeys() == 0) { 
 			root = rootPage.getFirstSubPage();
-			BSTPool.reportFreePage(rootPage);
+			BSTPool.reportFreeNode(rootPage);
 		}
 		return result;
 	}
@@ -565,7 +565,7 @@ public class Node {
 	}
 
 	public BSTreePage bstCreatePage(BSTreePage parent, boolean isLeaf) {
-		return new BSTreePage(this, parent, isLeaf);
+		return BSTreePage.create(this, parent, isLeaf);
 	}
 
 	BSTreePage getRoot() {
