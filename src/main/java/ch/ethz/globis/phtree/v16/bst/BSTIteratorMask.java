@@ -261,6 +261,21 @@ public class BSTIteratorMask {
 	}
 
 
+	public BSTEntry nextBSTEntryReuse() {
+		if (!hasNextULL()) {
+			throw new NoSuchElementException();
+		}
+
+        BSTEntry ret = nextValue;
+		if (currentPage == null) {
+			hasValue = false;
+		} else {
+			gotoPosInPage();
+		}
+		return ret;
+	}
+
+
 	public long nextKey() {
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();

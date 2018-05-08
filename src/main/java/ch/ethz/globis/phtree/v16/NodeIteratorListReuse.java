@@ -14,7 +14,6 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
 /**
  * A NodeIterator that returns a list instead of an Iterator AND reuses the NodeIterator.
@@ -156,17 +155,8 @@ public class NodeIteratorListReuse<T, R> {
 		private void niAllNextIterator() {
 			//ITERATOR is used for DIM>6 or if results are dense 
 			while (niIterator.hasNextULL() && results.size() < maxResults) {
-				LLEntry le = niIterator.nextEntryReuse();
-				BSTEntry be = le.getValue();
-				Object v = be.getValue();
-				if (v instanceof Node) {
-					Node nextSubNode = (Node) v; 
-					if (node.checkInfixNt(nextSubNode.getInfixLen(), be.getKdKey(), rangeMin, rangeMax)) {
-						checkAndRunSubnode(nextSubNode, null, be.getKdKey());
-					}
-				} else {
-					readValue(be);
-				}
+				BSTEntry be = niIterator.nextBSTEntryReuse();
+				checkEntry(be);
 			}
 			//TODO Adapt BST-Iterator to skip sub-nodes if check(current)==false -> searchNext(inc(current))  
 			return;
@@ -180,15 +170,7 @@ public class NodeIteratorListReuse<T, R> {
 				BSTEntry be = node.ntGetEntry(currentPos);
 				//sub-node?
 				if (be != null) {
-					Object v = be.getValue();
-					if (v instanceof Node) {
-						Node sub = (Node) v;
-						if (node.checkInfixNt(sub.getInfixLen(), be.getKdKey(), rangeMin, rangeMax)) {
-							checkAndRunSubnode(sub, null, be.getKdKey());
-						}
-					} else if (v != null) { 
-						readValue(be);
-					}
+					checkEntry(be);
 				}
 				
 				currentPos = PhTree16.inc(currentPos, maskLower, maskUpper);
@@ -197,6 +179,19 @@ public class NodeIteratorListReuse<T, R> {
 				}
 			}
 		}
+		
+		private void checkEntry(BSTEntry be) {
+			Object v = be.getValue();
+			if (v instanceof Node) {
+				Node sub = (Node) v;
+				if (node.checkInfixNt(sub.getInfixLen(), be.getKdKey(), rangeMin, rangeMax)) {
+					checkAndRunSubnode(sub, null, be.getKdKey());
+				}
+			} else if (v != null) { 
+				readValue(be);
+			}
+		}
+		
 	}
 	
 	NodeIteratorListReuse(int dims, PhResultList<T, R> results) {
