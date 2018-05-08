@@ -8,7 +8,6 @@ package ch.ethz.globis.phtree.v16.bst;
 
 import java.util.Arrays;
 
-import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v16.Node;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
@@ -35,10 +34,9 @@ public class BSTreePage {
 		this.parent = parent;
 		if (isLeaf) {
 			nEntries = 0;
-			keys = new long[INITIAL_PAGE_SIZE];
-			values = new BSTEntry[INITIAL_PAGE_SIZE];
-//			keys = new long[ind.maxLeafN()];
-//			values = new BSTEntry[ind.maxLeafN()];
+			int initialPageSize = ind.maxLeafN() <= 8 ? 2 : INITIAL_PAGE_SIZE;
+			keys = new long[initialPageSize];
+			values = new BSTEntry[initialPageSize];
 		} else {
 			nEntries = -1;
 			keys = new long[ind.maxInnerN()];
@@ -145,9 +143,6 @@ public class BSTreePage {
 	
 
 	public BSTEntry getValueFromLeaf(long key) {
-		if (PhTreeHelper.DEBUG && !isLeaf) {
-			throw new IllegalStateException("Leaf inconsistency.");
-		}
 		int pos = binarySearch(0, nEntries, key);
 		if (pos >= 0) {
             return values[pos];
@@ -183,14 +178,8 @@ public class BSTreePage {
 	}
 
 
-	private final void putUnchecked(long key, BSTEntry value, Node ind) {
-		//in any case, check whether the key(+value) already exists
-		
-		//TODO we could calculate the position from the previous search (usfeul for smaller nodes (low dim))!!!
-        int pos = binarySearch(0, nEntries, key);
-        
+	private final void putUnchecked(int pos, long key, BSTEntry value, Node ind) {
         //okay so we add it locally
-        pos = -(pos+1);
         shiftArrayForInsertion(pos, ind);
         keys[pos] = key;
         values[pos] = value;
@@ -291,7 +280,7 @@ public class BSTreePage {
    		this.ensureSize(ind.maxLeafN());
    		destP.ensureSize(ind.maxLeafN());
 
-        //TODO during bulkloading, keep 95% or so in old page. 100%?
+        //We move 50% of data. For bulkloading, we could keep 95% or so in old page. 100%? But there is no bulk loading.
         int nEntriesToKeep = (nEntries + destP.nEntries) >> 1;
        	int nEntriesToCopy = nEntries - nEntriesToKeep;
        	if (isNew) {
@@ -313,20 +302,22 @@ public class BSTreePage {
        		System.arraycopy(keys, nEntriesToKeep, destP.keys, 0, nEntriesToCopy);
        		System.arraycopy(values, nEntriesToKeep, destP.values, 0, nEntriesToCopy);
        	}
+        pos = -(pos+1);
+       	int oldNEntriesP = destP.nEntries;
        	nEntries = (short) nEntriesToKeep;
        	destP.nEntries = (short) (nEntriesToCopy + destP.nEntries);
        	//New page and min key
        	if (isNew || !isPrev) {
        		if (destP.keys[0] > key) {
-       			putUnchecked(key, value, ind);
+       			putUnchecked(pos, key, value, ind);
        		} else {
-       			destP.putUnchecked(key, value, ind);
+       			destP.putUnchecked(pos - nEntriesToKeep, key, value, ind);
        		}
        	} else {
        		if (keys[0] > key) {
-       			destP.putUnchecked(key, value, ind);
+       			destP.putUnchecked(pos + oldNEntriesP, key, value, ind);
        		} else {
-       			putUnchecked(key, value, ind);
+      			putUnchecked(pos - nEntriesToCopy, key, value, ind);
        		}
        	}
        	if (isNew) {
@@ -527,7 +518,6 @@ public class BSTreePage {
         	System.arraycopy(values, i+1, values, i, nEntries-i-1);
         	nEntries--;
         	node.decEntryCount();
-        	//TODO merge with neighbors if to small
         	return prevValue;
 		case KEEP_RETURN:
 			return prevValue;
