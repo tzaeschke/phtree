@@ -479,7 +479,7 @@ public class BSTreePage {
 		}
 	}
 
-	short getNKeys() {
+	public short getNKeys() {
 		return nEntries;
 	}
 	
@@ -499,6 +499,7 @@ public class BSTreePage {
         	System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
         	System.arraycopy(values, i+1, values, i, nEntries-i-1);
         	nEntries--;
+        	node.decEntryCount();
         	//TODO merge with neighbors if to small
         	return prevValue;
 		case KEEP_RETURN:
@@ -805,6 +806,14 @@ public class BSTreePage {
 				getPageByPos(i).getStats(stats);
 			}
 		}
+	}
+
+	public BSTEntry getFirstValue() {
+		return values[0];
+	}
+
+	public BSTreePage getFirstSubPage() {
+		return subPages[0];
 	}
 
 }

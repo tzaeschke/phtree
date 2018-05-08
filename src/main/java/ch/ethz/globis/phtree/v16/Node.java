@@ -13,8 +13,6 @@ import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 import java.util.Arrays;
 import java.util.List;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
-import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.BitsLong;
@@ -212,15 +210,13 @@ public class Node {
 			//value exists --> remove it
 			return;
 		}
-
-		//TODO this is apparently never called (ntIterator() would fail), why???. 
-		if (true) throw new UnsupportedOperationException();
 		
 		//okay, at his point we have a post that matches and (since it matches) we need to remove
 		//the local node because it contains at most one other entry and it is not the root node.
-		PhIterator64<Object> iter = ntIterator();
-		NtEntry<Object> nte = iter.nextEntryReuse();
 
+		//We know that there is only a leaf node with only a single entry, so...
+		BSTEntry nte = root.getFirstValue();
+		
 		long posInParent = PhTreeHelper.posInArray(key, parent.getPostLen());
 		if (nte.getValue() instanceof Node) {
 			long[] newPost = nte.getKdKey();
@@ -494,13 +490,8 @@ public class Node {
 		return postLenStored;
 	}
 
-    PhIterator64<Object> ntIterator() {
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		throw new UnsupportedOperationException();
-//      return new NtIteratorMinMax<>(dims).reset(ind, Long.MIN_VALUE, Long.MAX_VALUE);
+    private BSTIteratorMinMax ntIterator() {
+    	return iterator();
     }
 
     BSTIteratorMask ntIteratorWithMask(long maskLower, long maskUpper) {
@@ -548,16 +539,16 @@ public class Node {
 
 
 	public BSTEntry bstRemove(long key, long[] kdKey, PhTree16.UpdateInfo ui) {
-		BSTreePage page = getRoot();
-		BSTEntry result = null;
-		if (page != null) {
-	        if (page.isLeaf()) {
-	        	result = page.remove(key, kdKey, this, ui);
-	        } else {
-	        	result = page.findAndRemove(key, kdKey, this, ui);
-	        }
+		final BSTreePage rootPage = getRoot();
+		if (rootPage.isLeaf()) {
+			return rootPage.remove(key, kdKey, this, ui);
+		} 
+		
+		BSTEntry result = rootPage.findAndRemove(key, kdKey, this, ui);
+		if (rootPage.getNKeys() == 0) { 
+			root = rootPage.getFirstSubPage();
+			BSTPool.reportFreePage(rootPage);
 		}
-
 		return result;
 	}
 
@@ -793,6 +784,7 @@ public class Node {
 		return be; 
 	}
 
+	
 	private boolean matches(BSTEntry be, long[] keyToMatch) {
 		//This is always 0, unless we decide to put several keys into a single array
 		if (be.getValue() instanceof Node) {
