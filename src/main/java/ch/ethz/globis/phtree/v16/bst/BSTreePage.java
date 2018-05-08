@@ -18,10 +18,12 @@ import ch.ethz.globis.phtree.v16.PhTree16;
 
 
 public class BSTreePage {
+
+	private static final int INITIAL_PAGE_SIZE = 4;
 	
 	private BSTreePage parent;
-	private final long[] keys;
-	private final BSTEntry[] values;
+	private long[] keys;
+	private BSTEntry[] values;
 	/** number of keys. There are nEntries+1 subPages in any leaf page. */
 	private short nEntries;
 
@@ -33,8 +35,10 @@ public class BSTreePage {
 		this.parent = parent;
 		if (isLeaf) {
 			nEntries = 0;
-			keys = new long[ind.maxLeafN()];
-			values = new BSTEntry[ind.maxLeafN()];
+			keys = new long[INITIAL_PAGE_SIZE];
+			values = new BSTEntry[INITIAL_PAGE_SIZE];
+//			keys = new long[ind.maxLeafN()];
+//			values = new BSTEntry[ind.maxLeafN()];
 		} else {
 			nEntries = -1;
 			keys = new long[ind.maxInnerN()];
@@ -63,10 +67,6 @@ public class BSTreePage {
 	}
 
 	private int maxInnerN() {
-		return keys.length;
-	}
-	
-	private int maxLeafN() {
 		return keys.length;
 	}
 	
@@ -105,7 +105,7 @@ public class BSTreePage {
         BSTEntry result = null;
         if (page.isLeaf()) {
         	result = page.remove(key, kdKey, node, ui);
-            checkUnderflowSubpageLeaf(pos);
+            checkUnderflowSubpageLeaf(pos, node);
         } else {
         	result = page.findAndRemove(key, kdKey, node, ui);
         	handleUnderflowSubInner(pos);
@@ -183,24 +183,46 @@ public class BSTreePage {
 	}
 
 
-	public final void putUnchecked(long key, BSTEntry value, Node ind) {
+	private final void putUnchecked(long key, BSTEntry value, Node ind) {
 		//in any case, check whether the key(+value) already exists
 		
-		//TODO we could calculate the position from the previous search (usful for smaller nodes (low dim))!!!
+		//TODO we could calculate the position from the previous search (usfeul for smaller nodes (low dim))!!!
         int pos = binarySearch(0, nEntries, key);
         
         //okay so we add it locally
         pos = -(pos+1);
-        if (pos < nEntries) {
-        	System.arraycopy(keys, pos, keys, pos+1, nEntries-pos);
-        	System.arraycopy(values, pos, values, pos+1, nEntries-pos);
-        }
+        shiftArrayForInsertion(pos, ind);
         keys[pos] = key;
         values[pos] = value;
         nEntries++;
         ind.incEntryCount();
  	}
 
+	private void shiftArrayForInsertion(int pos, Node ind) {
+		ensureSizePlusOne(ind);
+		//Only shift if we do not append
+		if (pos < nEntries) {
+			System.arraycopy(keys, pos, keys, pos+1, nEntries-pos);
+			System.arraycopy(values, pos, values, pos+1, nEntries-pos);
+		}
+	}
+	
+	private void ensureSizePlusOne(Node ind) {
+		if (nEntries + 1 > keys.length) {
+			int newLen = keys.length*2 > ind.maxLeafN() ? ind.maxLeafN() : keys.length*2;
+			//TODO return arrays to pool! BitsLong pool
+			keys = Arrays.copyOf(keys, newLen);
+			values = Arrays.copyOf(values, newLen);
+		}
+	}
+
+	private void ensureSize(int newLen) {
+		if (newLen > keys.length) {
+			//TODO return arrays to pool! BitsLong pool
+			keys = Arrays.copyOf(keys, newLen);
+			values = Arrays.copyOf(values, newLen);
+		}
+	}
 
 	public final BSTEntry getOrCreate(long key, BSTreePage parent, int posPageInParent, Node ind) {
 		if (!isLeaf) {
@@ -216,9 +238,10 @@ public class BSTreePage {
         
         BSTEntry value = new BSTEntry(null, null);
         
-        if (nEntries < maxLeafN()) {
+        if (nEntries < ind.maxLeafN()) {
         	//okay so we add it locally
         	pos = -(pos+1);
+    		this.ensureSizePlusOne(ind);
         	if (pos < nEntries) {
         		System.arraycopy(keys, pos, keys, pos+1, nEntries-pos);
         		System.arraycopy(values, pos, values, pos+1, nEntries-pos);
@@ -246,14 +269,14 @@ public class BSTreePage {
 	        //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
 	        //loops, see iterator tests)
 	        BSTreePage next = parent.getNextLeafPage(posPageInParent);
-	        if (next != null && next.nEntries < next.maxLeafN()-1) {
+	        if (next != null && next.nEntries < ind.maxLeafN()-1) {
 	        	//merge
 	        	destP = next;
 	        	isPrev = false;
 	        } else {
 	        	//Merging with prev is not make a big difference, maybe we should remove it...
 	        	BSTreePage prev = parent.getPrevLeafPage(posPageInParent);
-	        	if (prev != null && prev.nEntries < prev.maxLeafN()-1) {
+	        	if (prev != null && prev.nEntries < ind.maxLeafN()-1) {
 	        		//merge
 	        		destP = prev;
 	        		isPrev = true;
@@ -263,6 +286,10 @@ public class BSTreePage {
 	        	}
 	        }
         }
+
+        //Ensure all nodes have full capacity
+   		this.ensureSize(ind.maxLeafN());
+   		destP.ensureSize(ind.maxLeafN());
 
         //TODO during bulkloading, keep 95% or so in old page. 100%?
         int nEntriesToKeep = (nEntries + destP.nEntries) >> 1;
@@ -512,12 +539,12 @@ public class BSTreePage {
 	}
 	
 	
-	private void checkUnderflowSubpageLeaf(int pos) {
+	private void checkUnderflowSubpageLeaf(int pos, Node ind) {
 		BSTreePage subPage = getPageByPos(pos);
         if (subPage.nEntries == 0) {
         	Node.statNLeaves--;
         	removePage(pos);
-        } else if (subPage.nEntries < (subPage.maxLeafN() >> 1) && (subPage.nEntries % 8 == 0)) {
+        } else if (subPage.nEntries < minLeafN(ind.maxLeafN()) && (subPage.nEntries % 8 == 0)) {
         	//The second term prevents frequent reading of previous and following pages.
         	//TODO Should we instead check for nEntries==MAx>>1 then == (MAX>>2) then <= (MAX>>3)?
 
@@ -527,7 +554,7 @@ public class BSTreePage {
          		//We merge only if they all fit on a single page. This means we may read
         		//the previous page unnecessarily, but we avoid writing it as long as 
         		//possible. TODO find a balance, and do no read prev page in all cases
-        		if (subPage.nEntries + prevPage.nEntries < subPage.maxLeafN()) {
+        		if (subPage.nEntries + prevPage.nEntries < ind.maxLeafN()) {
         			//TODO for now this work only for leaves with the same root. We
         			//would need to update the min values in the inner nodes.
         			System.arraycopy(subPage.keys, 0, prevPage.keys, prevPage.nEntries, subPage.nEntries);
