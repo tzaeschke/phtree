@@ -150,8 +150,9 @@ public class Node {
 	}
 	
 	public long calcInfixMask(int subPostLen) {
-		long mask = ~((-1L)<<(getPostLen()-subPostLen-1));
-		return mask << (subPostLen+1);
+		//We use a simplified mask, because the prefix is always present
+		//long mask = ~((-1L)<<(getPostLen()-subPostLen-1));
+		return (-1L) << (subPostLen+1);
 	}
 	
 
@@ -180,8 +181,6 @@ public class Node {
         	newNode.writeEntry(0, posSub2, key2, val2);
         	newNode.writeEntry(1, posSub1, key1, val1);
         }
-//        newNode.incEntryCount();
-//        newNode.incEntryCount();
         return newNode;
     }
 
@@ -646,8 +645,6 @@ public class Node {
 	// *****************************************
 	
 	private Object addEntry(long hcPos, long[] kdKey, Object value) {
-		//TODO for replace, can we reuse the existing key???
-		
 		//Uses bstGetOrCreate() -> 
 		//- get or create entry
 		//- if value==null -> new entry, just set key,value
@@ -691,7 +688,6 @@ public class Node {
 	
 
 	public Object insertSplitPH(BSTEntry currentEntry, long[] newKey, Object newValue, long mask) {
-		//TODO do we really need these masks?
 		if (mask == 0) {
 			//There won't be any split, no need to check.
 			return currentEntry.getValue();
@@ -700,7 +696,6 @@ public class Node {
 		Object currentValue = currentEntry.getValue();
 		int maxConflictingBits = Node.calcConflictingBits(newKey, localKdKey, mask);
 		if (maxConflictingBits == 0) {
-			//TODO swap 'if'
 			if (!(currentValue instanceof Node)) {
 				//replace value
 				currentEntry.setValue(newValue);
@@ -776,10 +771,8 @@ public class Node {
 		if (be == null) {
 			return null;
 		}
-		if (keyToMatch != null) {
-			if (!matches(be, keyToMatch)) {
-				return null;
-			}
+		if (keyToMatch != null && !matches(be, keyToMatch)) {
+			return null;
 		}
 		return be; 
 	}
@@ -789,8 +782,6 @@ public class Node {
 		//This is always 0, unless we decide to put several keys into a single array
 		if (be.getValue() instanceof Node) {
 			Node sub = (Node) be.getValue();
-			//TODO we are currently nmot setting this, so we can't read it...
-//TODO				if (node.hasSubInfix(offs, dims)) {
 			if (sub.getInfixLen() > 0) {
 				final long mask = calcInfixMask(sub.getPostLen());
 				if (!readAndCheckKdKey(be.getKdKey(), keyToMatch, mask)) {
@@ -809,7 +800,6 @@ public class Node {
 	}
 	
 	private static boolean readAndCheckKdKey(long[] allKeys, long[] keyToMatch, long mask) {
-		//TODO do we really need these masks?
 		for (int i = 0; i < keyToMatch.length; i++) {
 			if (((allKeys[i] ^ keyToMatch[i]) & mask) != 0) {
 				return false;
