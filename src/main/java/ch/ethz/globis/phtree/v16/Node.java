@@ -791,11 +791,12 @@ public class Node {
 			Node sub = (Node) be.getValue();
 			//TODO we are currently nmot setting this, so we can't read it...
 //TODO				if (node.hasSubInfix(offs, dims)) {
+			if (sub.getInfixLen() > 0) {
 				final long mask = calcInfixMask(sub.getPostLen());
 				if (!readAndCheckKdKey(be.getKdKey(), keyToMatch, mask)) {
 					return false;
 				}
-//			}
+			}
 		} else {
 			long[] candidate = be.getKdKey();
 			for (int i = 0; i < keyToMatch.length; i++) {
