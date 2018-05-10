@@ -75,7 +75,7 @@ public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
 		this.pht = pht;
 		this.checker = new PhFilterDistance();
 		this.results = new KnnResultList(dims);
-		this.iter = new NodeIteratorListReuse2<>(dims, results);
+		this.iter = new NodeIteratorListReuse2<>(dims, results, checker);
 	}
 
 	@Override
@@ -173,11 +173,11 @@ public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
 		results.maxDistance = maxDist;
 		checker.set(val, distance, maxDist);
 		distance.toMBB(maxDist, val, mbbMin, mbbMax);
-		iter.resetAndRun(pht.getRoot(), mbbMin, mbbMax, Integer.MAX_VALUE);
+		iter.resetAndRun(pht.getRoot(), mbbMin, mbbMax);
 	}
 
 
-	private class KnnResultList extends PhResultList<T, PhEntryDist<T>> {
+	public class KnnResultList extends PhResultList<T, PhEntryDist<T>> {
 		private PhEntryDist<T>[] data;
 		private PhEntryDist<T> free;
 		private double[] distData;
@@ -187,6 +187,7 @@ public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
 		private double maxDistance = Double.MAX_VALUE;
 		private final int dims;
 		private long[] center;
+		private boolean initialDive;
 		
 		KnnResultList(int dims) {
 			this.free = new PhEntryDist<>(new long[dims], null, -1);
@@ -199,6 +200,7 @@ public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
 		
 		@SuppressWarnings("unchecked")
 		void reset(int newSize, long[] center) {
+			initialDive = true;
 			size = 0;
 			this.center = center;
 			maxDistance = Double.MAX_VALUE;
@@ -376,6 +378,21 @@ public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
 			return distance.dist(center, buf, maxDistance) <= maxDistance;
 			//return checker.isValid(bitsToIgnore, prefix);
 //			return true;
+		}
+
+		/**
+		 * During the initial 'dive', the algorithm attempts to find the center point in the tree.
+		 * Once the succeeds or fails, the initial dive is over, but we are in a node full of good
+		 * candidates and may even have the perfect first candidate (the center point).
+		 * 
+		 * @return True during the initial dive.
+		 */
+		public boolean isInitialDive() {
+			return initialDive;
+		}
+		
+		public void stopInitialDive() {
+			initialDive = false;
 		}
 	}
 	

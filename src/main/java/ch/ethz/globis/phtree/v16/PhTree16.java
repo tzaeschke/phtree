@@ -512,14 +512,14 @@ public class PhTree16<T> implements PhTree<T> {
 	@Override
 	public PhKnnQuery<T> nearestNeighbour(int nMin, long... v) {
 		//return new PhQueryKnnMbbPP<T>(this).reset(nMin, PhDistanceL.THIS, v);
-		return new PhQueryKnnMbbPPList<T>(this).reset(nMin, PhDistanceL.THIS, v);
+		return new PhQueryKnnMbbPPList2<T>(this).reset(nMin, PhDistanceL.THIS, v);
 	}
 
 	@Override
 	public PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist,
 			PhFilter dimsFilter, long... center) {
 		//return new PhQueryKnnMbbPP<T>(this).reset(nMin, dist, center);
-		return new PhQueryKnnMbbPPList<T>(this).reset(nMin, dist, center);
+		return new PhQueryKnnMbbPPList2<T>(this).reset(nMin, dist, center);
 	}
 
 	@Override

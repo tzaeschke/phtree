@@ -61,5 +61,9 @@ public class PhFilterDistance implements PhFilter {
 	public PhDistance getDistance() {
 		return dist;
 	}
+	
+	public long[] getCenter() {
+		return v;
+	}
 
 }
