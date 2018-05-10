@@ -8,13 +8,6 @@ package ch.ethz.globis.phtree.v16.bst;
 
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 
-@Deprecated
-//TODO use PHEntry!!!!!!!!
-//TODO use PHEntry!!!!!!!!
-//TODO use PHEntry!!!!!!!!
-//TODO use PHEntry!!!!!!!!
-//TODO use PHEntry!!!!!!!!
-//TODO use PHEntry!!!!!!!!
 public class LLEntry {
 	
 	private long key;

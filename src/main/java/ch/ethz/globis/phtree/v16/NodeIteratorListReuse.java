@@ -68,6 +68,13 @@ public class NodeIteratorListReuse<T, R> {
 	@Deprecated
 	public static long AMMN4;
 
+	@Deprecated
+	public static long MMM1;
+	@Deprecated
+	public static long MMM2;
+	@Deprecated
+	public static long MMM3;
+
 	
 	private final int dims;
 	private final PhResultList<T,R> results;

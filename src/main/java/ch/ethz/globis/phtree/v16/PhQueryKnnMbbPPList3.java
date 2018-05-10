@@ -51,7 +51,7 @@ import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
  * 
  * @param <T> value type
  */
-public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
+public class PhQueryKnnMbbPPList3<T> implements PhKnnQuery<T> {
 
 	private final int dims;
 	private PhTree16<T> pht;
@@ -59,23 +59,23 @@ public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
 	private int currentPos = -1;
 	private final long[] mbbMin;
 	private final long[] mbbMax;
-	private final NodeIteratorListReuse2<T, PhEntryDist<T>> iter;
+	private final NodeIteratorListReuse3<T, PhEntryDist<T>> iter;
 	private final PhFilterDistance checker;
-	private final KnnResultList2 results; 
+	private final KnnResultList3 results; 
 
 
 	/**
 	 * Create a new kNN/NNS search instance.
 	 * @param pht the parent tree
 	 */
-	public PhQueryKnnMbbPPList2(PhTree16<T> pht) {
+	public PhQueryKnnMbbPPList3(PhTree16<T> pht) {
 		this.dims = pht.getDim();
 		this.mbbMin = new long[dims];
 		this.mbbMax = new long[dims];
 		this.pht = pht;
 		this.checker = new PhFilterDistance();
-		this.results = new KnnResultList2(dims);
-		this.iter = new NodeIteratorListReuse2<>(dims, results, checker);
+		this.results = new KnnResultList3(dims);
+		this.iter = new NodeIteratorListReuse3<>(dims, results, checker);
 	}
 
 	@Override
@@ -177,7 +177,7 @@ public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
 	}
 
 
-	public class KnnResultList2 extends PhResultList<T, PhEntryDist<T>> {
+	public class KnnResultList3 extends PhResultList<T, PhEntryDist<T>> {
 		private PhEntryDist<T>[] data;
 		private PhEntryDist<T> free;
 		private double[] distData;
@@ -189,7 +189,7 @@ public class PhQueryKnnMbbPPList2<T> implements PhKnnQuery<T> {
 		private long[] center;
 		private boolean initialDive;
 		
-		KnnResultList2(int dims) {
+		KnnResultList3(int dims) {
 			this.free = new PhEntryDist<>(new long[dims], null, -1);
 			this.dims = dims;
 		}
