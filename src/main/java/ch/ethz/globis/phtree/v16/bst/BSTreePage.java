@@ -170,6 +170,9 @@ public class BSTreePage {
 	 * @param value For non-unique trees, the value is taken into account as well.
 	 */
 	int binarySearch(int fromIndex, int toIndex, long key) {
+		if (toIndex-fromIndex <=4) {
+			return linearSearch(fromIndex, toIndex, key);
+		}
 		int low = fromIndex;
 		int high = toIndex - 1;
 
@@ -188,6 +191,14 @@ public class BSTreePage {
 		return -(low + 1);  // key not found.
 	}
 
+	int linearSearch(int fromIndex, int toIndex, long key) {
+		for (int i = fromIndex; i < toIndex; i++) {
+			if (key <= keys[i]) {
+				return key == keys[i] ? i : -(i+1);
+			}
+		}
+		return -(toIndex+1);  // key not found.
+	}
 
 	private final void putUnchecked(int pos, long key, BSTEntry value, Node ind) {
         //okay so we add it locally

@@ -21,6 +21,7 @@ import ch.ethz.globis.phtree.PhDistanceL;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhFilterDistance;
+import ch.ethz.globis.phtree.PhFilterWindow;
 import ch.ethz.globis.phtree.PhRangeQuery;
 import ch.ethz.globis.phtree.PhTree;
 import ch.ethz.globis.phtree.PhTreeConfig;
@@ -478,7 +479,13 @@ public class PhTree16<T> implements PhTree<T> {
 //			mapper = (PhMapper<T, R>) PhMapper.PVENTRY();
 //		}
 		
-		PhResultList<T, R> list = new PhResultList.MappingResultList<>(null, mapper,
+		if (filter == null) {
+			PhFilterWindow wf = new PhFilterWindow();
+			wf.set(min, max);
+			filter = wf;
+		}
+		
+		PhResultList<T, R> list = new PhResultList.MappingResultList<>(filter, mapper,
 				() -> new PhEntry<T>(new long[dims], null));
 		
 		NodeIteratorListReuse<T, R> it = new NodeIteratorListReuse<>(dims, list);
