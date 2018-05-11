@@ -105,13 +105,14 @@ public class NodeIteratorListReuse<T, R> {
 		 */
 		void reinitAndRun(Node node, long lower, long upper) {
 			this.node = node;
-			this.niIterator = null;
 			this.maskLower = lower;
 			this.maskUpper = upper;
 
 			useHcIncrementer = false;
 			if (niIterator == null) {
 				niIterator = node.ntIteratorWithMask(maskLower, maskUpper);
+			} else {
+				niIterator.reset(node.getRoot(), maskLower,  maskUpper);
 			}
 
 			if (dims > 6) {

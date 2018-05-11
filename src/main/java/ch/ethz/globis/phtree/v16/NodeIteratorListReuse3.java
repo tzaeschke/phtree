@@ -96,11 +96,12 @@ public class NodeIteratorListReuse3<T, R> {
 		 */
 		void reinitAndRun(Node node) {
 			this.node = node;
-			this.niIterator = null;
 
 			useHcIncrementer = false;
 			if (niIterator == null) {
 				niIterator = node.ntIteratorWithMask(maskLower, maskUpper);
+			} else {
+				niIterator.reset(node.getRoot(), maskLower,  maskUpper);
 			}
 
 			if (dims > 6) {

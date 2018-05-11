@@ -84,15 +84,18 @@ public class NodeIteratorListReuse<T, R> {
 		void reinitAndRun(Node node, long lower, long upper) {
 			this.node = node;
 			boolean isNI = node.isNT();
-			this.niIterator = null;
 			nMaxEntry = node.getEntryCount();
 			this.nEntryFound = 0;
 			this.maskLower = lower;
 			this.maskUpper = upper;
 
 			useHcIncrementer = false;
-			if (isNI && niIterator == null) {
-				niIterator = node.ntIteratorWithMask(maskLower, maskUpper);
+			if (isNI) {
+				if (niIterator == null) {
+					niIterator = node.ntIteratorWithMask(maskLower, maskUpper);
+				} else {
+					niIterator.reset(node.ind(), maskLower, maskUpper);
+				}
 			}
 
 			if (dims > 6) {
