@@ -19,10 +19,12 @@ import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v16.PhTree16.UpdateInfo;
+import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v16.bst.BSTPool;
 import ch.ethz.globis.phtree.v16.bst.BSTreePage;
+import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
 
 /**
@@ -495,6 +497,10 @@ public class Node {
 
     BSTIteratorMask ntIteratorWithMask(long maskLower, long maskUpper) {
     	return new BSTIteratorMask().reset(getRoot(), maskLower, maskUpper);
+	}
+    
+	BSTIteratorAll ntIteratorAll(LLEntry[] entryBuffer) {
+		return new BSTIteratorAll().reset(getRoot(), entryBuffer);
 	}
     
     
