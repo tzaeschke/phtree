@@ -373,6 +373,7 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 				long max = prefix[i] | maskMax;
 				buf[i] = min > center[i] ? min : (max < center[i] ? max : center[i]); 
 			}
+					
 			//TODO if buf==center -> no need to check distance 
 			//TODO return true for dim < 3????
 			return distance.dist(center, buf, maxDistance) <= maxDistance;

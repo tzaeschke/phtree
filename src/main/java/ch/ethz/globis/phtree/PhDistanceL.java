@@ -54,4 +54,9 @@ public class PhDistanceL implements PhDistance {
 			outMax[i] = (long) (center[i] + distance + 1);
 		}
 	}
+
+	@Override
+	public double dist(long l, long m) {
+		return Math.subtractExact(m, l);
+	}
 }

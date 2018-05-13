@@ -32,9 +32,22 @@ public class ExponentPP implements PreProcessorPointF {
 	}
 	
 	public double getDisplacement(int dim) {
-		if (dim < 0 || dim >= disp.length)
+		if (dim < 0 || dim >= disp.length) {
 			throw new IllegalArgumentException("Supplied dim is out of bounds");
+		}
 		return disp[dim];
+	}
+
+	@Override
+	public long pre(double raw) {
+		throw new UnsupportedOperationException();
+		//return BitTools.toSortableLong(raw + disp[d]);
+	}
+
+	@Override
+	public double post(long pre) {
+		throw new UnsupportedOperationException();
+		//return BitTools.toDouble(pre) - disp[d];
 	}
 
 }

@@ -58,4 +58,9 @@ public class PhDistanceF implements PhDistance {
 			outMax[i] = BitTools.toSortableLong(c + distance);
 		}
 	}
+
+	@Override
+	public double dist(long v1, long v2) {
+		return BitTools.toDouble(v2) - BitTools.toDouble(v1);
+	}
 }

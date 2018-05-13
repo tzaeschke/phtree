@@ -119,11 +119,12 @@ public abstract class PhTreeHelperHD {
 	 */
     @Deprecated
     public static final int getMaxConflictingBits(long[] v1, long[] v2, int bitsToCheck) {
-    	if (bitsToCheck == 0) {
-    		return 0;
-    	}
-    	long[] mask = bitsToCheck==64 ? ~0L : ~(-1L << bitsToCheck); //mask, because value2 may not have leading bits set
-    	return getMaxConflictingBitsWithMask(v1, v2, mask);
+    	throw new UnsupportedOperationException();
+//    	if (bitsToCheck == 0) {
+//    		return 0;
+//    	}
+//    	long[] mask = bitsToCheck==64 ? ~0L : ~(-1L << bitsToCheck); //mask, because value2 may not have leading bits set
+//    	return getMaxConflictingBitsWithMask(v1, v2, mask);
     }
     
     /**
@@ -136,13 +137,14 @@ public abstract class PhTreeHelperHD {
      */
     @Deprecated
     public static final int getMaxConflictingBitsWithMask(long[] v1, long[] v2, long[] mask) {
-        long x = 0;
-        for (int i = 0; i < v1.length; i++) {
-        	//write all differences to x, we just check x afterwards
-            x |= v1[i] ^ v2[i];
-        }
-        x &= mask;
-        return Long.SIZE - Long.numberOfLeadingZeros(x);
+    	throw new UnsupportedOperationException();
+//        long x = 0;
+//        for (int i = 0; i < v1.length; i++) {
+//        	//write all differences to x, we just check x afterwards
+//            x |= v1[i] ^ v2[i];
+//        }
+//        x &= mask;
+//        return Long.SIZE - Long.numberOfLeadingZeros(x);
     }
     
 

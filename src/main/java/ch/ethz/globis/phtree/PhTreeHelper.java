@@ -138,39 +138,6 @@ public abstract class PhTreeHelper {
     }
     
 
-    
-    /**
-     * Encode the bits at the given position of all attributes into a hyper-cube address.
-     * Currently, the first attribute determines the left-most (high-value) bit of the address 
-     * (left to right ordered)
-     * 
-     * @param valSet one vector
-     * @param currentDepth current depth
-     * @param DEPTH total bit depth, usually 64
-     * @return Encoded HC position
-     */
-    public static final long posInArray(long[] valSet, int currentDepth, int DEPTH) {
-        //n=DIM,  i={0..n-1}
-        // i = 0 :  |0|1|0|1|0|1|0|1|
-        // i = 1 :  | 0 | 1 | 0 | 1 |
-        // i = 2 :  |   0   |   1   |
-        //len = 2^n
-        //Following formula was for inverse ordering of current ordering...
-        //pos = sum (i=1..n, len/2^i) = sum (..., 2^(n-i))
-
-    	long valMask = (1L << (DEPTH-1-currentDepth));
-    	
-        long pos = 0;
-        for (long v: valSet) {
-        	pos <<= 1;
-        	//set pos-bit if bit is set in value
-            if ((valMask & v) != 0) {
-                pos |= 1L;
-            }
-        }
-        return pos;
-    }
-
     /**
      * Encode the bits at the given position of all attributes into a hyper-cube address.
      * Currently, the first attribute determines the left-most (high-value) bit of the address 
@@ -195,8 +162,8 @@ public abstract class PhTreeHelper {
         for (int i = 0; i < valSet.length; i++) {
         	pos <<= 1;
         	//set pos-bit if bit is set in value
-            pos |= (valMask & valSet[i]) >>> postLen;
-            }
+        	pos |= (valMask & valSet[i]) >>> postLen;
+        }
         return pos;
     }
 
@@ -220,13 +187,13 @@ public abstract class PhTreeHelper {
     	int rightShift = DEPTH-1;
     	for (int j = 0; j < DEPTH; j++) {
 	    	long pos = 0;
-	        for (long v: valSet) {
+	        for (int i = 0; i < valSet.length; i++) {
 	        	pos <<= 1;
 	        	//set pos-bit if bit is set in value
 //	            if ((valMask & v) != 0) {
 //	                pos |= 1L;
 //	            }
-	        	pos |= (valMask & v) >>> rightShift;
+	        	pos |= (valMask & valSet[i]) >>> rightShift;
 	            }
 	        tv[j] = pos;
 	        valMask >>>= 1;

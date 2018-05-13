@@ -61,4 +61,11 @@ public class PhDistancePP implements PhDistance {
 		pre.pre(min, outMin);
 		pre.pre(max, outMax);
 	}
+
+	@Override
+	public double dist(long l, long m) {
+		double d1 = pre.post(l);
+		double d2 = pre.post(m);
+		return d2 - d1;
+	}
 }

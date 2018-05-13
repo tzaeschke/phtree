@@ -656,6 +656,20 @@ public class BitsLong {
 	}
 
 	
+    public static boolean checkPrefix(long[] v1, long[] v2, int bitsToIgnore) {
+    	if (bitsToIgnore == 64) {
+    		return true;
+    	}
+    	long mask = (-1L) << bitsToIgnore;
+		for (int i = 0; i < v1.length; i++) {
+			if ( ((v1[i] ^ v2[i]) & mask) != 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	
     /**
      * Calculate array size for given number of bits.
      * This takes into account JVM memory management, which allocates multiples of 8 bytes.

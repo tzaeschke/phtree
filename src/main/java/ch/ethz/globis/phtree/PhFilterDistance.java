@@ -66,4 +66,8 @@ public class PhFilterDistance implements PhFilter {
 		return v;
 	}
 
+	public double getMaxDist() {
+		return maxDist;
+	}
+
 }

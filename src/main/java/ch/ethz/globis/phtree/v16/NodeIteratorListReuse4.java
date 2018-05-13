@@ -88,16 +88,10 @@ public class NodeIteratorListReuse4<T, R> {
 
 		/**
 		 * 
-		 * @param node
-		 * @param dims
-		 * @param valTemplate A null indicates that no values are to be extracted.
-		 * @param lower The minimum HC-Pos that a value should have.
-		 * @param upper
-		 * @param minValue The minimum value that any found value should have. 
-		 * 				   If the found value is lower, the search continues.
-		 * @param maxValue
+		 * @param node Node
+		 * @param prefix Prefix
 		 */
-		void reinitAndRun(Node node) {
+		void reinitAndRun(Node node, long[] prefix) {
 			this.node = node;
 
 			if (niIterator == null) {
@@ -105,7 +99,7 @@ public class NodeIteratorListReuse4<T, R> {
 			} else {
 				niIterator.reset(node.getRoot(), buffer);
 			}
-			getAll();
+			getAll(prefix);
 		}
 
 		
@@ -145,42 +139,87 @@ public class NodeIteratorListReuse4<T, R> {
 			}
 		}
 
-		private void getAll() {
-			niAllNext();
-		}
-
-
-		private void niAllNext() {
+		
+		private void getAll(long[] prefix) {
 			if (results.isInitialDive()) {
-				niDepthFirstNeighborsSecond();
+				niDepthFirstNeighborsSecond(prefix);
 			} else {
-				niAllNextIterator();
+				niAllNextIterator(prefix);
 			}
 		}
 		
-		private void niAllNextIterator() {
-			//ITERATOR is used for DIM>6 or if results are dense 
-			while (niIterator.hasNextULL()) {
-				BSTEntry be = niIterator.nextBSTEntryReuse();
-				checkEntry(be);
+		private void niAllNextIterator(long[] prefix) {
+			if (prefix == null) {
+				while (niIterator.hasNextULL()) {
+					BSTEntry be = niIterator.nextBSTEntryReuse();
+					checkEntry(be);
+				}
+				return;
 			}
+			
+			//calc 'divePos', ie. whether prefix is below/above 'center' for each dimension
+			long[] kNNCenter = checker.getCenter();
+	    	
+	        long relativeKNNpos = 0;
+	        //We want to get the center, so no +1 for postLen
+	        long prefixMask = (-1L) << node.getPostLen()+1;
+	        long prefixBit = 1L << node.getPostLen();
+	        for (int i = 0; i < prefix.length; i++) {
+	        	relativeKNNpos <<= 1;
+	        	//set pos-bit if bit is set in value
+	        	long nodeCenter = (prefix[i] & prefixMask) | prefixBit;
+	        	relativeKNNpos |= (kNNCenter[i] > nodeCenter) ? 1 : 0;
+	        }
+			
+			
+			double knownMaxDist = checker.getMaxDist();
+			//Calculate how many permutations are at most possible
+			int nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter());
+			
+			while (niIterator.hasNextULL()) {
+				//BSTEntry be = niIterator.nextBSTEntryReuse();
+				LLEntry le = niIterator.nextEntryReuse();
+				//TODO reenable!!!
+//				if (checker.getMaxDist() < knownMaxDist) {
+//					knownMaxDist = checker.getMaxDist();
+//					nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter(), false);
+//				}
+				if (Long.bitCount(le.getKey() ^ relativeKNNpos) > nMaxPermutatedBits) {
+					NodeIteratorListReuse.AMM1++;
+
+					//Can't break here, we are not sorted!
+					//break;
+					continue;
+				}
+				checkEntry(le.getValue());
+			}
+
 			//TODO Adapt BST-Iterator to skip sub-nodes if check(current)==false -> searchNext(inc(current))  
 			return;
 		}
 
-		private void niDepthFirstNeighborsSecond() {
+		private void niDepthFirstNeighborsSecond(long[] prefix) {
 			//First traverse the closest match (if any)
 			//Second traverse direct neighbors
 			//Third traverse the rest
 
 			//First attempt deep dive
-			long divePos = PhTreeHelper.posInArray(checker.getCenter(), node.getPostLen());
+			long[] kNNCenter = checker.getCenter();
+			long divePos = PhTreeHelper.posInArray(kNNCenter, node.getPostLen());
 			BSTEntry be = node.ntGetEntry(divePos);
+			int minimumPermutations = 0;
 			if (be != null) {
-				checkEntry(be);
-				//adjust masks
-				//TODO??/
-				recalcMasks(node, checker.getCenter());
+				if (be.getValue() instanceof Node) {
+					Node sub = (Node) be.getValue();
+					if (Bits.checkPrefix(be.getKdKey(), kNNCenter, sub.getPostLen()+1)) {
+						run(sub, be.getKdKey());
+						//ignore this quadrant from now on
+						minimumPermutations = 1;
+						//adjust masks
+						//TODO??/
+						recalcMasks(node, kNNCenter);
+					}
+				}
 			}
 
 			//Okay, deep dive is finished
@@ -194,7 +233,7 @@ public class NodeIteratorListReuse4<T, R> {
 				}
 			}
 			bufferSize = 0;
-		
+			
 			//Get all entries into the buffer array
 			itToArray.reset(node.getRoot(), buffer);
 			bufferSize = itToArray.getNEntries();
@@ -203,16 +242,86 @@ public class NodeIteratorListReuse4<T, R> {
 			COMP.key = divePos;
 			Arrays.sort(buffer, 0, bufferSize, COMP);
 
+			//Calculate how many permutations are at most possible
+			int nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter());
+			
+			
+			//Omit anything that we already traversed (there should be at most one entry at the moment) 
 			int start = 0;
-			while (start < bufferSize && Long.bitCount(buffer[start].getKey() ^ divePos) < 1) {
+			while (start < bufferSize && Long.bitCount(buffer[start].getKey() ^ divePos) < minimumPermutations) {
 				start++;
 			}
+
+			double knownMaxDist = checker.getMaxDist();
 			
 			//Now check the rest
 			for (int i = start; i < bufferSize; i++) {
+				if (checker.getMaxDist() < knownMaxDist) {
+					knownMaxDist = checker.getMaxDist();
+					nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter());
+				}
+				if (Long.bitCount(buffer[start].getKey() ^ divePos) > nMaxPermutatedBits) {
+					//TODO
+					//TODO
+					//TODO
+					//TODO
+					//TODO
+					break;
+				}
+				
 				checkEntry(buffer[i].getValue());
 			}
 		}
+
+
+		private int calcMacPermutatedBits(long[] prefix, long[] kNNCenter) {
+			int bitsToIgnore = node.getPostLen() + 1;
+			long maskSingleBit = 1L << node.getPostLen();
+			if (maskSingleBit < 0) {
+				//TODO
+				//can't yet deal with negative/positive of postLen==63
+				return kNNCenter.length;
+			}
+			long maskPrefix = (-1L) << bitsToIgnore;
+			long maskPostFix = (~maskPrefix) >> 1;
+			double[] distances = new double[prefix.length];
+			for (int i = 0; i < prefix.length; i++) {
+				long nodeCenter = prefix[i] & maskPrefix;
+				//find coordinate closest to the node's center, however the node-center should between the
+				//resulting coordinate and the kNN-center.
+				if (kNNCenter[i] > (nodeCenter | maskPostFix)) {
+					//kNN center is in 'upper' quadrant
+					nodeCenter = nodeCenter | maskPostFix; 
+				} else {
+					//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
+					nodeCenter = nodeCenter | maskSingleBit;
+				}
+				double dist = checker.getDistance().dist(nodeCenter, kNNCenter[i]); 
+				distances[i] = dist * dist;
+			}
+			
+			Arrays.sort(distances);
+			
+			double maxDist2 = checker.getMaxDist();
+			maxDist2 *= maxDist2;
+			double tempDist = 0;
+			int maxPermutations = distances.length; //dims
+			for (int i = 0; i < distances.length; i++) {
+				tempDist += distances[i];
+				if (tempDist > maxDist2) {
+					maxPermutations = i;
+					break;
+				}
+			}
+		
+			//TODO instead of adding up the distance, we could but the incremental sum into the vector
+			//     and the use binary search, or even linear search (starting with the previous known permutation limit)
+			
+			//TODO
+//			System.out.println("Distances: " + maxPermutations + " md= " + maxDist2 + " -> " + Arrays.toString(distances));
+			return maxPermutations;
+		}
+
 
 		private void recalcMasks(Node node, long[] prefix) {
 			//TODO remove this? It appears to make no sense for DIM
@@ -305,7 +414,7 @@ public class NodeIteratorListReuse4<T, R> {
 	void run(Node node, long[] prefix) {
 		NodeIterator nIt = pool.prepare();
 		nIt.recalcMasks(node, prefix);
-		nIt.reinitAndRun(node);
+		nIt.reinitAndRun(node, prefix);
 		pool.pop();
 	}
 

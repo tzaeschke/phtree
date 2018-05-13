@@ -44,4 +44,13 @@ public interface PhDistance {
 	 * @param outMax returns the new max values
 	 */
 	void toMBB(double distance, long[] center, long[] outMin, long[] outMax);
+
+	/**
+	 * Returns the difference (subtraction) of v2-v1.
+	 * 
+	 * @param v1 one value
+	 * @param v2 other value
+	 * @return The distance.
+	 */
+	double dist(long v1, long v2);
 }
