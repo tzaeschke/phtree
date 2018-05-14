@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -51,27 +51,34 @@ import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
  * 
  * @param <T> value type
  */
-public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
+public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 
 	private final int dims;
-	private PhTree16<T> pht;
+	private int nMin;
+	private PhTree16HD<T> pht;
 	private PhDistance distance;
 	private int currentPos = -1;
-	private final NodeIteratorListReuse4<T, PhEntryDist<T>> iter;
+	private final long[] mbbMin;
+	private final long[] mbbMax;
+	private final NodeIteratorListReuse<T, PhEntryDist<T>> iter;
 	private final PhFilterDistance checker;
-	private final KnnResultList4 results; 
+	private final KnnResultList results; 
+	private final NodeIteratorFullNoGC<T> ni;
 
 
 	/**
 	 * Create a new kNN/NNS search instance.
 	 * @param pht the parent tree
 	 */
-	public PhQueryKnnMbbPPList4(PhTree16<T> pht) {
+	public PhQueryKnnMbbPPList(PhTree16HD<T> pht) {
 		this.dims = pht.getDim();
+		this.mbbMin = new long[dims];
+		this.mbbMax = new long[dims];
 		this.pht = pht;
 		this.checker = new PhFilterDistance();
-		this.results = new KnnResultList4(dims);
-		this.iter = new NodeIteratorListReuse4<>(dims, results, checker);
+		this.results = new KnnResultList(dims);
+		this.iter = new NodeIteratorListReuse<>(dims, results);
+		ni = new NodeIteratorFullNoGC<>();
 	}
 
 	@Override
@@ -110,6 +117,7 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 	@Override
 	public PhKnnQuery<T> reset(int nMin, PhDistance dist, long... center) {
 		this.distance = dist == null ? this.distance : dist;
+		this.nMin = nMin;
 		
 		if (nMin > 0) {
 			results.reset(nMin, center);
@@ -122,6 +130,101 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 		return this;
 	}
 
+	private double estimateDistance(long[] key, Node node) {
+		Object v = node.doIfMatching(key, true, null, null, pht);
+		if (v == null) {
+			//Okay, there is no perfect match:
+			//just perform a query on the current node and return the first value that we find.
+			return getDistanceToClosest(key, node);
+		}
+		if (v instanceof Node) {
+			return estimateDistance(key, (Node) v);
+		}
+
+		//Okay, we have a perfect match!
+		//But we should return it only if nMin=1, otherwise our search area is too small.
+		if (nMin == 1) {
+			//Never return closest key if we look for nMin>1 keys!
+			//now return the key, even if it may not be an exact match (we don't check)
+			return 0.0;
+		}
+		//Okay just perform a query on the current node and return the first value that we find.
+		return getDistanceToClosest(key, node);
+	}
+
+	private double getDistanceToClosest(long[] key, Node node) {
+		//This is a hack.
+		//calcDiagonal() is problematic when applied to IEEE encoded
+		//floating point values, especially when the node is at the
+		//level of the exponent bits.
+		if (node.getPostLen() <= 52) { 
+			return calcDiagonal(key, node);
+		}
+		
+		//This allows writing the result directly into 'ret'
+		PhEntry<T> result = new PhEntry<>(null, null);
+		ni.init(node, null);
+		//TODO instead of iterator, just get first element!!!!!!! -> Implement special BST function
+		//TODO instead of iterator, just get first element!!!!!!! -> Implement special BST function
+		//TODO instead of iterator, just get first element!!!!!!! -> Implement special BST function
+		//TODO instead of iterator, just get first element!!!!!!! -> Implement special BST function
+		
+		
+		//TODO General KNN in high-dim:  
+		//     - if node-size > 10*dim, first iterate over bordering quadrants (just 1 bit different)
+		//       -> This serves as good annealling KNN
+		//     - If precise kNN is required, use best distance to exclude other quadrants in min/max-mask!!
+		//       -> Calculate how many bits can differ in a mask, then generate min/max-masks with that!
+		while (ni.increment(result)) {
+			if (result.hasNodeInternal()) {
+				//traverse sub node
+				ni.init((Node) result.getNodeInternal(), null);
+			} else {
+				//Never return closest key if we look for nMin>1 keys!
+				if (nMin > 1 && Arrays.equals(key, result.getKey())) {
+					//TODO why do we need this?????
+					//TODO why do we need this?????
+					//TODO why do we need this????? Should we always just use the diameter of the node?
+					//TODO why do we need this?????
+					
+					//Never return a perfect match if we look for nMin>1 keys!
+					//otherwise the distance is too small.
+					//This check should be cheap and will not be executed more than once anyway.
+					continue;
+				}
+				double dist = distance.dist(key, result.getKey());
+				//Problem: for rectangles with EDGE distance, the distance
+				//may calculate to '0.0', which will not yield a useful search MBB
+				//(unless there are more than 'k' rectangles with distance 0).
+				if (dist > 0) {
+					return dist;
+				} else {
+					return calcDiagonal(key, node);
+				}
+			}
+		}
+		throw new IllegalStateException();
+	}
+
+	private double calcDiagonal(long[] key, Node node) {
+		//First, get min/max.
+		long[] min = new long[dims];
+		long[] max = new long[dims];
+		long mask = (-1L) << (node.getPostLen()+1);
+		long mask1111 = ~mask;
+		for (int i = 0; i < dims; i++) {
+			min[i] = key[i] & mask;
+			max[i] = (key[i] & mask) | mask1111;
+		}
+		
+		//We calculate the diagonal of the node
+		double diagonal = distance.dist(min, max);
+		if (diagonal <= 0 || Double.isNaN(diagonal)) {
+			return 1;
+		}
+		//calc radius of inner circle
+		return diagonal*0.5;// /Math.sqrt(dims);
+	}
 
 	/**
 	 * This approach applies binary search to queries.
@@ -162,17 +265,28 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 		}
 
 		//estimate initial distance
-		findNeighbours(Double.POSITIVE_INFINITY, val);
+		double estimatedDist = estimateDistance(val, pht.getRoot());
+
+		while (!findNeighbours(estimatedDist, nMin, val)) {
+			estimatedDist *= 10;
+		}
 	}
 
-	private final void findNeighbours(double maxDist, long[] val) {
+	private final boolean findNeighbours(double maxDist, int nMin, long[] val) {
 		results.maxDistance = maxDist;
 		checker.set(val, distance, maxDist);
-		iter.resetAndRun(pht.getRoot());
+		distance.toMBB(maxDist, val, mbbMin, mbbMax);
+		iter.resetAndRun(pht.getRoot(), mbbMin, mbbMax, Integer.MAX_VALUE);
+
+		if (results.size() < nMin) {
+			//too small, we need a bigger range
+			return false;
+		}
+		return true;
 	}
 
 
-	public class KnnResultList4 extends PhResultList<T, PhEntryDist<T>> {
+	private class KnnResultList extends PhResultList<T, PhEntryDist<T>> {
 		private PhEntryDist<T>[] data;
 		private PhEntryDist<T> free;
 		private double[] distData;
@@ -182,9 +296,8 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 		private double maxDistance = Double.MAX_VALUE;
 		private final int dims;
 		private long[] center;
-		private boolean initialDive;
 		
-		KnnResultList4(int dims) {
+		KnnResultList(int dims) {
 			this.free = new PhEntryDist<>(new long[dims], null, -1);
 			this.dims = dims;
 		}
@@ -195,7 +308,6 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 		
 		@SuppressWarnings("unchecked")
 		void reset(int newSize, long[] center) {
-			initialDive = true;
 			size = 0;
 			this.center = center;
 			maxDistance = Double.MAX_VALUE;
@@ -248,14 +360,20 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 					//TODO THIS work best with comparing to the CURRENT previous value, instead
 					//     of using the one where we performed the last resize!!!!????
 					//TODO 6 is chosen arbitrary, I only tested k3 and k10 with 10M-CUBE
-
-					//Any call to this function is triggered by a new entry that ended up in the
+					
+					//TODO WHAT!!!?????? For nMin=1 we should not even get here!!!! (special case, see main method)
+					if (dims < 6 || data.length > 1 || oldMaxD/maxDistance > 1.1) {
+						//adjust minimum bounding box.
+						distance.toMBB(maxDistance, center, mbbMin, mbbMax);
+						//prevMaxDistance = oldMaxD;
+					}
+					//Any call to this function is triggered by entry that ended up in the
 					//candidate list. 
 					//Therefore, none of its parent nodes can be fully excluded by the new MBB.
 					//At best, we can exclude part of a parent if the search range slips
 					//'below' the center-point of a node in at least one dimension. 
 					//We basically need to compare each dimension, in which case we could 
-					//as well recalculate the min/max bit-range (min/max masks in the iterator).
+					//as well recalculate the bit-range.
 				}
 				if (free == e) {
 					free = createEntry();
@@ -362,27 +480,11 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 				long max = prefix[i] | maskMax;
 				buf[i] = min > center[i] ? min : (max < center[i] ? max : center[i]); 
 			}
-					
 			//TODO if buf==center -> no need to check distance 
 			//TODO return true for dim < 3????
 			return distance.dist(center, buf, maxDistance) <= maxDistance;
 			//return checker.isValid(bitsToIgnore, prefix);
 //			return true;
-		}
-
-		/**
-		 * During the initial 'dive', the algorithm attempts to find the center point in the tree.
-		 * Once the succeeds or fails, the initial dive is over, but we are in a node full of good
-		 * candidates and may even have the perfect first candidate (the center point).
-		 * 
-		 * @return True during the initial dive.
-		 */
-		public boolean isInitialDive() {
-			return initialDive;
-		}
-		
-		public void stopInitialDive() {
-			initialDive = false;
 		}
 	}
 	

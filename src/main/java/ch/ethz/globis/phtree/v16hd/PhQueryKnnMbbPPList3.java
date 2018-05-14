@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -51,27 +51,31 @@ import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
  * 
  * @param <T> value type
  */
-public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
+public class PhQueryKnnMbbPPList3<T> implements PhKnnQuery<T> {
 
 	private final int dims;
-	private PhTree16<T> pht;
+	private PhTree16HD<T> pht;
 	private PhDistance distance;
 	private int currentPos = -1;
-	private final NodeIteratorListReuse4<T, PhEntryDist<T>> iter;
+	private final long[] mbbMin;
+	private final long[] mbbMax;
+	private final NodeIteratorListReuse3<T, PhEntryDist<T>> iter;
 	private final PhFilterDistance checker;
-	private final KnnResultList4 results; 
+	private final KnnResultList3 results; 
 
 
 	/**
 	 * Create a new kNN/NNS search instance.
 	 * @param pht the parent tree
 	 */
-	public PhQueryKnnMbbPPList4(PhTree16<T> pht) {
+	public PhQueryKnnMbbPPList3(PhTree16HD<T> pht) {
 		this.dims = pht.getDim();
+		this.mbbMin = new long[dims];
+		this.mbbMax = new long[dims];
 		this.pht = pht;
 		this.checker = new PhFilterDistance();
-		this.results = new KnnResultList4(dims);
-		this.iter = new NodeIteratorListReuse4<>(dims, results, checker);
+		this.results = new KnnResultList3(dims);
+		this.iter = new NodeIteratorListReuse3<>(dims, results, checker);
 	}
 
 	@Override
@@ -168,11 +172,12 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 	private final void findNeighbours(double maxDist, long[] val) {
 		results.maxDistance = maxDist;
 		checker.set(val, distance, maxDist);
-		iter.resetAndRun(pht.getRoot());
+		distance.toMBB(maxDist, val, mbbMin, mbbMax);
+		iter.resetAndRun(pht.getRoot(), mbbMin, mbbMax);
 	}
 
 
-	public class KnnResultList4 extends PhResultList<T, PhEntryDist<T>> {
+	public class KnnResultList3 extends PhResultList<T, PhEntryDist<T>> {
 		private PhEntryDist<T>[] data;
 		private PhEntryDist<T> free;
 		private double[] distData;
@@ -184,7 +189,7 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 		private long[] center;
 		private boolean initialDive;
 		
-		KnnResultList4(int dims) {
+		KnnResultList3(int dims) {
 			this.free = new PhEntryDist<>(new long[dims], null, -1);
 			this.dims = dims;
 		}
@@ -248,7 +253,13 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 					//TODO THIS work best with comparing to the CURRENT previous value, instead
 					//     of using the one where we performed the last resize!!!!????
 					//TODO 6 is chosen arbitrary, I only tested k3 and k10 with 10M-CUBE
-
+					
+					//TODO WHAT!!!?????? For nMin=1 we should not even get here!!!! (special case, see main method)
+					if (dims < 6 || data.length > 1 || oldMaxD/maxDistance > 1.1) {
+						//adjust minimum bounding box.
+						distance.toMBB(maxDistance, center, mbbMin, mbbMax);
+						//prevMaxDistance = oldMaxD;
+					}
 					//Any call to this function is triggered by a new entry that ended up in the
 					//candidate list. 
 					//Therefore, none of its parent nodes can be fully excluded by the new MBB.
@@ -362,7 +373,6 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 				long max = prefix[i] | maskMax;
 				buf[i] = min > center[i] ? min : (max < center[i] ? max : center[i]); 
 			}
-					
 			//TODO if buf==center -> no need to check distance 
 			//TODO return true for dim < 3????
 			return distance.dist(center, buf, maxDistance) <= maxDistance;

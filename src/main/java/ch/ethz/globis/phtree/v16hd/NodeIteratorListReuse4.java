@@ -6,19 +6,24 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
+
+import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM1;
+import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM2;
+import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM3;
 
 import java.util.Arrays;
 import java.util.Comparator;
 
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilterDistance;
-import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitTools;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorToArray;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
+import ch.ethz.globis.phtree.util.BitsLong;
+import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorToArray;
+import ch.ethz.globis.phtree.v16hd.bst.LLEntry;
 
 
 /**
@@ -75,6 +80,8 @@ public class NodeIteratorListReuse4<T, R> {
 		private Node node;
 		private BSTIteratorAll niIterator;
 		private final BSTIteratorToArray itToArray = new BSTIteratorToArray();
+		private long maskLower;
+		private long maskUpper;
 		private LLEntry[] buffer;
 		private int bufferSize;
 		private final LLEComp COMP = new LLEComp();
@@ -157,18 +164,50 @@ public class NodeIteratorListReuse4<T, R> {
 			//calc 'divePos', ie. whether prefix is below/above 'center' for each dimension
 			long[] kNNCenter = checker.getCenter();
 	    	
-	        long relativeKNNpos = 0;
+//	        long[] relativeKNNpos = BitsLong.arrayCreate(dims);
+//	        int relativeKNNposSlot;
 	        //We want to get the center, so no +1 for postLen
 	        long prefixMask = (-1L) << node.getPostLen()+1;
 	        long prefixBit = 1L << node.getPostLen();
-	        for (int i = 0; i < prefix.length; i++) {
-	        	relativeKNNpos <<= 1;
-	        	//set pos-bit if bit is set in value
-	        	long nodeCenter = (prefix[i] & prefixMask) | prefixBit;
-	        	relativeKNNpos |= (kNNCenter[i] > nodeCenter) ? 1 : 0;
+//	        for (int i = 0; i < prefix.length; i++) {
+//	        	relativeKNNpos <<= 1;
+//	        	//set pos-bit if bit is set in value
+//	        	long nodeCenter = (prefix[i] & prefixMask) | prefixBit;
+//	        	relativeKNNpos[i] |= (kNNCenter[i] > nodeCenter) ? 1 : 0;
+//	        }
+
+	        //TODO cleanup
+	        //TODO cleanup
+	        //TODO cleanup
+	        //TODO cleanup
+	        //TODO cleanup
+	        
+	    	//long valMask = 1l << postLen;
+	    	long[] relativeKNNpos = BitsHD.newArray(dims);
+	        //get fraction
+	        int bitsPerSlot = BitsHD.mod65x(dims);
+	        int valsetPos = 0;
+	        //result slot (rs)
+	        for (int rs = 0; rs < relativeKNNpos.length; rs++) {
+	        	long pos = 0;
+	            for (int i = 0; i < bitsPerSlot; i++) {
+		        	pos <<= 1;
+		        	//set pos-bit if bit is set in value
+		        	long nodeCenter = (prefix[valsetPos] & prefixMask) | prefixBit;
+		        	pos |= (kNNCenter[valsetPos] > nodeCenter) ? 1 : 0;
+		        	valsetPos++;
+//	            	pos <<= 1;
+//	            	//set pos-bit if bit is set in value
+//	                pos |= (valMask & valSet[valsetPos++]) >>> postLen;
+	            }
+	            relativeKNNpos[rs] = pos;
+	            bitsPerSlot = 64;
 	        }
-			
+
+	        
+	        
         	iterateSortedBuffer(relativeKNNpos, prefix, 0);
+        	BitsLong.arrayReplace(relativeKNNpos, null);
 		}
 
 		private void niDepthFirstNeighborsSecond(long[] prefix) {
@@ -178,7 +217,7 @@ public class NodeIteratorListReuse4<T, R> {
 
 			//First attempt deep dive
 			long[] kNNCenter = checker.getCenter();
-			long divePos = PhTreeHelper.posInArray(kNNCenter, node.getPostLen());
+			long[] divePos = PhTreeHelperHD.posInArrayHD(kNNCenter, node.getPostLen());
 			BSTEntry be = node.ntGetEntry(divePos);
 			int minimumPermutations = 0;
 			if (be != null) {
@@ -188,6 +227,9 @@ public class NodeIteratorListReuse4<T, R> {
 						run(sub, be.getKdKey());
 						//ignore this quadrant from now on
 						minimumPermutations = 1;
+						//adjust masks
+						//TODO??/
+						recalcMasks(node, kNNCenter);
 					}
 				}
 			}
@@ -195,6 +237,7 @@ public class NodeIteratorListReuse4<T, R> {
 			//Okay, deep dive is finished
 			results.stopInitialDive();
 
+			//TODO???
 			if (node.getEntryCount() < 0*dims) {
 				iterateUnsorted(divePos, minimumPermutations);
 			} else {
@@ -202,17 +245,17 @@ public class NodeIteratorListReuse4<T, R> {
 			}
 		}
 		
-		private void iterateUnsorted(long divePos, int minimumPermutations) {
+		private void iterateUnsorted(long[] divePos, int minimumPermutations) {
 			niIterator.reset(node.getRoot());
 			while (niIterator.hasNextULL()) {
 				LLEntry le = niIterator.nextEntryReuse();
-				if (Long.bitCount(le.getKey() ^ divePos) >= minimumPermutations) {
+				if (BitsHD.xorBitCount(le.getKey(), divePos) >= minimumPermutations) {
 					checkEntry(le.getValue());
 				}
 			}
 		}
 		
-		private void iterateSortedBuffer(long divePos, long[] prefix, int minimumPermutations) {
+		private void iterateSortedBuffer(long[] divePos, long[] prefix, int minimumPermutations) {
 			if (buffer == null || buffer.length < node.getEntryCount()) {
 				if (buffer == null) {
 					buffer = new LLEntry[node.getEntryCount()];
@@ -232,7 +275,7 @@ public class NodeIteratorListReuse4<T, R> {
 			
 			//Omit anything that we already traversed (there should be at most one entry at the moment) 
 			int start = 0;
-			while (start < bufferSize && Long.bitCount(buffer[start].getKey() ^ divePos) < minimumPermutations) {
+			while (start < bufferSize && BitsHD.xorBitCount(buffer[start].getKey(), divePos) < minimumPermutations) {
 				start++;
 			}
 
@@ -249,7 +292,7 @@ public class NodeIteratorListReuse4<T, R> {
 					knownMaxDist = checker.getMaxDist();
 					nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter());
 				}
-				if (Long.bitCount(buffer[i].getKey() ^ divePos) > nMaxPermutatedBits) {
+				if (BitsHD.xorBitCount(buffer[i].getKey(), divePos) > nMaxPermutatedBits) {
 					break;
 				}
 				NodeIteratorListReuse.HD12++;
@@ -358,6 +401,80 @@ public class NodeIteratorListReuse4<T, R> {
 //			System.out.println("Distances: " + maxPermutations + " md= " + maxDist2 + " -> " + Arrays.toString(distances));
 			return maxPermutations;
 		}
+
+
+		private void recalcMasks(Node node, long[] prefix) {
+			//TODO remove this? It appears to make no sense for DIM
+
+
+			//create limits for the local node. there is a lower and an upper limit. Each limit
+			//consists of a series of DIM bit, one for each dimension.
+			//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
+			//not need to be queried.
+			//For the upper limit, a '0' indicates that the 'higher' half does not need to be 
+			//queried.
+			//
+			//              ||  lowerLimit=0 || lowerLimit=1 || upperLimit = 0 || upperLimit = 1
+			// =============||===================================================================
+			// query lower  ||     YES             NO
+			// ============ || ==================================================================
+			// query higher ||                                     NO               YES
+			//
+//			long maskHcBit = 1L << node.getPostLen();
+//			long maskVT = (-1L) << node.getPostLen();
+			long lowerLimit = 0;
+			long upperLimit = 0;
+//			//to prevent problems with signed long when using 64 bit
+//			if (maskHcBit >= 0) { //i.e. postLen < 63
+//				for (int i = 0; i < rangeMin.length; i++) {
+//					lowerLimit <<= 1;
+//					upperLimit <<= 1;
+//					long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
+//					if (rangeMin[i] >= nodeBisection) {
+//						//==> set to 1 if lower value should not be queried 
+//						lowerLimit |= 1L;
+//					}
+//					if (rangeMax[i] >= nodeBisection) {
+//						//Leave 0 if higher value should not be queried.
+//						upperLimit |= 1L;
+//					}
+//				}
+//			} else {
+//				//special treatment for signed longs
+//				//The problem (difference) here is that a '1' at the leading bit does indicate a
+//				//LOWER value, opposed to indicating a HIGHER value as in the remaining 63 bits.
+//				//The hypercube assumes that a leading '0' indicates a lower value.
+//				//Solution: We leave HC as it is.
+//
+//				for (int i = 0; i < rangeMin.length; i++) {
+//					lowerLimit <<= 1;
+//					upperLimit <<= 1;
+//					if (rangeMin[i] < 0) {
+//						//If minimum is positive, we don't need the search negative values 
+//						//==> set upperLimit to 0, prevent searching values starting with '1'.
+//						upperLimit |= 1L;
+//					}
+//					if (rangeMax[i] < 0) {
+//						//Leave 0 if higher value should not be queried
+//						//If maximum is negative, we do not need to search positive values 
+//						//(starting with '0').
+//						//--> lowerLimit = '1'
+//						lowerLimit |= 1L;
+//					}
+//				}
+//			}
+			upperLimit = (1L<<dims)-1;
+			MMM1++;
+			if (lowerLimit > 0) {
+				MMM2++;
+			}
+			if (upperLimit < ((1L<<dims)-1)) {
+				MMM3++;
+			}
+			maskLower = lowerLimit;
+			maskUpper = upperLimit;
+		}
+	
 	}
 	
 	NodeIteratorListReuse4(int dims, PhQueryKnnMbbPPList4<T>.KnnResultList4 results, PhFilterDistance checker) {
@@ -374,16 +491,17 @@ public class NodeIteratorListReuse4<T, R> {
 	
 	void run(Node node, long[] prefix) {
 		NodeIterator nIt = pool.prepare();
+		nIt.recalcMasks(node, prefix);
 		nIt.reinitAndRun(node, prefix);
 		pool.pop();
 	}
 
 	private static class LLEComp implements Comparator<LLEntry> {
-		long key;
+		long[] key;
 	    @Override
 		public int compare(LLEntry a, LLEntry b) {
-	    	int h1 = Long.bitCount(a.getKey() ^ key);
-	    	int h2 = Long.bitCount(b.getKey() ^ key);
+	    	int h1 = BitsHD.xorBitCount(a.getKey(), key);
+	    	int h2 = BitsHD.xorBitCount(b.getKey(), key);
             return h1 - h2;
 	    }
 	}

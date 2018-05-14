@@ -6,13 +6,14 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
 
 import static ch.ethz.globis.phtree.PhTreeHelper.align8;
 import static ch.ethz.globis.phtree.PhTreeHelper.debugCheck;
-import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
+import static ch.ethz.globis.phtree.PhTreeHelperHD.posInArrayHD;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,9 +30,9 @@ import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
+import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
+import ch.ethz.globis.phtree.v16hd.bst.LLEntry;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -86,7 +87,7 @@ import ch.ethz.globis.phtree.v16.bst.LLEntry;
  * @param <T> The value type of the tree 
  *
  */
-public class PhTree16<T> implements PhTree<T> {
+public class PhTree16HD<T> implements PhTree<T> {
 
 	//Enable HC incrementer / iteration
 	public static final boolean HCI_ENABLED = true; 
@@ -114,7 +115,7 @@ public class PhTree16<T> implements PhTree<T> {
         this.root = newRoot;
     }
 
-	public PhTree16(int dim) {
+	public PhTree16HD(int dim) {
 		dims = dim;
 		debugCheck();
 
@@ -135,7 +136,7 @@ public class PhTree16<T> implements PhTree<T> {
 		}
 	}
 
-	public PhTree16(PhTreeConfig cnf) {
+	public PhTree16HD(PhTreeConfig cnf) {
 		this(cnf.getDimActual());
 		switch (cnf.getConcurrencyType()) {
 		case PhTreeConfig.CONCURRENCY_NONE: break;
@@ -232,7 +233,7 @@ public class PhTree16<T> implements PhTree<T> {
 
     void insertRoot(long[] key, Object value) {
         root = Node.createNode(dims, 0, DEPTH_64-1);
-        long pos = posInArray(key, root.getPostLen());
+        long[] pos = posInArrayHD(key, root.getPostLen());
         root.addPostPIN(pos, -1, key, value);
         increaseNrEntries();
     }
@@ -398,12 +399,12 @@ public class PhTree16<T> implements PhTree<T> {
 			LLEntry le = iter.nextEntryReuse();
 			BSTEntry o = le.getValue();
 			if (o.getValue() instanceof Node) {
-				sb.appendLn(ind + "# " + le.getKey() + "  +");
+				sb.appendLn(ind + "# " + Arrays.toString(le.getKey()) + "  +");
 				toStringTree(sb, currentDepth + 1, (Node) o.getValue(), o.getKdKey(), printValue);
 			}  else {
 				//post-fix
 				sb.append(ind + Bits.toBinary(o.getKdKey(), DEPTH_64));
-				sb.append("  hcPos=" + le.getKey());
+				sb.append("  hcPos=" + Arrays.toString(le.getKey()));
 				if (printValue) {
 					sb.append("  v=" + o.getValue());
 				}
@@ -492,7 +493,7 @@ public class PhTree16<T> implements PhTree<T> {
 
 	@Override
 	public int getBitDepth() {
-		return PhTree16.DEPTH_64;
+		return PhTree16HD.DEPTH_64;
 	}
 
 	/**

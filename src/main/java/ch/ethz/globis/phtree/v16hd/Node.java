@@ -6,23 +6,21 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
-
-import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
+package ch.ethz.globis.phtree.v16hd;
 
 import java.util.Arrays;
 import java.util.List;
 
 import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v16.PhTree16.UpdateInfo;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
-import ch.ethz.globis.phtree.v16.bst.BSTPool;
-import ch.ethz.globis.phtree.v16.bst.BSTreePage;
+import ch.ethz.globis.phtree.v16hd.PhTree16HD.UpdateInfo;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
+import ch.ethz.globis.phtree.v16hd.bst.BSTPool;
+import ch.ethz.globis.phtree.v16hd.bst.BSTreePage;
 
 
 /**
@@ -105,8 +103,8 @@ public class Node {
 	 * @param pos The position of the node when mapped to a vector.
 	 * @return The sub node or null.
 	 */
-	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree16<?> tree) {
-		long hcPos = posInArray(keyToMatch, getPostLen());
+	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree16HD<?> tree) {
+		long[] hcPos = PhTreeHelperHD.posInArrayHD(keyToMatch, getPostLen());
 
 		//ntPut will also increase the node-entry count
 		Object v = ntPut(hcPos, keyToMatch, newValueToInsert);
@@ -127,9 +125,9 @@ public class Node {
 	 * @param tree
 	 * @return The sub node or null.
 	 */
-	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent, UpdateInfo insertRequired, PhTree16<?> tree) {
+	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent, UpdateInfo insertRequired, PhTree16HD<?> tree) {
 		
-		long hcPos = posInArray(keyToMatch, getPostLen());
+		long[] hcPos = PhTreeHelperHD.posInArrayHD(keyToMatch, getPostLen());
 		
 		if (getOnly) {
 			return ntGetEntryIfMatches(hcPos, keyToMatch);
@@ -172,9 +170,9 @@ public class Node {
         int newPostLen = mcb-1;
         Node newNode = createNode(key1.length, newLocalInfLen, newPostLen);
 
-        long posSub1 = posInArray(key1, newPostLen);
-        long posSub2 = posInArray(key2, newPostLen);
-        if (posSub1 < posSub2) {
+        long[] posSub1 = PhTreeHelperHD.posInArrayHD(key1, newPostLen);
+        long[] posSub2 = PhTreeHelperHD.posInArrayHD(key2, newPostLen);
+        if (BitsHD.isLess(posSub1, posSub2)) {
         	newNode.writeEntry(0, posSub1, key1, val1);
         	newNode.writeEntry(1, posSub2, key2, val2);
         } else {
@@ -216,7 +214,7 @@ public class Node {
 		//We know that there is only a leaf node with only a single entry, so...
 		BSTEntry nte = root.getFirstValue();
 		
-		long posInParent = PhTreeHelper.posInArray(key, parent.getPostLen());
+		long[] posInParent = PhTreeHelperHD.posInArrayHD(key, parent.getPostLen());
 		if (nte.getValue() instanceof Node) {
 			long[] newPost = nte.getKdKey();
 			//connect sub to parent
@@ -248,7 +246,7 @@ public class Node {
 	 * @param value
 	 * @param newSubInfixLen -infix len for sub-nodes. This is ignored for post-fixes.
 	 */
-	private void writeEntry(int pin, long hcPos, long[] newKey, Object value) {
+	private void writeEntry(int pin, long[] hcPos, long[] newKey, Object value) {
 		if (value instanceof Node) {
 			Node node = (Node) value;
 			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;  
@@ -258,7 +256,7 @@ public class Node {
 		return;
 	}
 
-	private void replaceEntryWithSub(long hcPos, long[] infix, Node newSub) {
+	private void replaceEntryWithSub(long[] hcPos, long[] infix, Node newSub) {
 		ntReplaceEntry(hcPos, infix, newSub);
 		return;
 	}
@@ -268,12 +266,12 @@ public class Node {
 	 * Replace a sub-node with a postfix, for example if the current sub-node is removed, 
 	 * it may have to be replaced with a post-fix.
 	 */
-	void replaceSubWithPost(long hcPos, long[] key, Object value) {
+	void replaceSubWithPost(long[] hcPos, long[] key, Object value) {
 		ntReplaceEntry(hcPos, key, value);
 		return;
 	}
 
-	void ntReplaceEntry(long hcPos, long[] kdKey, Object value) {
+	void ntReplaceEntry(long[] hcPos, long[] kdKey, Object value) {
 		//We use 'null' as parameter to indicate that we want replacement, rather than splitting,
 		//if the value exists.
 		replaceEntry(hcPos, kdKey, value);
@@ -292,7 +290,7 @@ public class Node {
 	 * @param dims
 	 * @return
 	 */
-	Object ntPut(long hcPos, long[] kdKey, Object value) {
+	Object ntPut(long[] hcPos, long[] kdKey, Object value) {
 		return addEntry(hcPos, kdKey, value);
 	}
 	
@@ -309,19 +307,19 @@ public class Node {
 	 * @param dims
 	 * @return
 	 */
-	Object ntRemoveAnything(long hcPos, int dims) {
+	Object ntRemoveAnything(long[] hcPos, int dims) {
     	return removeEntry(hcPos, null, null);
 	}
 
-	Object ntRemoveEntry(long hcPos, long[] key, UpdateInfo ui) {
+	Object ntRemoveEntry(long[] hcPos, long[] key, UpdateInfo ui) {
     	return removeEntry(hcPos, key, ui);
 	}
 
-	BSTEntry ntGetEntry(long hcPos) {
+	BSTEntry ntGetEntry(long[] hcPos) {
 		return getEntry(hcPos, null);
 	}
 
-	Object ntGetEntryIfMatches(long hcPos, long[] keyToMatch) {
+	Object ntGetEntryIfMatches(long[] hcPos, long[] keyToMatch) {
 		BSTEntry e = getEntry(hcPos, keyToMatch);
 		return e != null ? e.getValue() : null;
 	}
@@ -337,7 +335,7 @@ public class Node {
 	 * @param pin position in node: ==hcPos for AHC or pos in array for LHC
 	 * @param key
 	 */
-	void addPostPIN(long hcPos, int pin, long[] key, Object value) {
+	void addPostPIN(long[] hcPos, int pin, long[] key, Object value) {
 		ntPut(hcPos, key, value);
 		return;
 	}
@@ -349,7 +347,7 @@ public class Node {
 	boolean checkInfixNt(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
 		//first check if node-prefix allows sub-node to contain any useful values
 
-		if (PhTreeHelper.DEBUG) {
+		if (PhTreeHelperHD.DEBUG) {
 			N_GOOD++;
 			//Ensure that we never enter this method if the node cannot possibly contain a match.
 			long maskClean = mask1100(getPostLen());
@@ -455,7 +453,7 @@ public class Node {
 		return postLenStored;
 	}
 
-    BSTIteratorMask ntIteratorWithMask(long maskLower, long maskUpper) {
+    BSTIteratorMask ntIteratorWithMask(long[] maskLower, long[] maskUpper) {
     	return new BSTIteratorMask().reset(getRoot(), maskLower, maskUpper);
 	}
     
@@ -480,7 +478,7 @@ public class Node {
 	}
 
 
-	public final BSTEntry bstGetOrCreate(long key) {
+	public final BSTEntry bstGetOrCreate(long[] key) {
 		BSTreePage page = getRoot();
 		if (page.isLeaf()) {
 			BSTEntry e = page.getOrCreate(key, null, -1, this);
@@ -503,7 +501,7 @@ public class Node {
 	}
 
 
-	public BSTEntry bstRemove(long key, long[] kdKey, PhTree16.UpdateInfo ui) {
+	public BSTEntry bstRemove(long[] key, long[] kdKey, PhTree16HD.UpdateInfo ui) {
 		final BSTreePage rootPage = getRoot();
 		if (rootPage.isLeaf()) {
 			return rootPage.remove(key, kdKey, this, ui);
@@ -518,7 +516,7 @@ public class Node {
 	}
 
 
-	public BSTEntry bstGet(long key) {
+	public BSTEntry bstGet(long[] key) {
 		BSTreePage page = getRoot();
 		while (page != null && !page.isLeaf()) {
 			page = page.findSubPage(key);
@@ -537,7 +535,7 @@ public class Node {
 		return root;
 	}
 
-	public BSTIteratorMask iteratorMask(long minMask, long maxMask) {
+	public BSTIteratorMask iteratorMask(long[] minMask, long[] maxMask) {
 		return new BSTIteratorMask().reset(root, minMask, maxMask);
 	}
 
@@ -555,7 +553,7 @@ public class Node {
 
 	
 	public BSTIteratorAll iterator() {
-		return new BSTIteratorAll().reset(getRoot());
+		return ntIteratorAll();
 	}
 
 	
@@ -606,7 +604,7 @@ public class Node {
 	// BST handler
 	// *****************************************
 	
-	private Object addEntry(long hcPos, long[] kdKey, Object value) {
+	private Object addEntry(long[] hcPos, long[] kdKey, Object value) {
 		//Uses bstGetOrCreate() -> 
 		//- get or create entry
 		//- if value==null -> new entry, just set key,value
@@ -676,7 +674,7 @@ public class Node {
         return null;
 	}
 	
-	private Object replaceEntry(long hcPos, long[] kdKey, Object value) {
+	private Object replaceEntry(long[] hcPos, long[] kdKey, Object value) {
 		BSTEntry be = bstGet(hcPos);
 		Object prev = be.getValue();
 		be.setKdKey(kdKey);
@@ -684,7 +682,7 @@ public class Node {
 		return prev;
 	}
 
-	private Object removeEntry(long hcPos, long[] key, UpdateInfo ui) {
+	private Object removeEntry(long[] hcPos, long[] key, UpdateInfo ui) {
 		//Only remove value-entries, node-entries are simply returned without removing them
 		BSTEntry prev = bstRemove(hcPos, key, ui);
 		//return values: 
@@ -725,7 +723,7 @@ public class Node {
 	}
 	
 	
-	private BSTEntry getEntry(long hcPos, long[] keyToMatch) {
+	private BSTEntry getEntry(long[] hcPos, long[] keyToMatch) {
 		BSTEntry be = bstGet(hcPos);
 		if (be == null) {
 			return null;

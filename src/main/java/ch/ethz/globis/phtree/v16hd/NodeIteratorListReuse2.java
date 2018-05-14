@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
 
 import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM1;
 import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM2;
@@ -15,9 +15,9 @@ import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM3;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
+import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
+import ch.ethz.globis.phtree.v16hd.bst.LLEntry;
 
 /**
  * A NodeIterator that returns a list instead of an Iterator AND reuses the NodeIterator.
@@ -115,7 +115,7 @@ public class NodeIteratorListReuse2<T, R> {
 			int logNChild = Long.SIZE - Long.numberOfLeadingZeros(nChild);
 			//the following will overflow for k=60
 			//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
-			useHcIncrementer = PhTree16.HCI_ENABLED && dims < 50 
+			useHcIncrementer = PhTree16HD.HCI_ENABLED && dims < 50 
 					&& (nChild > nPossibleMatch*(double)logNChild*2);
 			if (!useHcIncrementer) {
 				niIterator.reset(node.getRoot(), maskLower, maskUpper);
@@ -194,7 +194,7 @@ public class NodeIteratorListReuse2<T, R> {
 					checkEntry(be);
 				}
 				
-				currentPos = PhTree16.inc(currentPos, maskLower, maskUpper);
+				currentPos = PhTree16HD.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					break;
 				}

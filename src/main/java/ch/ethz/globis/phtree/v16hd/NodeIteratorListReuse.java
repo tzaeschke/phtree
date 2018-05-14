@@ -6,18 +6,13 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
 
-import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM1;
-import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM2;
-import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM3;
+import java.util.List;
 
 import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhFilterDistance;
-import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
+import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
 
 /**
  * A NodeIterator that returns a list instead of an Iterator AND reuses the NodeIterator.
@@ -28,26 +23,23 @@ import ch.ethz.globis.phtree.v16.bst.LLEntry;
  * The NILReuse creates much less objects, but they end up in an array for reuse, which means
  * they may not be on the stack.... 
  * 
- * Version 2: This implements Single-Dive with search of distance=1 neighbors
- * 
- * 
  * @author ztilmann
  *
  * @param <T> value type
  * @param <R> result type
  */
-public class NodeIteratorListReuse2<T, R> {
+public class NodeIteratorListReuse<T, R> {
 	
 	private class PhIteratorStack {
 		@SuppressWarnings("unchecked")
-		private final NodeIterator[] stack = new NodeIteratorListReuse2.NodeIterator[64];
+		private final NodeIterator[] stack = new NodeIteratorListReuse.NodeIterator[64];
 		private int size = 0;
 
 
 		NodeIterator prepare() {
 			NodeIterator ni = stack[size++];
 			if (ni == null)  {
-				ni = new NodeIterator();
+				ni = new NodeIterator(dims);
 				stack[size-1] = ni;
 			}
 			return ni;
@@ -58,12 +50,53 @@ public class NodeIteratorListReuse2<T, R> {
 		}
 	}
 
+	@Deprecated
+	public static long AMM1;
+	@Deprecated
+	public static long AMM2;
+	@Deprecated
+	public static long AMM3;
+	@Deprecated
+	public static long AMM4;
+	@Deprecated
+	public static long AMM5;
+
+	@Deprecated
+	public static long AMMN2;
+	@Deprecated
+	public static long AMMN3;
+	@Deprecated
+	public static long AMMN4;
+
+	@Deprecated
+	public static long MMM1;
+	@Deprecated
+	public static long MMM2;
+	@Deprecated
+	public static long MMM3;
+
+	@Deprecated
+	public static long HD11;
+	@Deprecated
+	public static long HD12;
+	@Deprecated
+	public static long HD21;
+	@Deprecated
+	public static long HD22;
+	
+	@Deprecated
+	public static long CE1;
+	@Deprecated
+	public static long CE2;
+	@Deprecated
+	public static long CE3;
+
 	
 	private final int dims;
-	private final PhQueryKnnMbbPPList2<T>.KnnResultList2 results;
+	private final PhResultList<T,R> results;
+	private int maxResults;
 	private long[] rangeMin;
 	private long[] rangeMax;
-	private final PhFilterDistance checker;
 
 	private final PhIteratorStack pool;
 	
@@ -71,10 +104,14 @@ public class NodeIteratorListReuse2<T, R> {
 	
 		private Node node;
 		private BSTIteratorMask niIterator;
-		private long maskLower;
-		private long maskUpper;
-		private boolean useHcIncrementer;
+		private final long[] maskLower;
+		private final long[] maskUpper;
 
+		private NodeIterator(int dims) {
+			this.maskLower = BitsHD.newArray(dims);
+			this.maskUpper = BitsHD.newArray(dims);
+		}
+		
 		/**
 		 * 
 		 * @param node
@@ -86,41 +123,20 @@ public class NodeIteratorListReuse2<T, R> {
 		 * 				   If the found value is lower, the search continues.
 		 * @param maxValue
 		 */
-		void reinitAndRun(Node node, long lower, long upper) {
+		void reinitAndRun(Node node, long[] prefix) {
 			this.node = node;
-			this.maskLower = lower;
-			this.maskUpper = upper;
+			//TODO do not pass as argument....
+			calcLimits(rangeMin, rangeMax, prefix);
 
-			useHcIncrementer = false;
 			if (niIterator == null) {
 				niIterator = node.ntIteratorWithMask(maskLower, maskUpper);
 			} else {
 				niIterator.reset(node.getRoot(), maskLower,  maskUpper);
 			}
 
-			if (dims > 6) {
-				initHCI();
-			}
-
 			getAll();
 		}
 
-		private void initHCI() {
-			//LHC, NI, ...
-			long maxHcAddr = ~((-1L)<<dims);
-			int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
-			//nPossibleMatch = (2^k-x)
-			long nPossibleMatch = 1L << (dims - nSetFilterBits);
-			int nChild = node.ntGetSize();
-			int logNChild = Long.SIZE - Long.numberOfLeadingZeros(nChild);
-			//the following will overflow for k=60
-			//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
-			useHcIncrementer = PhTree16.HCI_ENABLED && dims < 50 
-					&& (nChild > nPossibleMatch*(double)logNChild*2);
-			if (!useHcIncrementer) {
-				niIterator.reset(node.getRoot(), maskLower, maskUpper);
-			}
-		}
 		
 		private void checkAndAddResult(PhEntry<T> e) {
 			results.phOffer(e);
@@ -129,7 +145,7 @@ public class NodeIteratorListReuse2<T, R> {
 
 		private void checkAndRunSubnode(Node sub, long[] subPrefix) {
 			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
-				NodeIteratorListReuse.AMMN4++;
+				AMMN4++;
 				run(sub, subPrefix);
 			}
 		}
@@ -137,7 +153,7 @@ public class NodeIteratorListReuse2<T, R> {
 
 		@SuppressWarnings("unchecked")
 		private void readValue(BSTEntry candidate) {
-			NodeIteratorListReuse.AMM3++;
+			AMM3++;
 			//TODO avoid getting/assigning element? -> Most entries fail!
 			PhEntry<T> result = results.phGetTempEntry();
 			result.setKeyInternal(candidate.getKdKey());
@@ -147,13 +163,13 @@ public class NodeIteratorListReuse2<T, R> {
 		
 		private void checkEntry(BSTEntry be) {
 			Object v = be.getValue();
-			NodeIteratorListReuse.AMM1++;
+			AMM1++;
 			if (v instanceof Node) {
-				NodeIteratorListReuse.AMMN2++;
-				NodeIteratorListReuse.AMMN3++;
+				AMMN2++;
+				AMMN3++;
 				checkAndRunSubnode((Node) v, be.getKdKey());
 			} else if (v != null) { 
-				NodeIteratorListReuse.AMM2++;
+				AMM2++;
 				readValue(be);
 			}
 		}
@@ -164,113 +180,117 @@ public class NodeIteratorListReuse2<T, R> {
 
 
 		private void niAllNext() {
-			if (results.isInitialDive()) {
-				niDepthFirstNeighborsSecond();
-			} else if (useHcIncrementer) {
-				niAllNextHCI();
-			} else {
-				niAllNextIterator();
-			}
+			//iterator?
+			niAllNextIterator();
 		}
 		
 		private void niAllNextIterator() {
 			//ITERATOR is used for DIM>6 or if results are dense 
-			while (niIterator.hasNextULL()) {
+			while (niIterator.hasNextULL() && results.size() < maxResults) {
 				BSTEntry be = niIterator.nextBSTEntryReuse();
 				checkEntry(be);
 			}
-			//TODO Adapt BST-Iterator to skip sub-nodes if check(current)==false -> searchNext(inc(current))  
-			return;
 		}
 
-		private void niAllNextHCI() {
-			//HCI is used for DIM <=6 or if results are sparse
-			//repeat until we found a value inside the given range
-			long currentPos = maskLower; 
-			while (true) {
-				BSTEntry be = node.ntGetEntry(currentPos);
-				//sub-node?
-				if (be != null) {
-					checkEntry(be);
+		/**
+		 * 
+		 * @param rangeMin
+		 * @param rangeMax
+		 * @param valTemplate
+		 * @param postLen
+		 */
+		private void calcLimits(long[] rangeMin, long[] rangeMax, long[] prefix) {
+			//create limits for the local node. there is a lower and an upper limit. Each limit
+			//consists of a series of DIM bit, one for each dimension.
+			//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
+			//not need to be queried.
+			//For the upper limit, a '0' indicates that the 'higher' half does not need to be 
+			//queried.
+			//
+			//              ||  lowerLimit=0 || lowerLimit=1 || upperLimit = 0 || upperLimit = 1
+			// =============||===================================================================
+			// query lower  ||     YES             NO
+			// ============ || ==================================================================
+			// query higher ||                                     NO               YES
+			//
+			
+			//Hack: if prefix==null, we simply use rangeMin. This simplifies the case postLen=63 where 
+			//we are at the root node and prefix==null and where we anyway don't need any bits from prefix.
+			if (prefix == null) {
+				prefix = rangeMin;
+			}
+			
+			int postLen = node.getPostLen();
+			long maskHcBit = 1L << postLen;
+			long maskVT = (-1L) << postLen;
+			long[] lowerLimit = maskLower;
+			long[] upperLimit = maskUpper;
+			BitsHD.set0(lowerLimit);
+			BitsHD.set0(upperLimit);
+			int maskSlot = 0;
+			long mask1 = 1L << (BitsHD.mod65x(prefix.length) - 1);
+			//to prevent problems with signed long when using 64 bit
+			if (maskHcBit >= 0) { //i.e. postLen < 63
+				for (int i = 0; i < prefix.length; i++) {
+					long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
+					if (rangeMin[i] >= nodeBisection) {
+						//==> set to 1 if lower value should not be queried 
+						lowerLimit[maskSlot] |= mask1;
+					}
+					if (rangeMax[i] >= nodeBisection) {
+						//Leave 0 if higher value should not be queried.
+						upperLimit[maskSlot] |= mask1;
+					}
+					if ((mask1 >>= 1) == 0) {
+						mask1 = 1L << 63;
+						maskSlot++;
+					}
 				}
-				
-				currentPos = PhTree16.inc(currentPos, maskLower, maskUpper);
-				if (currentPos <= maskLower) {
-					break;
+			} else {
+				//special treatment for signed longs
+				//The problem (difference) here is that a '1' at the leading bit does indicate a
+				//LOWER value, opposed to indicating a HIGHER value as in the remaining 63 bits.
+				//The hypercube assumes that a leading '0' indicates a lower value.
+				//Solution: We leave HC as it is.
+
+				for (int i = 0; i < prefix.length; i++) {
+					if (rangeMin[i] < 0) {
+						//If minimum is positive, we don't need the search negative values 
+						//==> set upperLimit to 0, prevent searching values starting with '1'.
+						upperLimit[maskSlot] |= mask1;
+					}
+					if (rangeMax[i] < 0) {
+						//Leave 0 if higher value should not be queried
+						//If maximum is negative, we do not need to search positive values 
+						//(starting with '0').
+						//--> lowerLimit = '1'
+						lowerLimit[maskSlot] |= mask1;
+					}
+					if ((mask1 >>= 1) == 0) {
+						mask1 = 1L << 63;
+						maskSlot++;
+					}
 				}
 			}
-		}
-
-		private void niDepthFirstNeighborsSecond() {
-			//First traverse the closest match (if any)
-			//Second traverse direct neighbors
-			//Third traverse the rest
-
-			//First attempt deep dive
-			long divePos = PhTreeHelper.posInArray(checker.getCenter(), node.getPostLen());
-			BSTEntry be = node.ntGetEntry(divePos);
-			if (be != null) {
-				checkEntry(be);
-			}
-
-			//Okay, deep dive is finished
-			results.stopInitialDive();
-
-			//Now check direct neighbors
-			int maskN = 1;
-			for (int d = 0; d < dims; d++) {
-				be = node.ntGetEntry(divePos ^ maskN);
-				if (be != null) {
-					checkEntry(be);
-				}
-				maskN <<= 1;
-			}
-
-			//Now check the rest
-			while (niIterator.hasNextULL()) {
-				LLEntry le = niIterator.nextEntryReuse();
-				if (Long.bitCount(le.getKey() ^ divePos) > 1) {
-					checkEntry(le.getValue());
-				}
-			}
-			//TODO Adapt BST-Iterator to skip sub-nodes if check(current)==false -> searchNext(inc(current))  
-
-//			long currentPos = maskLower; 
-//			while (true) {
-//				if (Long.bitCount(currentPos ^ divePos) > 1) {
-//					be = node.ntGetEntry(currentPos);
-//					//sub-node?
-//					if (be != null) {
-//						checkEntry(be);
-//					}
-//				}
-//				
-//				currentPos = PhTree16HD.inc(currentPos, maskLower, maskUpper);
-//				if (currentPos <= maskLower) {
-//					break;
-//				}
-//			}
 		}
 	}
 	
-	NodeIteratorListReuse2(int dims, PhQueryKnnMbbPPList2<T>.KnnResultList2 results, PhFilterDistance checker) {
+	NodeIteratorListReuse(int dims, PhResultList<T, R> results) {
 		this.dims = dims;
 		this.results = results;
 		this.pool = new PhIteratorStack();
-		this.checker = checker;
 	}
 
-	void resetAndRun(Node node, long[] rangeMin, long[] rangeMax) {
+	List<R> resetAndRun(Node node, long[] rangeMin, long[] rangeMax, int maxResults) {
 		results.clear();
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
+		this.maxResults = maxResults;
 		run(node, null);
+		return results;
 	}
 	
 	void run(Node node, long[] prefix) {
-		//TODO remove this? It appears to make no sense for DIM
-		
-		
 //		//create limits for the local node. there is a lower and an upper limit. Each limit
 //		//consists of a series of DIM bit, one for each dimension.
 //		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -286,8 +306,8 @@ public class NodeIteratorListReuse2<T, R> {
 //		//
 //		long maskHcBit = 1L << node.getPostLen();
 //		long maskVT = (-1L) << node.getPostLen();
-		long lowerLimit = 0;
-		long upperLimit = 0;
+//		long[] lowerLimit = this.0;
+//		long[] upperLimit = 0;
 //		//to prevent problems with signed long when using 64 bit
 //		if (maskHcBit >= 0) { //i.e. postLen < 63
 //			for (int i = 0; i < rangeMin.length; i++) {
@@ -327,16 +347,8 @@ public class NodeIteratorListReuse2<T, R> {
 //				}
 //			}
 //		}
-		upperLimit = (1L<<dims)-1;
-		MMM1++;
-		if (lowerLimit > 0) {
-			MMM2++;
-		}
-		if (upperLimit < ((1L<<dims)-1)) {
-			MMM3++;
-		}
 		NodeIterator nIt = pool.prepare();
-		nIt.reinitAndRun(node, lowerLimit, upperLimit);
+		nIt.reinitAndRun(node, prefix);
 		pool.pop();
 	}
 

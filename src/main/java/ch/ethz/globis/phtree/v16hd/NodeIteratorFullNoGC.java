@@ -6,13 +6,13 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
 
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
+import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
+import ch.ethz.globis.phtree.v16hd.bst.LLEntry;
 
 
 
@@ -27,7 +27,7 @@ import ch.ethz.globis.phtree.v16.bst.LLEntry;
 public class NodeIteratorFullNoGC<T> {
 	
 	private boolean finished;
-	private final BSTIteratorAll ntIterator = new BSTIteratorAll();
+	private BSTIteratorAll ntIterator;
 	private PhFilter checker;
 
 
@@ -51,6 +51,11 @@ public class NodeIteratorFullNoGC<T> {
 	private void reinit(Node node, PhFilter checker) {
 		finished = false;
 		this.checker = checker;
+	
+		//Position of the current entry
+		if (ntIterator == null) {
+			ntIterator = new BSTIteratorAll();
+		}
 		ntIterator.reset(node.getRoot());
 	}
 

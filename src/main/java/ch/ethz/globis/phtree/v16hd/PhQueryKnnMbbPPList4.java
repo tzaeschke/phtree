@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -54,7 +54,7 @@ import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 
 	private final int dims;
-	private PhTree16<T> pht;
+	private PhTree16HD<T> pht;
 	private PhDistance distance;
 	private int currentPos = -1;
 	private final NodeIteratorListReuse4<T, PhEntryDist<T>> iter;
@@ -66,7 +66,7 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 	 * Create a new kNN/NNS search instance.
 	 * @param pht the parent tree
 	 */
-	public PhQueryKnnMbbPPList4(PhTree16<T> pht) {
+	public PhQueryKnnMbbPPList4(PhTree16HD<T> pht) {
 		this.dims = pht.getDim();
 		this.pht = pht;
 		this.checker = new PhFilterDistance();
@@ -238,24 +238,9 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 			if (d < maxDistance || (d <= maxDistance && size < data.length)) {
 				NodeIteratorListReuse.AMM5++;
 				boolean needsAdjustment = internalAdd(e);
-				
 				if (needsAdjustment) {
-					double oldMaxD = maxDistance;
 					maxDistance = distData[size-1];
 					checker.setMaxDist(maxDistance);
-					//This is an optimisation, seem to work for example for 10M/K3/CUBE
-					//TODO we should compare with the distance when this was last changed!
-					//TODO THIS work best with comparing to the CURRENT previous value, instead
-					//     of using the one where we performed the last resize!!!!????
-					//TODO 6 is chosen arbitrary, I only tested k3 and k10 with 10M-CUBE
-
-					//Any call to this function is triggered by a new entry that ended up in the
-					//candidate list. 
-					//Therefore, none of its parent nodes can be fully excluded by the new MBB.
-					//At best, we can exclude part of a parent if the search range slips
-					//'below' the center-point of a node in at least one dimension. 
-					//We basically need to compare each dimension, in which case we could 
-					//as well recalculate the min/max bit-range (min/max masks in the iterator).
 				}
 				if (free == e) {
 					free = createEntry();
