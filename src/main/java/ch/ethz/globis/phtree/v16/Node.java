@@ -24,7 +24,6 @@ import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMinMax;
 import ch.ethz.globis.phtree.v16.bst.BSTPool;
 import ch.ethz.globis.phtree.v16.bst.BSTreePage;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
 
 /**
@@ -274,12 +273,7 @@ public class Node {
 		ntReplaceEntry(hcPos, infix, newSub);
 		return;
 	}
-	
-	boolean hasSubInfixNI(long[] infix) {
-		//TODO reenable? But we also need to write it...
-		//return (infix[infix.length-1] & 1L) != 0;
-		return true;
-	}
+
 	
 	/**
 	 * Replace a sub-node with a postfix, for example if the current sub-node is removed, 
@@ -383,26 +377,9 @@ public class Node {
 			}
 		}
 		
-		if (!hasSubInfixNI(keyToTest) || infixLen == 0) {
+		if (infixLen == 0) {
 			return true;
 		}
-
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
-		//TODO Why not abort with infixlen == 0? Or use applyHcPos if infixeLenNew == n1 ????
 
 		//first, clean trailing bits
 		//Mask for comparing the tempVal with the ranges, except for bit that have not been
@@ -438,8 +415,6 @@ public class Node {
 			if (!checkInfixNt(sub.getInfixLen(), candidate.getKdKey(), rangeMin, rangeMax)) {
 				return false;
 			}
-			//TODO we only need to set the key..
-			//TODO do we need to set anything at all????
 			result.setKeyInternal(candidate.getKdKey());
 			result.setNodeInternal(sub);
 			return true;
@@ -491,16 +466,12 @@ public class Node {
 		return postLenStored;
 	}
 
-    private BSTIteratorMinMax ntIterator() {
-    	return iterator();
-    }
-
     BSTIteratorMask ntIteratorWithMask(long maskLower, long maskUpper) {
     	return new BSTIteratorMask().reset(getRoot(), maskLower, maskUpper);
 	}
     
-	BSTIteratorAll ntIteratorAll(LLEntry[] entryBuffer) {
-		return new BSTIteratorAll().reset(getRoot(), entryBuffer);
+	BSTIteratorAll ntIteratorAll() {
+		return new BSTIteratorAll().reset(getRoot());
 	}
     
     
@@ -714,9 +685,6 @@ public class Node {
 						localKdKey, currentValue, maxConflictingBits);
 
 		//replace value
-		//TODO Do we really need to clone the KEY here? We could just keep it, because it is never modified???
-		//     --> This is a little bit dangerous, after an entry is deleted from the tree, a user may think its okay
-		//         to modify it again....
 		currentEntry.setKdKey(BitsLong.arrayClone(localKdKey));
 		currentEntry.setValue(newNode);
 		//entry did not exist

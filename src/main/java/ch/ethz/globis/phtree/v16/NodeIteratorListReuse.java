@@ -75,6 +75,22 @@ public class NodeIteratorListReuse<T, R> {
 	@Deprecated
 	public static long MMM3;
 
+	@Deprecated
+	public static long HD11;
+	@Deprecated
+	public static long HD12;
+	@Deprecated
+	public static long HD21;
+	@Deprecated
+	public static long HD22;
+	
+	@Deprecated
+	public static long CE1;
+	@Deprecated
+	public static long CE2;
+	@Deprecated
+	public static long CE3;
+
 	
 	private final int dims;
 	private final PhResultList<T,R> results;

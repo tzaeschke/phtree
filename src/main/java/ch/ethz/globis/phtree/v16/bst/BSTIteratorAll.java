@@ -22,8 +22,6 @@ public class BSTIteratorAll {
 
 	private BSTreePage currentPage = null;
 	private short currentPos = 0;
-	private LLEntry[] entries;
-	private int nEntries;
 	private final IteratorPosStack stack = new IteratorPosStack(20);
 	private long nextKey;
 	private BSTEntry nextValue;
@@ -34,13 +32,11 @@ public class BSTIteratorAll {
 		//nothing
 	}
 	
-	public BSTIteratorAll reset(BSTreePage root, LLEntry[] entries) {
+	public BSTIteratorAll reset(BSTreePage root) {
 		this.currentPage = root;
 		this.currentPos = -1;
 		this.hasValue = false;
 		this.stack.clear();
-		this.entries = entries;
-		this.nEntries = 0;
 		findFirstPosInPage();
 		return this;
 	}
