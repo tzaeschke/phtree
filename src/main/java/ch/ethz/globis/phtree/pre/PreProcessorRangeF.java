@@ -46,6 +46,21 @@ public interface PreProcessorRangeF {
 	
 	
 	/**
+	 * 
+	 * @param raw raw data (input)
+	 * @return pre-processed data (output, must be non-null and same size as input array)
+	 */
+	public long pre(double raw);
+	
+	
+	/**
+	 * @param pre pre-processed data (input)
+	 * @return post-processed data (output, must be non-null and same size as input array)
+	 */
+	public double post(long pre);
+	
+	
+	/**
 	 * Simple IEEE preprocessor that converts the bits directly to an integer value.
 	 * The conversion is lossless. Euclidean space properties are not fully maintained in
 	 * the converted space because the space is stretched.
@@ -87,6 +102,15 @@ public interface PreProcessorRangeF {
 			}
 		}
 
+		@Override
+		public long pre(double raw) {
+			return BitTools.toSortableLong(raw);
+		}
+
+		@Override
+		public double post(long pre) {
+			return BitTools.toDouble(pre);
+		}
 	}
 	
 	
@@ -133,6 +157,16 @@ public interface PreProcessorRangeF {
 				post1[i] = pre[i]*div;
 				post2[i] = pre[i+dims]*div;
 			}
+		}
+
+		@Override
+		public long pre(double raw) {
+			return (long) (raw * preMult);
+		}
+
+		@Override
+		public double post(long pre) {
+			return pre * postMult;
 		}
 	}
 	

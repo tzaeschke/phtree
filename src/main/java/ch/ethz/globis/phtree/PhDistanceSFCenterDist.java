@@ -90,4 +90,11 @@ public class PhDistanceSFCenterDist implements PhDistanceSF {
 		pre.pre(qMIN, min, outMin);
 		pre.pre(max, qMAX, outMax);
 	}
+
+	@Override
+	public double dist(long v1, long v2) {
+		double d1 = pre.post(v1);
+		double d2 = pre.post(v2);
+		return d2 - d1;
+	}
 }

@@ -18,8 +18,8 @@ import org.junit.Test;
 
 import ch.ethz.globis.phtree.v16.Node;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorMinMax;
 
 public class TestBST16 {
 
@@ -81,7 +81,11 @@ public class TestBST16 {
 		for (BSTEntry i : list) {
 			//if (i%1000 == 0) 
 			//	System.out.println("ins=" + i);
-			ht.bstPut((Integer)i.getValue(), i);
+			//ht.bstPut((Integer)i.getValue(), i);
+			BSTEntry newBE = ht.bstGetOrCreate((Integer)i.getValue());
+			newBE.setKdKey(i.getKdKey());
+			newBE.setValue(i.getValue());
+			
 			//Check
 			BSTEntry be = ht.bstGet((Integer)i.getValue());
 			assertEquals((int)i.getValue(), (int)be.getValue());
@@ -103,7 +107,7 @@ public class TestBST16 {
 		
 		//iterate
 		long l51 = System.currentTimeMillis();
-		BSTIteratorMinMax iter = ht.iterator();
+		BSTIteratorAll iter = ht.iterator();
 		long prev = -1;
 		while (iter.hasNextULL()) {
 			long current = iter.nextKey();
@@ -126,7 +130,10 @@ public class TestBST16 {
 		//replace some
 		long l31 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
-			ht.bstPut((Integer)i.getValue(), new BSTEntry(i.getKdKey(), -(Integer)i.getValue()));
+			//ht.bstPut((Integer)i.getValue(), new BSTEntry(i.getKdKey(), -(Integer)i.getValue()));
+			BSTEntry newBE = ht.bstGetOrCreate((Integer)i.getValue());
+			newBE.setValue(-(Integer)i.getValue());
+
 			//if (i%1000 == 0) System.out.println("rep=" + i);
 		}
 		long l32 = System.currentTimeMillis();
