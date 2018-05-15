@@ -109,7 +109,7 @@ public class TestBST16hd {
 		long l51 = System.currentTimeMillis();
 		BSTIteratorAll iter = ht.iterator();
 		long[] prev = new long[] {-1};
-		while (iter.hasNextULL()) {
+		while (iter.hasNextEntry()) {
 			long[] current = iter.nextKey();
 			assertEquals(prev[0] + 1, current[0]);
 			prev[0] = current[0];
@@ -119,7 +119,7 @@ public class TestBST16hd {
 		long l61 = System.currentTimeMillis();
 		BSTIteratorMask iterMask = ht.iteratorMask(new long[] {0}, new long[] {0xFFFFFFFFFFFEL});
 		prev = new long[] {-2};
-		while (iterMask.hasNextULL()) {
+		while (iterMask.hasNextEntry()) {
 			long[] current = iterMask.nextKey();
 			assertEquals(prev[0] + 2, current[0]);
 			prev[0] = current[0];

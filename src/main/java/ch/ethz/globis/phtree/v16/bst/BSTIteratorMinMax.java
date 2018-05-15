@@ -28,7 +28,6 @@ public class BSTIteratorMinMax {
 	private long nextKey;
 	private BSTEntry nextValue;
 	private boolean hasValue = false;
-    private final LLEntry tempEntry = new LLEntry(-1, null);
 	
 	public BSTIteratorMinMax() {
 		//nothing
@@ -46,7 +45,7 @@ public class BSTIteratorMinMax {
 	}
 
 
-	public boolean hasNextULL() {
+	public boolean hasNextEntry() {
 		return hasValue;
 	}
 
@@ -179,23 +178,23 @@ public class BSTIteratorMinMax {
 	}
 	
 	
-	public LLEntry nextEntryReuse() {
-		if (!hasNextULL()) {
+	public BSTEntry nextEntry() {
+		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 
-        tempEntry.set(nextKey, nextValue);
+        BSTEntry ret = nextValue;
 		if (currentPage == null) {
 			hasValue = false;
 		} else {
 			gotoPosInPage();
 		}
-		return tempEntry;
+		return ret;
 	}
 
 
 	public long nextKey() {
-		if (!hasNextULL()) {
+		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 

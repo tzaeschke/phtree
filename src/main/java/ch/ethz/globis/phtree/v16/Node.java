@@ -614,8 +614,7 @@ public class Node {
 		BSTEntry be = bstGetOrCreate(hcPos);
 		if (be.getKdKey() == null) {
 			//new!
-			be.setKdKey(kdKey);
-			be.setValue(value);
+			be.set(hcPos, kdKey, value);
 			return null;
 		} 
 		
@@ -642,8 +641,7 @@ public class Node {
 				return insertSplitPH(existingE, kdKey, value, mask);
 			}
 			//perfect match -> replace value
-			existingE.setValue(value);
-			existingE.setKdKey(kdKey);
+			existingE.set(existingE.getKey(), kdKey, value);
 			return localVal;
 		}
 	}
@@ -660,18 +658,16 @@ public class Node {
 		if (maxConflictingBits == 0) {
 			if (!(currentValue instanceof Node)) {
 				//replace value
-				currentEntry.setValue(newValue);
+				currentEntry.set(currentEntry.getKey(), newKey, newValue);
 			}
 			//return previous value
 			return currentValue;
 		}
 		
-		Node newNode = createNode(newKey, newValue, 
-						localKdKey, currentValue, maxConflictingBits);
+		Node newNode = createNode(newKey, newValue, localKdKey, currentValue, maxConflictingBits);
 
 		//replace value
-		currentEntry.setKdKey(BitsLong.arrayClone(localKdKey));
-		currentEntry.setValue(newNode);
+		currentEntry.set(currentEntry.getKey(), BitsLong.arrayClone(localKdKey), newNode);
 		//entry did not exist
         return null;
 	}
@@ -679,8 +675,7 @@ public class Node {
 	private Object replaceEntry(long hcPos, long[] kdKey, Object value) {
 		BSTEntry be = bstGet(hcPos);
 		Object prev = be.getValue();
-		be.setKdKey(kdKey);
-		be.setValue(value);
+		be.set(hcPos, kdKey, value);
 		return prev;
 	}
 
@@ -713,7 +708,7 @@ public class Node {
 					//replace
 					//simply replace kdKey!!
 					//Replacing the long[] should be correct (and fastest, and avoiding GC)
-					currentEntry.setKdKey(ui.newKey);
+					currentEntry.set(currentEntry.getKey(), ui.newKey, currentEntry.getValue());
 					return REMOVE_OP.KEEP_RETURN;
 				} else {
 					ui.insertRequired = bitPosOfDiff;
@@ -770,8 +765,8 @@ public class Node {
 
 	void getStats(PhTreeStats stats, List<BSTEntry> entries) {
 		BSTIteratorAll iter = iterator();
-		while (iter.hasNextULL()) {
-			entries.add((BSTEntry) iter.nextEntryReuse().getValue());
+		while (iter.hasNextEntry()) {
+			entries.add(iter.nextEntry());
 		}
 		BSTStats bstStats = getStats();
 		//nInner
@@ -791,11 +786,16 @@ public class Node {
 	}
 
 	public static class BSTEntry {
+		private long key;
 		private long[] kdKey;
 		private Object value;
-		public BSTEntry(long[] k, Object v) {
+		public BSTEntry(long key, long[] k, Object v) {
+			this.key = key;
 			kdKey = k;
 			value = v;
+		}
+		public long getKey() {
+			return key;
 		}
 		public long[] getKdKey() {
 			return kdKey;
@@ -803,16 +803,17 @@ public class Node {
 		public Object getValue() {
 			return value;
 		}
-		public void setValue(Object v) {
-			this.value = v;
-		}
-		public void setKdKey(long[] key) {
-			this.kdKey = key;
-			
+		public void set(long key, long[] kdKey, Object value) {
+			this.key = key;
+			this.kdKey = kdKey;
+			this.value = value;
 		}
 		@Override
 		public String toString() {
 			return (kdKey == null ? null : Arrays.toString(kdKey)) + "->" + value;
+		}
+		public void setValue(Object value) {
+			this.value = value;
 		}
 	}
 

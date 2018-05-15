@@ -92,7 +92,7 @@ public class BSTIteratorMask {
 		this.maxMask = maskUpper;
 	}
 
-	public boolean hasNextULL() {
+	public boolean hasNextEntry() {
 		return hasValue;
 	}
 
@@ -231,7 +231,7 @@ public class BSTIteratorMask {
 	
 
 	public BSTEntry nextEntry() {
-		if (!hasNextULL()) {
+		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 
@@ -246,7 +246,7 @@ public class BSTIteratorMask {
 
 
 	public long[] nextKey() {
-		if (!hasNextULL()) {
+		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 

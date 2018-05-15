@@ -97,8 +97,8 @@ public class NodeIteratorFullNoGC<T> {
 	
 	
 	private void niFindNext(PhEntry<T> result) {
-		while (ntIterator.hasNextULL()) {
-			BSTEntry be = ntIterator.nextBSTEntryReuse();
+		while (ntIterator.hasNextEntry()) {
+			BSTEntry be = ntIterator.nextEntry();
 			if (readValue(be, result)) {
 				return;
 			}

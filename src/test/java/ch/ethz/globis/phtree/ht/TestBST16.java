@@ -57,7 +57,7 @@ public class TestBST16 {
 	}
 	
 	private static BSTEntry createEntry(int i) {
-		BSTEntry e = new BSTEntry(new long[DIM], i);
+		BSTEntry e = new BSTEntry(i, new long[DIM], i);
 		e.getKdKey()[0] = i;
 		return e;
 	}
@@ -82,9 +82,8 @@ public class TestBST16 {
 			//if (i%1000 == 0) 
 			//	System.out.println("ins=" + i);
 			//ht.bstPut((Integer)i.getValue(), i);
-			BSTEntry newBE = ht.bstGetOrCreate((Integer)i.getValue());
-			newBE.setKdKey(i.getKdKey());
-			newBE.setValue(i.getValue());
+			BSTEntry newBE = ht.bstGetOrCreate((int)i.getValue());
+			newBE.set((int)i.getValue(), i.getKdKey(), i.getValue());
 			
 			//Check
 			BSTEntry be = ht.bstGet((Integer)i.getValue());
@@ -109,7 +108,7 @@ public class TestBST16 {
 		long l51 = System.currentTimeMillis();
 		BSTIteratorAll iter = ht.iterator();
 		long prev = -1;
-		while (iter.hasNextULL()) {
+		while (iter.hasNextEntry()) {
 			long current = iter.nextKey();
 			assertEquals(prev + 1, current);
 			prev = current;
@@ -119,7 +118,7 @@ public class TestBST16 {
 		long l61 = System.currentTimeMillis();
 		BSTIteratorMask iterMask = ht.iteratorMask(0, 0xFFFFFFFFFFFEL);
 		prev = -2;
-		while (iterMask.hasNextULL()) {
+		while (iterMask.hasNextEntry()) {
 			long current = iterMask.nextKey();
 			assertEquals(prev + 2, current);
 			prev = current;

@@ -26,7 +26,6 @@ public class BSTIteratorAll {
 	private long nextKey;
 	private BSTEntry nextValue;
 	private boolean hasValue = false;
-    private final LLEntry tempEntry = new LLEntry(-1, null);
 	
 	public BSTIteratorAll() {
 		//nothing
@@ -42,7 +41,7 @@ public class BSTIteratorAll {
 	}
 
 
-	public boolean hasNextULL() {
+	public boolean hasNextEntry() {
 		return hasValue;
 	}
 
@@ -128,23 +127,8 @@ public class BSTIteratorAll {
 	}
 	
 	
-	public LLEntry nextEntryReuse() {
-		if (!hasNextULL()) {
-			throw new NoSuchElementException();
-		}
-
-        tempEntry.set(nextKey, nextValue);
-		if (currentPage == null) {
-			hasValue = false;
-		} else {
-			gotoPosInPage();
-		}
-		return tempEntry;
-	}
-
-
-	public BSTEntry nextBSTEntryReuse() {
-		if (!hasNextULL()) {
+	public BSTEntry nextEntry() {
+		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 
@@ -159,7 +143,7 @@ public class BSTIteratorAll {
 
 
 	public long nextKey() {
-		if (!hasNextULL()) {
+		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 

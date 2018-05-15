@@ -236,7 +236,7 @@ public class BSTreePage {
         	return values[pos];
         } 
         
-        BSTEntry value = new BSTEntry(null, null);
+        BSTEntry value = new BSTEntry(key, null, null);
         
         if (nEntries < ind.maxLeafN()) {
         	//okay so we add it locally

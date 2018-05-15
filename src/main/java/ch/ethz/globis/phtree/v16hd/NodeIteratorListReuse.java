@@ -186,7 +186,7 @@ public class NodeIteratorListReuse<T, R> {
 		
 		private void niAllNextIterator() {
 			//ITERATOR is used for DIM>6 or if results are dense 
-			while (niIterator.hasNextULL() && results.size() < maxResults) {
+			while (niIterator.hasNextEntry() && results.size() < maxResults) {
 				BSTEntry be = niIterator.nextEntry();
 				checkEntry(be);
 			}

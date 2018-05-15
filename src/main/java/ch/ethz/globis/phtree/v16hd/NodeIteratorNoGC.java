@@ -109,7 +109,7 @@ public class NodeIteratorNoGC<T> {
 	}
 	
 	private boolean niFindNextIter(PhEntry<T> result) {
-		while (niIterator.hasNextULL()) {
+		while (niIterator.hasNextEntry()) {
 			BSTEntry be = niIterator.nextEntry();
 			if (readValue(be, result)) {
 				next = be.getKey(); //This is required for kNN-adjusting of iterators

@@ -77,7 +77,7 @@ public class NodeIteratorListReuse4<T, R> {
 		private final BSTIteratorToArray itToArray = new BSTIteratorToArray();
 		private BSTEntry[] buffer;
 		private int bufferSize;
-		private final LLEComp COMP = new LLEComp();
+		private final BSTEComp COMP = new BSTEComp();
 
 		/**
 		 * 
@@ -142,8 +142,8 @@ public class NodeIteratorListReuse4<T, R> {
 		private void niAllNextIterator(long[] prefix) {
 			//TODO find limit!  3 <= limit <= 8   !!!! for CLUSTER 5
 			if (prefix == null || dims > 4) {
-				while (niIterator.hasNextULL()) {
-					BSTEntry be = niIterator.nextBSTEntryReuse();
+				while (niIterator.hasNextEntry()) {
+					BSTEntry be = niIterator.nextEntry();
 					checkEntry(be);
 				}
 				return;
@@ -212,8 +212,8 @@ public class NodeIteratorListReuse4<T, R> {
 		
 		private void iterateUnsorted(long[] divePos, int minimumPermutations) {
 			niIterator.reset(node.getRoot());
-			while (niIterator.hasNextULL()) {
-				BSTEntry be = niIterator.nextBSTEntryReuse();
+			while (niIterator.hasNextEntry()) {
+				BSTEntry be = niIterator.nextEntry();
 				if (BitsHD.xorBitCount(be.getKey(), divePos) >= minimumPermutations) {
 					checkEntry(be);
 				}
@@ -222,11 +222,7 @@ public class NodeIteratorListReuse4<T, R> {
 		
 		private void iterateSortedBuffer(long[] divePos, long[] prefix, int minimumPermutations) {
 			if (buffer == null || buffer.length < node.getEntryCount()) {
-				if (buffer == null) {
-					buffer = new BSTEntry[node.getEntryCount()];
-				} else {
-					buffer = Arrays.copyOf(buffer, node.getEntryCount());
-				}
+				buffer = new BSTEntry[node.getEntryCount()];
 			}
 			bufferSize = 0;
 			
@@ -287,7 +283,7 @@ public class NodeIteratorListReuse4<T, R> {
 		pool.pop();
 	}
 
-	private static class LLEComp implements Comparator<BSTEntry> {
+	private static class BSTEComp implements Comparator<BSTEntry> {
 		long[] key;
 	    @Override
 		public int compare(BSTEntry a, BSTEntry b) {

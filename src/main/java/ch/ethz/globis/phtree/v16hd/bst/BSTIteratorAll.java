@@ -42,7 +42,7 @@ public class BSTIteratorAll {
 	}
 
 
-	public boolean hasNextULL() {
+	public boolean hasNextEntry() {
 		return hasValue;
 	}
 
@@ -128,8 +128,8 @@ public class BSTIteratorAll {
 	}
 	
 	
-	public BSTEntry nextBSTEntryReuse() {
-		if (!hasNextULL()) {
+	public BSTEntry nextEntry() {
+		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 
@@ -144,7 +144,7 @@ public class BSTIteratorAll {
 
 
 	public long[] nextKey() {
-		if (!hasNextULL()) {
+		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 

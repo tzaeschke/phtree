@@ -12,7 +12,6 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
 
 
@@ -93,9 +92,9 @@ public class NodeIteratorFullNoGC<T> {
 	
 	
 	private void niFindNext(PhEntry<T> result) {
-		while (ntIterator.hasNextULL()) {
-			LLEntry le = ntIterator.nextEntryReuse();
-			if (readValue(le.getValue(), result)) {
+		while (ntIterator.hasNextEntry()) {
+			BSTEntry be = ntIterator.nextEntry();
+			if (readValue(be, result)) {
 				return;
 			}
 		}

@@ -350,8 +350,8 @@ public class PhTree16HD<T> implements PhTree<T> {
 
 	private void toStringPlain(StringBuilderLn sb, Node node) {
 		BSTIteratorAll iter = node.ntIteratorAll();
-		while (iter.hasNextULL()) {
-			BSTEntry o = iter.nextBSTEntryReuse();
+		while (iter.hasNextEntry()) {
+			BSTEntry o = iter.nextEntry();
 			//inner node?
 			if (o.getValue() instanceof Node) {
 				toStringPlain(sb, (Node) o.getValue());
@@ -394,8 +394,8 @@ public class PhTree16HD<T> implements PhTree<T> {
 
 		//To clean previous postfixes.
 		BSTIteratorAll iter = node.ntIteratorAll();
-		while (iter.hasNextULL()) {
-			BSTEntry o = iter.nextBSTEntryReuse();
+		while (iter.hasNextEntry()) {
+			BSTEntry o = iter.nextEntry();
 			if (o.getValue() instanceof Node) {
 				sb.appendLn(ind + "# " + Arrays.toString(o.getKey()) + "  +");
 				toStringTree(sb, currentDepth + 1, (Node) o.getValue(), o.getKdKey(), printValue);

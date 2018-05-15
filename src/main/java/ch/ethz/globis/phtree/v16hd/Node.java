@@ -553,7 +553,7 @@ public class Node {
 
 	
 	public BSTIteratorAll iterator() {
-		return ntIteratorAll();
+		return new BSTIteratorAll().reset(getRoot());
 	}
 
 	
@@ -763,8 +763,8 @@ public class Node {
 
 	void getStats(PhTreeStats stats, List<BSTEntry> entries) {
 		BSTIteratorAll iter = iterator();
-		while (iter.hasNextULL()) {
-			entries.add(iter.nextBSTEntryReuse());
+		while (iter.hasNextEntry()) {
+			entries.add(iter.nextEntry());
 		}
 		BSTStats bstStats = getStats();
 		//nInner

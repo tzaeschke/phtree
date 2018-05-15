@@ -240,15 +240,8 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 				boolean needsAdjustment = internalAdd(e);
 				
 				if (needsAdjustment) {
-					double oldMaxD = maxDistance;
 					maxDistance = distData[size-1];
 					checker.setMaxDist(maxDistance);
-					//This is an optimisation, seem to work for example for 10M/K3/CUBE
-					//TODO we should compare with the distance when this was last changed!
-					//TODO THIS work best with comparing to the CURRENT previous value, instead
-					//     of using the one where we performed the last resize!!!!????
-					//TODO 6 is chosen arbitrary, I only tested k3 and k10 with 10M-CUBE
-
 					//Any call to this function is triggered by a new entry that ended up in the
 					//candidate list. 
 					//Therefore, none of its parent nodes can be fully excluded by the new MBB.

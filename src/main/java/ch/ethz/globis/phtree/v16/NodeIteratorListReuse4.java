@@ -18,7 +18,6 @@ import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorToArray;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
 
 /**
@@ -75,9 +74,9 @@ public class NodeIteratorListReuse4<T, R> {
 		private Node node;
 		private final BSTIteratorAll niIterator = new BSTIteratorAll();
 		private final BSTIteratorToArray itToArray = new BSTIteratorToArray();
-		private LLEntry[] buffer;
+		private BSTEntry[] buffer;
 		private int bufferSize;
-		private final LLEComp COMP = new LLEComp();
+		private final BSTEComp COMP = new BSTEComp();
 
 		/**
 		 * 
@@ -142,8 +141,8 @@ public class NodeIteratorListReuse4<T, R> {
 		private void niAllNextIterator(long[] prefix) {
 			//TODO find limit!  3 <= limit <= 8   !!!! for CLUSTER 5
 			if (prefix == null || dims > 4) {
-				while (niIterator.hasNextULL()) {
-					BSTEntry be = niIterator.nextBSTEntryReuse();
+				while (niIterator.hasNextEntry()) {
+					BSTEntry be = niIterator.nextEntry();
 					checkEntry(be);
 				}
 				return;
@@ -199,21 +198,17 @@ public class NodeIteratorListReuse4<T, R> {
 		
 		private void iterateUnsorted(long divePos, int minimumPermutations) {
 			niIterator.reset(node.getRoot());
-			while (niIterator.hasNextULL()) {
-				LLEntry le = niIterator.nextEntryReuse();
-				if (Long.bitCount(le.getKey() ^ divePos) >= minimumPermutations) {
-					checkEntry(le.getValue());
+			while (niIterator.hasNextEntry()) {
+				BSTEntry be = niIterator.nextEntry();
+				if (Long.bitCount(be.getKey() ^ divePos) >= minimumPermutations) {
+					checkEntry(be);
 				}
 			}
 		}
 		
 		private void iterateSortedBuffer(long divePos, long[] prefix, int minimumPermutations) {
 			if (buffer == null || buffer.length < node.getEntryCount()) {
-				if (buffer == null) {
-					buffer = new LLEntry[node.getEntryCount()];
-				} else {
-					buffer = Arrays.copyOf(buffer, node.getEntryCount());
-				}
+				buffer = new BSTEntry[node.getEntryCount()];
 			}
 			bufferSize = 0;
 			
@@ -250,7 +245,7 @@ public class NodeIteratorListReuse4<T, R> {
 					break;
 				}
 				NodeIteratorListReuse.HD12++;
-				checkEntry(buffer[i].getValue());
+				checkEntry(buffer[i]);
 			}
 		}
 	}
@@ -274,10 +269,10 @@ public class NodeIteratorListReuse4<T, R> {
 		pool.pop();
 	}
 
-	private static class LLEComp implements Comparator<LLEntry> {
+	private static class BSTEComp implements Comparator<BSTEntry> {
 		long key;
 	    @Override
-		public int compare(LLEntry a, LLEntry b) {
+		public int compare(BSTEntry a, BSTEntry b) {
 	    	int h1 = Long.bitCount(a.getKey() ^ key);
 	    	int h2 = Long.bitCount(b.getKey() ^ key);
             return h1 - h2;

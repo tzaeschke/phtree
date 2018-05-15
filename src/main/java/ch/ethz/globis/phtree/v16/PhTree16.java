@@ -31,7 +31,6 @@ import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.LLEntry;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -350,8 +349,8 @@ public class PhTree16<T> implements PhTree<T> {
 
 	private void toStringPlain(StringBuilderLn sb, Node node) {
 		BSTIteratorAll iter = node.ntIteratorAll();
-		while (iter.hasNextULL()) {
-			BSTEntry o = iter.nextBSTEntryReuse();
+		while (iter.hasNextEntry()) {
+			BSTEntry o = iter.nextEntry();
 			//inner node?
 			if (o.getValue() instanceof Node) {
 				toStringPlain(sb, (Node) o.getValue());
@@ -394,16 +393,15 @@ public class PhTree16<T> implements PhTree<T> {
 
 		//To clean previous postfixes.
 		BSTIteratorAll iter = node.ntIteratorAll();
-		while (iter.hasNextULL()) {
-			LLEntry le = iter.nextEntryReuse();
-			BSTEntry o = le.getValue();
+		while (iter.hasNextEntry()) {
+			BSTEntry o = iter.nextEntry();
 			if (o.getValue() instanceof Node) {
-				sb.appendLn(ind + "# " + le.getKey() + "  +");
+				sb.appendLn(ind + "# " + o.getKey() + "  +");
 				toStringTree(sb, currentDepth + 1, (Node) o.getValue(), o.getKdKey(), printValue);
 			}  else {
 				//post-fix
 				sb.append(ind + Bits.toBinary(o.getKdKey(), DEPTH_64));
-				sb.append("  hcPos=" + le.getKey());
+				sb.append("  hcPos=" + o.getKey());
 				if (printValue) {
 					sb.append("  v=" + o.getValue());
 				}
