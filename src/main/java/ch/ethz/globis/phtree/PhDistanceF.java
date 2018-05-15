@@ -90,15 +90,23 @@ public class PhDistanceF implements PhDistance {
 		}
 		
 		Arrays.sort(outDistances);
+
+		//create totals
+		for (int i = 1; i < outDistances.length; i++) {
+			outDistances[i] += outDistances[i-1];
+		}
 	}
 	
 	@Override
 	public int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
 		double maxDist2 = maxDist * maxDist;
-		double tempDist = 0;
+		//TODO binary search for large dimensions?
+//		if (distances.length > 0) {
+//			int pos = Arrays.binarySearch(distances, maxDist2);
+//			return pos < 0 ? -(pos+1) : (pos + 1);
+//		}
 		for (int i = 0; i < distances.length; i++) {
-			tempDist += distances[i];
-			if (tempDist > maxDist2) {
+			if (distances[i] > maxDist2) {
 				return i;
 			}
 		}

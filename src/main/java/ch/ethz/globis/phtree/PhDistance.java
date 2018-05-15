@@ -106,7 +106,8 @@ public interface PhDistance {
 	 * @return Maximum allowable permutation count.
 	 */
 	default int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
-		//Default implementation: Correct but inefficient
-		return distances.length;
+		throw new UnsupportedOperationException("Please implement the new kNN distance helper functions.");
+		//Default implementation: Correct but inefficient:
+		//return distances.length;
 	}
 }

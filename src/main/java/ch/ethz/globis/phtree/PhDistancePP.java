@@ -6,6 +6,8 @@
  */
 package ch.ethz.globis.phtree;
 
+import java.util.Arrays;
+
 import ch.ethz.globis.phtree.pre.PreProcessorPointF;
 
 
@@ -28,6 +30,7 @@ public class PhDistancePP implements PhDistance {
 		this.pre = pre;
 	}
 
+	
 	/**
 	 * Calculate the distance for encoded {@code double} values.
 	 * 
@@ -47,6 +50,7 @@ public class PhDistancePP implements PhDistance {
 		return Math.sqrt(d);
 	}
 
+	
 	@Override
 	public void toMBB(double distance, long[] center, long[] outMin,
 			long[] outMax) {
@@ -62,10 +66,47 @@ public class PhDistancePP implements PhDistance {
 		pre.pre(max, outMax);
 	}
 
+	
 	@Override
-	public double dist(long l, long m) {
-		double d1 = pre.post(l);
-		double d2 = pre.post(m);
-		return d2 - d1;
+	public void knnCalcDistances(long[] kNNCenterIn, long[] prefixIn, int bitsToIgnore, double[] outDistances) {
+		long maskSingleBit = 1L << (bitsToIgnore-1);
+		if (maskSingleBit < 0) {
+			//TODO
+			//can't yet deal with negative/positive of postLen==63
+			return;
+		}
+		long maskPrefix = (-1L) << bitsToIgnore;
+		long maskPostFix = (~maskPrefix) >> 1;
+		for (int i = 0; i < prefixIn.length; i++) {
+			long nodeCenter = prefixIn[i] & maskPrefix;
+			//find coordinate closest to the node's center, however the node-center should between the
+			//resulting coordinate and the kNN-center.
+			boolean isLarger = kNNCenterIn[i] > (nodeCenter | maskPostFix);
+			nodeCenter |= isLarger ? 
+				//kNN center is in 'upper' quadrant
+				maskPostFix
+				:
+				//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
+				maskSingleBit;
+
+			double dist = pre.post(nodeCenter) - pre.post(kNNCenterIn[i]);
+			outDistances[i] = dist * dist;
+		}
+		
+		Arrays.sort(outDistances);
+	}
+	
+	@Override
+	public int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
+		double maxDist2 = maxDist * maxDist;
+		double tempDist = 0;
+		for (int i = 0; i < distances.length; i++) {
+			tempDist += distances[i];
+			if (tempDist > maxDist2) {
+				return i;
+			}
+		}
+	
+		return distances.length; //dims
 	}
 }

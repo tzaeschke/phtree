@@ -197,7 +197,7 @@ public interface PhTree<T> {
 	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(int dim) {
-		if (dim > 0) {
+		if (dim > 60) {
 			return new PhTree16HD<>(dim);
 		}
 		return new PhTree16<>(dim);
@@ -211,7 +211,7 @@ public interface PhTree<T> {
 	 * @param <T> the type of the values
 	 */
 	public static <T> PhTree<T> create(PhTreeConfig cfg) {
-		if (cfg.getDim() > 0) {
+		if (cfg.getDim() > 60) {
 			return new PhTree16HD<>(cfg);
 		}
 		return new PhTree16<>(cfg);

@@ -8,10 +8,6 @@
  */
 package ch.ethz.globis.phtree.v16hd;
 
-import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM1;
-import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM2;
-import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM3;
-
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -19,7 +15,6 @@ import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTreeHelperHD;
-import ch.ethz.globis.phtree.util.BitTools;
 import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;

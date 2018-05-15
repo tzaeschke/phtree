@@ -44,6 +44,10 @@ Released version 1.0.0 of the PH-Tree (partial reimplementation)
   This implementations is slower, but it is automatically chosen when trying to create a tree
   with over 60 dimensions.
 - Internal B+Tree structure (with configurable page sizes) makes it more suitable for disk based storage.
+- **API Change #1**: The PH-Tree now stores keys (long[]/double[]) internally. Modifying them
+  after storing them in the tree will make the tree invalid.
+- **API Change #2**: kNN search uses a new metric that depends on the distance functions. If you
+  implemented your own distance functions, please update them, see `PhDistance` javadoc for details.
 
 
 

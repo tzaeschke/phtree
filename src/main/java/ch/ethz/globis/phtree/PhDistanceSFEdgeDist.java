@@ -88,4 +88,77 @@ public class PhDistanceSFEdgeDist implements PhDistanceSF {
 		pre.pre(qMIN, min, outMin);
 		pre.pre(max, qMAX, outMax);
 	}
+	
+	
+	@Override
+	public void knnCalcDistances(long[] kNNCenter, long[] prefix, int bitsToIgnore, double[] outDistances) {
+		long maskSingleBit = 1L << (bitsToIgnore-1);
+		if (maskSingleBit < 0) {
+			//TODO
+			//can't yet deal with negative/positive of postLen==63
+			return;
+		}
+
+		long[] v2 = new long[prefix.length];
+		long maskPrefix = (-1L) << bitsToIgnore;
+		long maskPostFix = (~maskPrefix) >> 1;
+		for (int i = 0; i < prefix.length; i++) {
+			long nodeCenter = prefix[i] & maskPrefix;
+			//find coordinate closest to the node's center, however the node-center should between the
+			//resulting coordinate and the kNN-center.
+			boolean isLarger = kNNCenter[i] > (nodeCenter | maskPostFix);
+			nodeCenter |= isLarger ? 
+				//kNN center is in 'upper' quadrant
+				maskPostFix
+				:
+				//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
+				maskSingleBit;
+			v2[i] = nodeCenter;
+		}
+
+		
+		int dimsHalf = kNNCenter.length>>1;
+		double[] d1lo = new double[dimsHalf];
+		double[] d1up = new double[dimsHalf];
+		double[] d2lo = new double[dimsHalf];
+		double[] d2up = new double[dimsHalf];
+		pre.post(kNNCenter, d1lo, d1up);
+		pre.post(v2, d2lo, d2up);
+
+		for (int i = 0; i < dimsHalf; i++) {
+			double dOnAxis = 0;
+			if (d1up[i] < d2lo[i]) {
+				dOnAxis = d2lo[i] - d1up[i];
+			} else if (d1lo[i] > d2up[i]) {
+				dOnAxis = d1lo[i] - d2up[i]; 
+			}
+			outDistances[i] = dOnAxis*dOnAxis;
+		}
+		
+		//SOrt only the first half, the rest is 0
+		Arrays.sort(outDistances, 0, dimsHalf);
+
+		//create totals
+		for (int i = 1; i < dimsHalf; i++) {
+			outDistances[i] += outDistances[i-1];
+		}
+	}
+	
+	@Override
+	public int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
+		double maxDist2 = maxDist * maxDist;
+		//TODO binary search for large dimensions?
+//		if (distances.length > 0) {
+//			int pos = Arrays.binarySearch(distances, maxDist2);
+//			return pos < 0 ? -(pos+1) : (pos + 1);
+//		}
+		for (int i = 0; i < distances.length; i++) {
+			if (distances[i] > maxDist2) {
+				return i * 2;  //TBH, this was determined experimentally, I don't really understand it... 
+			}
+		}
+	
+		return distances.length; //dims
+	}
+
 }
