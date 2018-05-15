@@ -16,14 +16,14 @@ import java.util.stream.IntStream;
 
 import org.junit.Test;
 
-import ch.ethz.globis.phtree.v16.Node;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
+import ch.ethz.globis.phtree.v16hd.Node;
+import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
 
-public class TestBST16 {
+public class TestBST16hd {
 
-	private static final int N1 = 100_000;
+	private static final int N1 = 10_000;
 	private static final int N2 = 10*N1;
 	
 	private static final int DIM = 10;
@@ -57,8 +57,9 @@ public class TestBST16 {
 	}
 	
 	private static BSTEntry createEntry(int i) {
-		BSTEntry e = new BSTEntry(new long[DIM], i);
+		BSTEntry e = new BSTEntry(new long[DIM], new long[1]);
 		e.getKdKey()[0] = i;
+		((long[])e.getValue())[0] = i;
 		return e;
 	}
 	
@@ -82,13 +83,13 @@ public class TestBST16 {
 			//if (i%1000 == 0) 
 			//	System.out.println("ins=" + i);
 			//ht.bstPut((Integer)i.getValue(), i);
-			BSTEntry newBE = ht.bstGetOrCreate((Integer)i.getValue());
+			BSTEntry newBE = ht.bstGetOrCreate((long[])i.getValue());
 			newBE.setKdKey(i.getKdKey());
 			newBE.setValue(i.getValue());
 			
 			//Check
-			BSTEntry be = ht.bstGet((Integer)i.getValue());
-			assertEquals((int)i.getValue(), (int)be.getValue());
+			BSTEntry be = ht.bstGet((long[])i.getValue());
+			assertEquals((long[])i.getValue(), (long[])be.getValue());
 		}
 		long l12 = System.currentTimeMillis();
 		assertEquals(list.size(), ht.getEntryCount());
@@ -98,41 +99,41 @@ public class TestBST16 {
 		//lookup
 		long l21 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
-			BSTEntry e = ht.bstGet((Integer)i.getValue());
+			BSTEntry e = ht.bstGet((long[])i.getValue());
 			//assertNotNull("i=" + i, e);
-			int x = (int) e.getValue();
-			assertEquals(i.getValue(), (int) x);
+			long[] x = (long[]) e.getValue();
+			assertEquals(i.getValue(), x);
 		}
 		long l22 = System.currentTimeMillis();
 		
 		//iterate
 		long l51 = System.currentTimeMillis();
 		BSTIteratorAll iter = ht.iterator();
-		long prev = -1;
+		long[] prev = new long[] {-1};
 		while (iter.hasNextULL()) {
-			long current = iter.nextKey();
-			assertEquals(prev + 1, current);
-			prev = current;
+			long[] current = iter.nextKey();
+			assertEquals(prev[0] + 1, current[0]);
+			prev[0] = current[0];
 		}
-		assertEquals(prev, list.size() - 1);
+		assertEquals(prev[0], list.size() - 1);
 		long l52 = System.currentTimeMillis();
 		long l61 = System.currentTimeMillis();
-		BSTIteratorMask iterMask = ht.iteratorMask(0, 0xFFFFFFFFFFFEL);
-		prev = -2;
+		BSTIteratorMask iterMask = ht.iteratorMask(new long[] {0}, new long[] {0xFFFFFFFFFFFEL});
+		prev = new long[] {-2};
 		while (iterMask.hasNextULL()) {
-			long current = iterMask.nextKey();
-			assertEquals(prev + 2, current);
-			prev = current;
+			long[] current = iterMask.nextKey();
+			assertEquals(prev[0] + 2, current[0]);
+			prev[0] = current[0];
 		}
-		assertEquals(prev, list.size() - 2);
+		assertEquals(prev[0], list.size() - 2);
 		long l62 = System.currentTimeMillis();
 		
 		//replace some
 		long l31 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
 			//ht.bstPut((Integer)i.getValue(), new BSTEntry(i.getKdKey(), -(Integer)i.getValue()));
-			BSTEntry newBE = ht.bstGetOrCreate((Integer)i.getValue());
-			newBE.setValue(-(Integer)i.getValue());
+			BSTEntry newBE = ht.bstGetOrCreate((long[])i.getValue());
+			newBE.setValue(-((long[])i.getValue())[0]);
 
 			//if (i%1000 == 0) System.out.println("rep=" + i);
 		}
@@ -147,7 +148,7 @@ public class TestBST16 {
 			//if (i%1000 == 0) 
 //			System.out.println("rem=" + i.getValue());
 //			System.out.println("rem2=" + ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null));
-			assertEquals(-(Integer)i.getValue(), ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null).getValue());
+			assertEquals(-((long[])i.getValue())[0], ht.bstRemove((long[])i.getValue(), i.getKdKey(), null).getValue());
 //			if (ht.size() % 100_000 == 0) {
 //				println(ht.getStats().toString());
 //			}

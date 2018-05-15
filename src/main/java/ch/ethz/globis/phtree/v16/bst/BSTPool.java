@@ -70,6 +70,15 @@ public class BSTPool {
     }
 
     /**
+     * Create an array.
+     * @param newSize size
+     * @return New array.
+     */
+    public static BSTEntry[] arrayCreateEntries(int newSize) {
+    	return POOL_ENTRY.getArray(newSize);
+	}
+
+    /**
      * Resize an array.
      * @param oldA old array
      * @param newSize size
@@ -84,16 +93,13 @@ public class BSTPool {
 
 	
     /**
-     * Discards oldA and returns newA.
+     * Discards oldA.
      * @param oldA old array
-     * @param newA new array
-     * @return newA.
      */
-    public static BSTEntry[] arrayReplace(BSTEntry[] oldA, BSTEntry[] newA) {
+    public static void arrayDiscard(BSTEntry[] oldA) {
     	if (oldA != null) {
     		POOL_ENTRY.offer(oldA);
     	}
-    	return newA;
     }
     
 	
@@ -144,6 +150,16 @@ public class BSTPool {
     }
 
     /**
+     * Create a new array.
+     * @param newSize size
+     * @return New array.
+     */
+    public static long[] arrayCreateLong(int newSize) {
+    	return POOL_KEY.getArray(newSize);
+	}
+
+	
+    /**
      * Resize an array.
      * @param oldA old array
      * @param newSize size
@@ -158,16 +174,13 @@ public class BSTPool {
 
 	
     /**
-     * Discards oldA and returns newA.
+     * Discards oldA.
      * @param oldA old array
-     * @param newA new array
-     * @return newA.
      */
-    public static long[] arrayReplace(long[] oldA, long[] newA) {
+    public static void arrayDiscard(long[] oldA) {
     	if (oldA != null) {
     		POOL_KEY.offer(oldA);
     	}
-    	return newA;
     }
     
 	
@@ -218,6 +231,15 @@ public class BSTPool {
     }
 
     /**
+     * Create an array.
+     * @param newSize size
+     * @return New array.
+     */
+    public static BSTreePage[] arrayCreateNodes(int newSize) {
+    	return POOL_NODES.getArray(newSize);
+	}
+
+    /**
      * Resize an array.
      * @param oldA old array
      * @param newSize size
@@ -232,16 +254,13 @@ public class BSTPool {
 
 	
     /**
-     * Discards oldA and returns newA.
+     * Discards oldA.
      * @param oldA old array
-     * @param newA new array
-     * @return newA.
      */
-    public static BSTreePage[] arrayReplace(BSTreePage[] oldA, BSTreePage[] newA) {
+    public static void arrayDiscard(BSTreePage[] oldA) {
     	if (oldA != null) {
     		POOL_NODES.offer(oldA);
     	}
-    	return newA;
     }
     
 	
@@ -281,6 +300,13 @@ public class BSTPool {
     }
 
 	public static void reportFreeNode(BSTreePage p) {
+		POOL_KEY.offer(p.getKeys());
+		if (p.isLeaf()) {
+			POOL_ENTRY.offer(p.getValues());
+		} else {
+			POOL_NODES.offer(p.getSubPages());
+		}
+		p.nullify();
 		POOL_NODE.offer(p);
 	}
 

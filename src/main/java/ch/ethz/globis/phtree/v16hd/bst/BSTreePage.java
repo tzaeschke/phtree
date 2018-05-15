@@ -40,16 +40,16 @@ public class BSTreePage {
 		if (isLeaf) {
 			nEntries = 0;
 			int initialPageSize = ind.maxLeafN() <= 8 ? 2 : INITIAL_PAGE_SIZE;
-			keys = new long[initialPageSize][];
-			values = new BSTEntry[initialPageSize];
+			keys = BSTPool.arrayCreateLong(initialPageSize);
+			values = BSTPool.arrayCreateEntries(initialPageSize);
 		} else {
 			nEntries = -1;
-			keys = new long[ind.maxInnerN()][];
+			keys = BSTPool.arrayCreateLong(ind.maxInnerN());
 			values = null;
 		}
 		
 		if (!isLeaf) {	
-			subPages = new BSTreePage[ind.maxInnerN() + 1];
+			subPages = BSTPool.arrayCreateNodes(ind.maxInnerN() + 1);
 			Node.statNInner++;
 		} else {
 			subPages = null;
@@ -133,10 +133,6 @@ public class BSTreePage {
         }
         //read page before that value
         BSTreePage page = getPageByPos(pos);
-        if (page == null) {
-        	page = createLeafPage(ind, pos);
-        	throw new UnsupportedOperationException("Doe this ever happen?"); //TODO remove
-        }
         if (page.isLeaf()) {
     		BSTEntry o = page.getOrCreate(key, this, pos, ind);
     		if (o.getKdKey() == null && o.getValue() instanceof BSTreePage) {
@@ -584,7 +580,7 @@ public class BSTreePage {
 				if (sub.nEntries == 0) {
 					//only one element left, no merging occurred -> move sub-page up to parent
 					BSTreePage child = sub.getPageByPos(0);
-					replaceChildPage2(sub, child, pos);
+					replaceChildPage(child, pos);
 					Node.statNInner--;
 					BSTPool.reportFreeNode(sub);
 				}
@@ -628,9 +624,7 @@ public class BSTreePage {
 	 * Replacing sub-pages occurs when the sub-page shrinks down to a single sub-sub-page, in which
 	 * case we pull up the sub-sub-page to the local page, replacing the sub-page.
 	 */
-	private void replaceChildPage2(BSTreePage indexPage, BSTreePage subChild, int pos) {
-		//remove page from FSM.
-		BSTPool.reportFreeNode(indexPage);
+	private void replaceChildPage(BSTreePage subChild, int pos) {
 		subPages[pos] = subChild;
 		if (pos>0) {
 			keys[pos-1] = subChild.getMinKey();
@@ -640,11 +634,6 @@ public class BSTreePage {
 	
 	void setParent(BSTreePage parent) {
 		this.parent = parent;
-	}
-	
-
-	private void incrementNEntries() {
-		nEntries++;
 	}
 
 	final long[][] getKeys() {
@@ -660,20 +649,6 @@ public class BSTreePage {
 	}
 	
 	
-	private BSTreePage createLeafPage(Node ind, int pos) {
-		if (subPages[pos] != null) {
-			throw new IllegalStateException();
-		}
-
-		//create new page
-		BSTreePage page = new BSTreePage(ind, this, true);
-		incrementNEntries();
-		subPages[pos] = page;
-		return page;
-		
-	}
-
-
 	/**
 	 * Returns only INNER pages.
 	 * TODO for now this ignores leafPages on a previous inner node. It returns only leaf pages
@@ -809,6 +784,16 @@ public class BSTreePage {
 
 	public BSTreePage getFirstSubPage() {
 		return subPages[0];
+	}
+
+	BSTreePage[] getSubPages() {
+		return subPages;
+	}
+
+	void nullify() {
+		keys = null;
+		values = null;
+		subPages = null;
 	}
 
 }
