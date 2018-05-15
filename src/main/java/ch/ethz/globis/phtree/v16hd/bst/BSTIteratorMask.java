@@ -71,7 +71,6 @@ public class BSTIteratorMask {
 	private long[] nextKey;
 	private BSTEntry nextValue;
 	private boolean hasValue = false;
-    private final LLEntry tempEntry = new LLEntry(null, null);
 	
 	public BSTIteratorMask() {
 		//nothing
@@ -187,22 +186,6 @@ public class BSTIteratorMask {
 				close();
 				return;
 			}
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO if check fails we could/should use inc() to find next valid page:
-			//TODO 1) in leaf: compare to page.max()
-			//TODO 2) in inner: (compare to max?, then:) compare to key of next-page (skip pages) 
 		} while (!check(nextKey));
 	}
 
@@ -247,22 +230,7 @@ public class BSTIteratorMask {
 	}
 	
 
-	public LLEntry nextEntryReuse() {
-		if (!hasNextULL()) {
-			throw new NoSuchElementException();
-		}
-
-        tempEntry.set(nextKey, nextValue);
-		if (currentPage == null) {
-			hasValue = false;
-		} else {
-			gotoPosInPage();
-		}
-		return tempEntry;
-	}
-
-
-	public BSTEntry nextBSTEntryReuse() {
+	public BSTEntry nextEntry() {
 		if (!hasNextULL()) {
 			throw new NoSuchElementException();
 		}

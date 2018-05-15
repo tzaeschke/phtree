@@ -139,7 +139,7 @@ public class BSTreePage {
     			//add page
     			BSTreePage newPage = (BSTreePage) o.getValue();
     			addSubPage(newPage, newPage.getMinKey(), pos, ind);
-    			o.setValue(null);
+    			o.set(key, null, null);
     			return o;
     		}
     		return o;
@@ -213,7 +213,7 @@ public class BSTreePage {
         	return values[pos];
         } 
         
-        BSTEntry value = new BSTEntry(null, null);
+        BSTEntry value = new BSTEntry(null, null, null);
         
         if (nEntries < ind.maxLeafN()) {
         	//okay so we add it locally

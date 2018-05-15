@@ -18,7 +18,7 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask.IteratorPosStack;
 public class BSTIteratorToArray {
 
 
-	private LLEntry[] entries;
+	private BSTEntry[] entries;
 	private int nEntries;
 	private final IteratorPosStack stack = new IteratorPosStack(20);
 
@@ -27,7 +27,7 @@ public class BSTIteratorToArray {
 		//nothing
 	}
 	
-	public BSTIteratorToArray reset(BSTreePage root, LLEntry[] entries) {
+	public BSTIteratorToArray reset(BSTreePage root, BSTEntry[] entries) {
 		this.stack.clear();
 		this.entries = entries;
 		this.nEntries = 0;
@@ -89,20 +89,8 @@ public class BSTIteratorToArray {
 	
 	private void readLeafPage(BSTreePage currentPage) {
 		BSTEntry[] values = currentPage.getValues();
-		long[][] keys = currentPage.getKeys();
-		for (int i = 0; i < currentPage.getNKeys(); i++) {
-			BSTEntry e = values[i];
-			long[] key = keys[i];
-			LLEntry buf = entries[nEntries]; 
-			if (buf == null) {
-				//TODO use pool
-				buf = new LLEntry(key, e);
-				entries[nEntries] = buf; 
-			} else {
-				buf.set(key, e);
-			}
-			nEntries++;
-		}
+		System.arraycopy(values, 0, entries, nEntries, currentPage.getNKeys());
+		nEntries += currentPage.getNKeys();
 	}
 
 	private void findAll(BSTreePage root) {

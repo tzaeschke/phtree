@@ -32,7 +32,6 @@ import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16hd.bst.LLEntry;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -396,15 +395,14 @@ public class PhTree16HD<T> implements PhTree<T> {
 		//To clean previous postfixes.
 		BSTIteratorAll iter = node.ntIteratorAll();
 		while (iter.hasNextULL()) {
-			LLEntry le = iter.nextEntryReuse();
-			BSTEntry o = le.getValue();
+			BSTEntry o = iter.nextBSTEntryReuse();
 			if (o.getValue() instanceof Node) {
-				sb.appendLn(ind + "# " + Arrays.toString(le.getKey()) + "  +");
+				sb.appendLn(ind + "# " + Arrays.toString(o.getKey()) + "  +");
 				toStringTree(sb, currentDepth + 1, (Node) o.getValue(), o.getKdKey(), printValue);
 			}  else {
 				//post-fix
 				sb.append(ind + Bits.toBinary(o.getKdKey(), DEPTH_64));
-				sb.append("  hcPos=" + Arrays.toString(le.getKey()));
+				sb.append("  hcPos=" + Arrays.toString(o.getKey()));
 				if (printValue) {
 					sb.append("  v=" + o.getValue());
 				}

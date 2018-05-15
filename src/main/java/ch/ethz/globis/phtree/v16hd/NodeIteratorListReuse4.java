@@ -19,7 +19,6 @@ import ch.ethz.globis.phtree.util.BitsLong;
 import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
 import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorToArray;
-import ch.ethz.globis.phtree.v16hd.bst.LLEntry;
 
 
 /**
@@ -76,7 +75,7 @@ public class NodeIteratorListReuse4<T, R> {
 		private Node node;
 		private final BSTIteratorAll niIterator = new BSTIteratorAll();
 		private final BSTIteratorToArray itToArray = new BSTIteratorToArray();
-		private LLEntry[] buffer;
+		private BSTEntry[] buffer;
 		private int bufferSize;
 		private final LLEComp COMP = new LLEComp();
 
@@ -214,9 +213,9 @@ public class NodeIteratorListReuse4<T, R> {
 		private void iterateUnsorted(long[] divePos, int minimumPermutations) {
 			niIterator.reset(node.getRoot());
 			while (niIterator.hasNextULL()) {
-				LLEntry le = niIterator.nextEntryReuse();
-				if (BitsHD.xorBitCount(le.getKey(), divePos) >= minimumPermutations) {
-					checkEntry(le.getValue());
+				BSTEntry be = niIterator.nextBSTEntryReuse();
+				if (BitsHD.xorBitCount(be.getKey(), divePos) >= minimumPermutations) {
+					checkEntry(be);
 				}
 			}
 		}
@@ -224,7 +223,7 @@ public class NodeIteratorListReuse4<T, R> {
 		private void iterateSortedBuffer(long[] divePos, long[] prefix, int minimumPermutations) {
 			if (buffer == null || buffer.length < node.getEntryCount()) {
 				if (buffer == null) {
-					buffer = new LLEntry[node.getEntryCount()];
+					buffer = new BSTEntry[node.getEntryCount()];
 				} else {
 					buffer = Arrays.copyOf(buffer, node.getEntryCount());
 				}
@@ -264,7 +263,7 @@ public class NodeIteratorListReuse4<T, R> {
 					break;
 				}
 				NodeIteratorListReuse.HD12++;
-				checkEntry(buffer[i].getValue());
+				checkEntry(buffer[i]);
 			}
 		}
 	}
@@ -288,10 +287,10 @@ public class NodeIteratorListReuse4<T, R> {
 		pool.pop();
 	}
 
-	private static class LLEComp implements Comparator<LLEntry> {
+	private static class LLEComp implements Comparator<BSTEntry> {
 		long[] key;
 	    @Override
-		public int compare(LLEntry a, LLEntry b) {
+		public int compare(BSTEntry a, BSTEntry b) {
 	    	int h1 = BitsHD.xorBitCount(a.getKey(), key);
 	    	int h2 = BitsHD.xorBitCount(b.getKey(), key);
             return h1 - h2;

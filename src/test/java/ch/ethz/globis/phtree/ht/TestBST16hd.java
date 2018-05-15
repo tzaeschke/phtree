@@ -57,7 +57,7 @@ public class TestBST16hd {
 	}
 	
 	private static BSTEntry createEntry(int i) {
-		BSTEntry e = new BSTEntry(new long[DIM], new long[1]);
+		BSTEntry e = new BSTEntry(new long[1], new long[DIM], new long[1]);
 		e.getKdKey()[0] = i;
 		((long[])e.getValue())[0] = i;
 		return e;
@@ -84,8 +84,7 @@ public class TestBST16hd {
 			//	System.out.println("ins=" + i);
 			//ht.bstPut((Integer)i.getValue(), i);
 			BSTEntry newBE = ht.bstGetOrCreate((long[])i.getValue());
-			newBE.setKdKey(i.getKdKey());
-			newBE.setValue(i.getValue());
+			newBE.set((long[])i.getValue(), i.getKdKey(), i.getValue());
 			
 			//Check
 			BSTEntry be = ht.bstGet((long[])i.getValue());

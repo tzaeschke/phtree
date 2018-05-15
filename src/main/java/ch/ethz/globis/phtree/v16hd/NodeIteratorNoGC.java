@@ -12,7 +12,6 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
-import ch.ethz.globis.phtree.v16hd.bst.LLEntry;
 
 
 
@@ -111,10 +110,9 @@ public class NodeIteratorNoGC<T> {
 	
 	private boolean niFindNextIter(PhEntry<T> result) {
 		while (niIterator.hasNextULL()) {
-			LLEntry le = niIterator.nextEntryReuse();
-			BSTEntry be = le.getValue();
+			BSTEntry be = niIterator.nextEntry();
 			if (readValue(be, result)) {
-				next = le.getKey(); //This is required for kNN-adjusting of iterators
+				next = be.getKey(); //This is required for kNN-adjusting of iterators
 				return true;
 			}
 		}
