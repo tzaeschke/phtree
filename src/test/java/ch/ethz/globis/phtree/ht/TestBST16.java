@@ -23,10 +23,10 @@ import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 
 public class TestBST16 {
 
-	private static final int N1 = 1_0;
+	private static final int N1 = 10_000;
 	private static final int N2 = 10*N1;
 	
-	private static final int DIM = 10;
+	private static final int DIM = 20;
 	
 	private Node create() {
 		return Node.createNode(DIM, 0, 63);
@@ -93,7 +93,7 @@ public class TestBST16 {
 		long l12 = System.currentTimeMillis();
 		assertEquals(list.size(), ht.getEntryCount());
 		
-		println(ht.getStats().toString());
+		//println(ht.getStats().toString());
 		
 		//lookup
 		long l21 = System.currentTimeMillis();
@@ -142,10 +142,10 @@ public class TestBST16 {
 		//remove some
 		long l41 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
-			System.out.println(ht.toStringTree());
+//			System.out.println(ht.toStringTree());
 			
 			//if (i%1000 == 0) 
-			System.out.println("rem=" + i.getValue());
+//			System.out.println("rem=" + i.getValue());
 //			System.out.println("rem2=" + ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null));
 			assertEquals(-(Integer)i.getValue(), ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null).getValue());
 //			if (ht.size() % 100_000 == 0) {

@@ -28,7 +28,7 @@ public interface PhDistance {
 	 * 
 	 * @param v1 one value
 	 * @param v2 other value
-	 * @param maximum Maximum Value. If distance is larger than the maximum value it returns Double.POSITIVE_INFINITY.
+	 * @param maxValue Maximum Value. If distance is larger than the maximum value it returns Double.POSITIVE_INFINITY.
 	 * @return The distance or Double.POSITIVE_INFINITY.
 	 */
 	default double dist(long[] v1, long[] v2, double maxValue) {
@@ -63,8 +63,7 @@ public interface PhDistance {
 	 *    are at most (3-1)=2 dimensions 'away' from the the quadrant where the query point is located.
 	 *    If a quadrant is 3 dimensions away, we would at least need to sum up the three smallest distance. which
 	 *    would clearly exceed 'maxDist'. <p>
-	 *   
-	 * <p>
+	 * 
 	 * 
 	 * Obviously, due to the sorting, many quadrants may be too far away, even if they only differ in 1 or 2
 	 * dimensions. But this approach allows us to simply compare the HC-positions of the quadrants to see in
