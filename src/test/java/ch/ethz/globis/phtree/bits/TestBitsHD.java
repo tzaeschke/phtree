@@ -14,7 +14,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 import ch.ethz.globis.phtree.PhTreeHelperHD;
-import ch.ethz.globis.phtree.v11hd.BitsHD;
+import ch.ethz.globis.phtree.v16hd.BitsHD;
 
 /**
  * 
@@ -146,7 +146,7 @@ public class TestBitsHD {
 	
 	@Test
 	public void testBinarySearch() {
-		long[] ba = {0,1, 0,34, 0,43, 10,12, 100,255, 100,1000, 100,-1L, 101, 1};
+		long[][] ba = {{0,1}, {0,34}, {0,43}, {10,12}, {100,255}, {100,1000}, {100,-1L}, {101, 1}};
 		checkBinarySearch(ba, -1, 0, 0);
 		checkBinarySearch(ba,  0, 0, 1);
 		checkBinarySearch(ba, -2, 0, 2);
@@ -171,8 +171,8 @@ public class TestBitsHD {
 		checkBinarySearch(ba, -9, (-1L), 0);
 	}
 	
-	private void checkBinarySearch(long[] ba, int expectedPos, long ... key) {
-		int i2 = BitsHD.binarySearch(ba, 0, ba.length/2, key, 128, 0);
+	private void checkBinarySearch(long[][] ba, int expectedPos, long ... key) {
+		int i2 = BitsHD.binarySearch(ba, 0, ba.length, key);
 		assertEquals(expectedPos, i2);
 	}
 	

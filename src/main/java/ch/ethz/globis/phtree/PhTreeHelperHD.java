@@ -6,7 +6,7 @@
  */
 package ch.ethz.globis.phtree;
 
-import ch.ethz.globis.phtree.v11hd.BitsHD;
+import ch.ethz.globis.phtree.v16hd.BitsHD;
 
 /**
  *

@@ -11,7 +11,7 @@ import static ch.ethz.globis.phtree.PhTreeHelper.DEBUG;
 import java.util.Arrays;
 
 import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.v11hd.BitsHD;
+import ch.ethz.globis.phtree.v16hd.BitsHD;
 
 /**
  * Bit-stream manipulation functions.

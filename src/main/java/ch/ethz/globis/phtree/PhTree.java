@@ -11,13 +11,6 @@ import java.util.List;
 import ch.ethz.globis.phtree.util.PhIteratorBase;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
-import ch.ethz.globis.phtree.v11.PhTree11;
-import ch.ethz.globis.phtree.v11hd.PhTreeHD11;
-import ch.ethz.globis.phtree.v11hd2.PhTreeHD11b;
-import ch.ethz.globis.phtree.v11lhc.PhTreeLhc11;
-import ch.ethz.globis.phtree.v13.PhTree13;
-import ch.ethz.globis.phtree.v14.PhTree14;
-import ch.ethz.globis.phtree.v15.PhTree15;
 import ch.ethz.globis.phtree.v16.PhTree16;
 import ch.ethz.globis.phtree.v16hd.PhTree16HD;
 
