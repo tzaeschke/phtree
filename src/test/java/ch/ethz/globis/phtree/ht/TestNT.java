@@ -22,7 +22,7 @@ public class TestNT {
 	
 	@Test
 	public void testBSTree() {
-		int N = 10_000_000;
+		int N = 100_000;
 		NodeTreeV11<Integer> ht = create();
 		
 		//populate
