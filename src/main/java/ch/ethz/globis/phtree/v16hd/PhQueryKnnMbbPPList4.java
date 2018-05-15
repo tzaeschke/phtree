@@ -17,6 +17,7 @@ import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
+import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -231,22 +232,37 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 		
 		@Override
 		void phOffer(PhEntry<T> entry) {
-			//TODO we don;t really need PhEntryDist anymore, do we? Maybe for external access of d?
 			PhEntryDist<T> e = (PhEntryDist<T>) entry;
 			double d = distance.dist(center, e.getKey(), maxDistance);
 			e.setDist( d );
 			if (d < maxDistance || (d <= maxDistance && size < data.length)) {
-				NodeIteratorListReuse.AMM5++;
-				boolean needsAdjustment = internalAdd(e);
-				if (needsAdjustment) {
-					maxDistance = distData[size-1];
-					checker.setMaxDist(maxDistance);
-				}
-				if (free == e) {
-					free = createEntry();
-				}
+				internalPreAdd(e);
 			} else {
 				free = e;
+			}
+		}
+		
+		@SuppressWarnings("unchecked")
+		void phOffer(BSTEntry candidate) {
+			double d = distance.dist(center, candidate.getKdKey(), maxDistance);
+			if (d < maxDistance || (d <= maxDistance && size < data.length)) {
+				PhEntryDist<T> e = results.phGetTempEntry();
+				e.setKeyInternal(candidate.getKdKey());
+				e.setValueInternal((T) candidate.getValue());
+				e.setDist( d );
+				internalPreAdd(e);
+			}
+		}
+		
+		private void internalPreAdd(PhEntryDist<T> e) {
+			NodeIteratorListReuse.AMM5++;
+			boolean needsAdjustment = internalAdd(e);
+			if (needsAdjustment) {
+				maxDistance = distData[size-1];
+				checker.setMaxDist(maxDistance);
+			}
+			if (free == e) {
+				free = createEntry();
 			}
 		}
 		

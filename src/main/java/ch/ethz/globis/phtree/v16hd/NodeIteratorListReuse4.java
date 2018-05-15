@@ -91,11 +91,6 @@ public class NodeIteratorListReuse4<T, R> {
 		}
 
 		
-		private void checkAndAddResult(PhEntry<T> e) {
-			results.phOffer(e);
-			//TODO when accepted, adapt min/max?!?!?!?!
-		}
-
 		private void checkAndRunSubnode(Node sub, long[] subPrefix) {
 			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
 				NodeIteratorListReuse.AMMN4++;
@@ -106,12 +101,11 @@ public class NodeIteratorListReuse4<T, R> {
 
 		@SuppressWarnings("unchecked")
 		private void readValue(BSTEntry candidate) {
-			NodeIteratorListReuse.AMM3++;
 			//TODO avoid getting/assigning element? -> Most entries fail!
 			PhEntry<T> result = results.phGetTempEntry();
 			result.setKeyInternal(candidate.getKdKey());
 			result.setValueInternal((T) candidate.getValue());
-			checkAndAddResult(result);
+			results.phOffer(result);
 		}
 		
 		private void checkEntry(BSTEntry be) {
@@ -126,7 +120,8 @@ public class NodeIteratorListReuse4<T, R> {
 			} else if (v != null) { 
 				NodeIteratorListReuse.CE3++;
 				NodeIteratorListReuse.AMM2++;
-				readValue(be);
+				NodeIteratorListReuse.AMM3++;
+				results.phOffer(be);
 			}
 		}
 

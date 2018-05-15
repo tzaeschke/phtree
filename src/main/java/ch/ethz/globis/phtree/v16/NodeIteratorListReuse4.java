@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 import ch.ethz.globis.phtree.PhDistance;
-import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
@@ -90,11 +89,6 @@ public class NodeIteratorListReuse4<T, R> {
 		}
 
 		
-		private void checkAndAddResult(PhEntry<T> e) {
-			results.phOffer(e);
-			//TODO when accepted, adapt min/max?!?!?!?!
-		}
-
 		private void checkAndRunSubnode(Node sub, long[] subPrefix) {
 			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
 				NodeIteratorListReuse.AMMN4++;
@@ -103,16 +97,6 @@ public class NodeIteratorListReuse4<T, R> {
 		}
 
 
-		@SuppressWarnings("unchecked")
-		private void readValue(BSTEntry candidate) {
-			NodeIteratorListReuse.AMM3++;
-			//TODO avoid getting/assigning element? -> Most entries fail!
-			PhEntry<T> result = results.phGetTempEntry();
-			result.setKeyInternal(candidate.getKdKey());
-			result.setValueInternal((T) candidate.getValue());
-			checkAndAddResult(result);
-		}
-		
 		private void checkEntry(BSTEntry be) {
 			Object v = be.getValue();
 			NodeIteratorListReuse.AMM1++;
@@ -125,7 +109,8 @@ public class NodeIteratorListReuse4<T, R> {
 			} else if (v != null) { 
 				NodeIteratorListReuse.CE3++;
 				NodeIteratorListReuse.AMM2++;
-				readValue(be);
+				NodeIteratorListReuse.AMM3++;
+				results.phOffer(be);
 			}
 		}
 

@@ -17,6 +17,7 @@ import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
+import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -231,33 +232,47 @@ public class PhQueryKnnMbbPPList4<T> implements PhKnnQuery<T> {
 		
 		@Override
 		void phOffer(PhEntry<T> entry) {
-			//TODO we don;t really need PhEntryDist anymore, do we? Maybe for external access of d?
 			PhEntryDist<T> e = (PhEntryDist<T>) entry;
 			double d = distance.dist(center, e.getKey(), maxDistance);
-			e.setDist( d );
 			if (d < maxDistance || (d <= maxDistance && size < data.length)) {
-				NodeIteratorListReuse.AMM5++;
-				boolean needsAdjustment = internalAdd(e);
-				
-				if (needsAdjustment) {
-					maxDistance = distData[size-1];
-					checker.setMaxDist(maxDistance);
-					//Any call to this function is triggered by a new entry that ended up in the
-					//candidate list. 
-					//Therefore, none of its parent nodes can be fully excluded by the new MBB.
-					//At best, we can exclude part of a parent if the search range slips
-					//'below' the center-point of a node in at least one dimension. 
-					//We basically need to compare each dimension, in which case we could 
-					//as well recalculate the min/max bit-range (min/max masks in the iterator).
-				}
-				if (free == e) {
-					free = createEntry();
-				}
+				internalPreAdd(e);
 			} else {
 				free = e;
 			}
 		}
 		
+		@SuppressWarnings("unchecked")
+		void phOffer(BSTEntry candidate) {
+			double d = distance.dist(center, candidate.getKdKey(), maxDistance);
+			if (d < maxDistance || (d <= maxDistance && size < data.length)) {
+				PhEntryDist<T> e = results.phGetTempEntry();
+				e.setKeyInternal(candidate.getKdKey());
+				e.setValueInternal((T) candidate.getValue());
+				e.setDist( d );
+				internalPreAdd(e);
+			}
+		}
+		
+		private void internalPreAdd(PhEntryDist<T> e) {
+			NodeIteratorListReuse.AMM5++;
+			boolean needsAdjustment = internalAdd(e);
+			
+			if (needsAdjustment) {
+				maxDistance = distData[size-1];
+				checker.setMaxDist(maxDistance);
+				//Any call to this function is triggered by a new entry that ended up in the
+				//candidate list. 
+				//Therefore, none of its parent nodes can be fully excluded by the new MBB.
+				//At best, we can exclude part of a parent if the search range slips
+				//'below' the center-point of a node in at least one dimension. 
+				//We basically need to compare each dimension, in which case we could 
+				//as well recalculate the min/max bit-range (min/max masks in the iterator).
+			}
+			if (free == e) {
+				free = createEntry();
+			}
+		}
+
 		private boolean internalAdd(PhEntryDist<T> e) {
 			if (size == 0) {
 				free = data[size];
