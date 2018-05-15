@@ -11,10 +11,10 @@ package ch.ethz.globis.phtree.v16;
 import java.util.Arrays;
 import java.util.Comparator;
 
+import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.util.BitTools;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorToArray;
@@ -73,7 +73,7 @@ public class NodeIteratorListReuse4<T, R> {
 	private final class NodeIterator {
 	
 		private Node node;
-		private BSTIteratorAll niIterator;
+		private final BSTIteratorAll niIterator = new BSTIteratorAll();
 		private final BSTIteratorToArray itToArray = new BSTIteratorToArray();
 		private LLEntry[] buffer;
 		private int bufferSize;
@@ -86,12 +86,7 @@ public class NodeIteratorListReuse4<T, R> {
 		 */
 		void reinitAndRun(Node node, long[] prefix) {
 			this.node = node;
-
-			if (niIterator == null) {
-				niIterator = node.ntIteratorAll();
-			} else {
-				niIterator.reset(node.getRoot());
-			}
+			this.niIterator.reset(node.getRoot());
 			getAll(prefix);
 		}
 
@@ -235,19 +230,21 @@ public class NodeIteratorListReuse4<T, R> {
 			while (start < bufferSize && Long.bitCount(buffer[start].getKey() ^ divePos) < minimumPermutations) {
 				start++;
 			}
-
-			double knownMaxDist = checker.getMaxDist();
-			
+		
 			NodeIteratorListReuse.HD11 += bufferSize;
 
 			//Calculate how many permutations are at most possible
-			int nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter());
+			double[] distances = new double[dims];
+			PhDistance dist = checker.getDistance(); 
+			dist.knnCalcDistances(checker.getCenter(), prefix, node.getPostLen() + 1, distances);
+			int nMaxPermutatedBits = dist.knnCalcMaximumPermutationCount(distances, checker.getMaxDist());
 			
 			//Now check the rest
+			double knownMaxDist = checker.getMaxDist();
 			for (int i = start; i < bufferSize; i++) {
 				if (checker.getMaxDist() < knownMaxDist) {
 					knownMaxDist = checker.getMaxDist();
-					nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter());
+					nMaxPermutatedBits = dist.knnCalcMaximumPermutationCount(distances, knownMaxDist);
 				}
 				if (Long.bitCount(buffer[i].getKey() ^ divePos) > nMaxPermutatedBits) {
 					break;
@@ -256,109 +253,8 @@ public class NodeIteratorListReuse4<T, R> {
 				checkEntry(buffer[i].getValue());
 			}
 		}
-
-
-		private int calcMacPermutatedBits(long[] prefix, long[] kNNCenter) {
-			return calcMaxPermutatedDimensions(prefix, kNNCenter, node.getPostLen() + 1, checker.getMaxDist());
-		}
-		
-		private int calcMaxPermutatedDimensions(long[] prefix, long[] kNNCenter, int bitsToIgnore, double maxDist) {
-			long maskSingleBit = 1L << (bitsToIgnore-1);
-			if (maskSingleBit < 0) {
-				//TODO
-				//can't yet deal with negative/positive of postLen==63
-				return kNNCenter.length;
-			}
-			long maskPrefix = (-1L) << bitsToIgnore;
-			long maskPostFix = (~maskPrefix) >> 1;
-			double[] distances = new double[prefix.length];
-			for (int i = 0; i < prefix.length; i++) {
-				long nodeCenter = prefix[i] & maskPrefix;
-				//find coordinate closest to the node's center, however the node-center should between the
-				//resulting coordinate and the kNN-center.
-				boolean isLarger = kNNCenter[i] > (nodeCenter | maskPostFix);
-				nodeCenter |= isLarger ? 
-					//kNN center is in 'upper' quadrant
-					maskPostFix
-					:
-					//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
-					maskSingleBit;
-				//double dist = checker.getDistance().dist(nodeCenter, kNNCenter[i]);
-				//TODO use double-input???
-				double dist = BitTools.toDouble(nodeCenter) - BitTools.toDouble(kNNCenter[i]);
-				distances[i] = dist * dist;
-			}
-			
-			Arrays.sort(distances);
-			
-			double maxDist2 = maxDist * maxDist;
-			double tempDist = 0;
-			int maxPermutations = distances.length; //dims
-			for (int i = 0; i < distances.length; i++) {
-				tempDist += distances[i];
-				if (tempDist > maxDist2) {
-					maxPermutations = i;
-					break;
-				}
-			}
-		
-			//TODO instead of adding up the distance, we could but the incremental sum into the vector
-			//     and the use binary search, or even linear search (starting with the previous known permutation limit)
-			
-			//TODO
-//			System.out.println("Distances: " + maxPermutations + " md= " + maxDist2 + " -> " + Arrays.toString(distances));
-			return maxPermutations;
-		}
-
-
-		private int calcMacPermutatedBitsOLD(long[] prefix, long[] kNNCenter) {
-			int bitsToIgnore = node.getPostLen() + 1;
-			long maskSingleBit = 1L << node.getPostLen();
-			if (maskSingleBit < 0) {
-				//TODO
-				//can't yet deal with negative/positive of postLen==63
-				return kNNCenter.length;
-			}
-			long maskPrefix = (-1L) << bitsToIgnore;
-			long maskPostFix = (~maskPrefix) >> 1;
-			double[] distances = new double[prefix.length];
-			for (int i = 0; i < prefix.length; i++) {
-				long nodeCenter = prefix[i] & maskPrefix;
-				//find coordinate closest to the node's center, however the node-center should between the
-				//resulting coordinate and the kNN-center.
-				if (kNNCenter[i] > (nodeCenter | maskPostFix)) {
-					//kNN center is in 'upper' quadrant
-					nodeCenter = nodeCenter | maskPostFix; 
-				} else {
-					//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
-					nodeCenter = nodeCenter | maskSingleBit;
-				}
-				double dist = checker.getDistance().dist(nodeCenter, kNNCenter[i]); 
-				distances[i] = dist * dist;
-			}
-			
-			Arrays.sort(distances);
-			
-			double maxDist2 = checker.getMaxDist();
-			maxDist2 *= maxDist2;
-			double tempDist = 0;
-			int maxPermutations = distances.length; //dims
-			for (int i = 0; i < distances.length; i++) {
-				tempDist += distances[i];
-				if (tempDist > maxDist2) {
-					maxPermutations = i;
-					break;
-				}
-			}
-		
-			//TODO instead of adding up the distance, we could but the incremental sum into the vector
-			//     and the use binary search, or even linear search (starting with the previous known permutation limit)
-			
-			//TODO
-//			System.out.println("Distances: " + maxPermutations + " md= " + maxDist2 + " -> " + Arrays.toString(distances));
-			return maxPermutations;
-		}
 	}
+
 	
 	NodeIteratorListReuse4(int dims, PhQueryKnnMbbPPList4<T>.KnnResultList4 results, PhFilterDistance checker) {
 		this.dims = dims;

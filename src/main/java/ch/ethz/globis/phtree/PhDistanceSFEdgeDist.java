@@ -39,7 +39,7 @@ public class PhDistanceSFEdgeDist implements PhDistanceSF {
 	/**
 	 * Calculate the distance for encoded {@code double} values.
 	 * This distance function calculates the minimum distance between the rectangles.
-	 * If the the rectangles overlap, the distance is set to '0'..
+	 * If the the rectangles overlap, the distance is set to '0'.
 	 * 
 	 * @see PhDistance#dist(long[], long[])
 	 */
@@ -87,12 +87,5 @@ public class PhDistanceSFEdgeDist implements PhDistanceSF {
 		//outMax contains the maximum allowed values for the lower and the upper corner
 		pre.pre(qMIN, min, outMin);
 		pre.pre(max, qMAX, outMax);
-	}
-
-	@Override
-	public double dist(long v1, long v2) {
-		double d1 = pre.post(v1);
-		double d2 = pre.post(v2);
-		return d2 - d1;
 	}
 }

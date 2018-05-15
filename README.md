@@ -31,6 +31,22 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 
 # News
 
+### 2018-05-15
+
+Released version 1.0.0 of the PH-Tree (partial reimplementation)
+
+- Greatly simplified code (No more AHC vs LHC vs NT, there is only a B+Tree in each node). No
+  more encoding into a single bit-stream.
+  Downside: increased more memory usage (still very competitive with other indexes)
+- Insertion/deletion performance roughly doubled.
+- Increased performance of all query operations, especially kNN queries.
+- Additional implementation for over 64 dimensions, theoretical limit about 2^31 dimensions.
+  This implementations is slower, but it is automatically chosen when trying to create a tree
+  with over 60 dimensions.
+- Internal B+Tree structure (with configurable page sizes) makes it more suitable for disk based storage.
+
+
+
 ### 2017-09-17
 
 Released version 0.3.4 of the PH-tree

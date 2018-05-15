@@ -15,6 +15,7 @@ import static ch.ethz.globis.phtree.v16.NodeIteratorListReuse.MMM3;
 import java.util.Arrays;
 import java.util.Comparator;
 
+import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTreeHelperHD;
@@ -78,10 +79,8 @@ public class NodeIteratorListReuse4<T, R> {
 	private final class NodeIterator {
 	
 		private Node node;
-		private BSTIteratorAll niIterator;
+		private final BSTIteratorAll niIterator = new BSTIteratorAll();
 		private final BSTIteratorToArray itToArray = new BSTIteratorToArray();
-		private long maskLower;
-		private long maskUpper;
 		private LLEntry[] buffer;
 		private int bufferSize;
 		private final LLEComp COMP = new LLEComp();
@@ -93,12 +92,7 @@ public class NodeIteratorListReuse4<T, R> {
 		 */
 		void reinitAndRun(Node node, long[] prefix) {
 			this.node = node;
-
-			if (niIterator == null) {
-				niIterator = node.ntIteratorAll();
-			} else {
-				niIterator.reset(node.getRoot());
-			}
+			niIterator.reset(node.getRoot());
 			getAll(prefix);
 		}
 
@@ -164,25 +158,9 @@ public class NodeIteratorListReuse4<T, R> {
 			//calc 'divePos', ie. whether prefix is below/above 'center' for each dimension
 			long[] kNNCenter = checker.getCenter();
 	    	
-//	        long[] relativeKNNpos = BitsLong.arrayCreate(dims);
-//	        int relativeKNNposSlot;
 	        //We want to get the center, so no +1 for postLen
 	        long prefixMask = (-1L) << node.getPostLen()+1;
 	        long prefixBit = 1L << node.getPostLen();
-//	        for (int i = 0; i < prefix.length; i++) {
-//	        	relativeKNNpos <<= 1;
-//	        	//set pos-bit if bit is set in value
-//	        	long nodeCenter = (prefix[i] & prefixMask) | prefixBit;
-//	        	relativeKNNpos[i] |= (kNNCenter[i] > nodeCenter) ? 1 : 0;
-//	        }
-
-	        //TODO cleanup
-	        //TODO cleanup
-	        //TODO cleanup
-	        //TODO cleanup
-	        //TODO cleanup
-	        
-	    	//long valMask = 1l << postLen;
 	    	long[] relativeKNNpos = BitsHD.newArray(dims);
 	        //get fraction
 	        int bitsPerSlot = BitsHD.mod65x(dims);
@@ -196,15 +174,11 @@ public class NodeIteratorListReuse4<T, R> {
 		        	long nodeCenter = (prefix[valsetPos] & prefixMask) | prefixBit;
 		        	pos |= (kNNCenter[valsetPos] > nodeCenter) ? 1 : 0;
 		        	valsetPos++;
-//	            	pos <<= 1;
-//	            	//set pos-bit if bit is set in value
-//	                pos |= (valMask & valSet[valsetPos++]) >>> postLen;
 	            }
 	            relativeKNNpos[rs] = pos;
 	            bitsPerSlot = 64;
 	        }
-
-	        
+        
 	        
         	iterateSortedBuffer(relativeKNNpos, prefix, 0);
         	BitsLong.arrayReplace(relativeKNNpos, null);
@@ -227,9 +201,6 @@ public class NodeIteratorListReuse4<T, R> {
 						run(sub, be.getKdKey());
 						//ignore this quadrant from now on
 						minimumPermutations = 1;
-						//adjust masks
-						//TODO??/
-						recalcMasks(node, kNNCenter);
 					}
 				}
 			}
@@ -279,18 +250,20 @@ public class NodeIteratorListReuse4<T, R> {
 				start++;
 			}
 
-			double knownMaxDist = checker.getMaxDist();
-			
 			NodeIteratorListReuse.HD11 += bufferSize;
 
 			//Calculate how many permutations are at most possible
-			int nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter());
+			double[] distances = new double[dims];
+			PhDistance dist = checker.getDistance(); 
+			dist.knnCalcDistances(checker.getCenter(), prefix, node.getPostLen() + 1, distances);
+			int nMaxPermutatedBits = dist.knnCalcMaximumPermutationCount(distances, checker.getMaxDist());
 			
 			//Now check the rest
+			double knownMaxDist = checker.getMaxDist();
 			for (int i = start; i < bufferSize; i++) {
 				if (checker.getMaxDist() < knownMaxDist) {
 					knownMaxDist = checker.getMaxDist();
-					nMaxPermutatedBits = calcMacPermutatedBits(prefix, checker.getCenter());
+					nMaxPermutatedBits = dist.knnCalcMaximumPermutationCount(distances, checker.getMaxDist());
 				}
 				if (BitsHD.xorBitCount(buffer[i].getKey(), divePos) > nMaxPermutatedBits) {
 					break;
@@ -299,183 +272,8 @@ public class NodeIteratorListReuse4<T, R> {
 				checkEntry(buffer[i].getValue());
 			}
 		}
-
-
-		private int calcMacPermutatedBits(long[] prefix, long[] kNNCenter) {
-			return calcMaxPermutatedDimensions(prefix, kNNCenter, node.getPostLen() + 1, checker.getMaxDist());
-		}
-		
-		private int calcMaxPermutatedDimensions(long[] prefix, long[] kNNCenter, int bitsToIgnore, double maxDist) {
-			long maskSingleBit = 1L << (bitsToIgnore-1);
-			if (maskSingleBit < 0) {
-				//TODO
-				//can't yet deal with negative/positive of postLen==63
-				return kNNCenter.length;
-			}
-			long maskPrefix = (-1L) << bitsToIgnore;
-			long maskPostFix = (~maskPrefix) >> 1;
-			double[] distances = new double[prefix.length];
-			for (int i = 0; i < prefix.length; i++) {
-				long nodeCenter = prefix[i] & maskPrefix;
-				//find coordinate closest to the node's center, however the node-center should between the
-				//resulting coordinate and the kNN-center.
-				boolean isLarger = kNNCenter[i] > (nodeCenter | maskPostFix);
-				nodeCenter |= isLarger ? 
-					//kNN center is in 'upper' quadrant
-					maskPostFix
-					:
-					//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
-					maskSingleBit;
-				//double dist = checker.getDistance().dist(nodeCenter, kNNCenter[i]);
-				//TODO use double-input???
-				double dist = BitTools.toDouble(nodeCenter) - BitTools.toDouble(kNNCenter[i]);
-				distances[i] = dist * dist;
-			}
-			
-			Arrays.sort(distances);
-			
-			double maxDist2 = maxDist * maxDist;
-			double tempDist = 0;
-			int maxPermutations = distances.length; //dims
-			for (int i = 0; i < distances.length; i++) {
-				tempDist += distances[i];
-				if (tempDist > maxDist2) {
-					maxPermutations = i;
-					break;
-				}
-			}
-		
-			//TODO instead of adding up the distance, we could but the incremental sum into the vector
-			//     and the use binary search, or even linear search (starting with the previous known permutation limit)
-			
-			//TODO
-//			System.out.println("Distances: " + maxPermutations + " md= " + maxDist2 + " -> " + Arrays.toString(distances));
-			return maxPermutations;
-		}
-
-
-		private int calcMacPermutatedBitsOLD(long[] prefix, long[] kNNCenter) {
-			int bitsToIgnore = node.getPostLen() + 1;
-			long maskSingleBit = 1L << node.getPostLen();
-			if (maskSingleBit < 0) {
-				//TODO
-				//can't yet deal with negative/positive of postLen==63
-				return kNNCenter.length;
-			}
-			long maskPrefix = (-1L) << bitsToIgnore;
-			long maskPostFix = (~maskPrefix) >> 1;
-			double[] distances = new double[prefix.length];
-			for (int i = 0; i < prefix.length; i++) {
-				long nodeCenter = prefix[i] & maskPrefix;
-				//find coordinate closest to the node's center, however the node-center should between the
-				//resulting coordinate and the kNN-center.
-				if (kNNCenter[i] > (nodeCenter | maskPostFix)) {
-					//kNN center is in 'upper' quadrant
-					nodeCenter = nodeCenter | maskPostFix; 
-				} else {
-					//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
-					nodeCenter = nodeCenter | maskSingleBit;
-				}
-				double dist = checker.getDistance().dist(nodeCenter, kNNCenter[i]); 
-				distances[i] = dist * dist;
-			}
-			
-			Arrays.sort(distances);
-			
-			double maxDist2 = checker.getMaxDist();
-			maxDist2 *= maxDist2;
-			double tempDist = 0;
-			int maxPermutations = distances.length; //dims
-			for (int i = 0; i < distances.length; i++) {
-				tempDist += distances[i];
-				if (tempDist > maxDist2) {
-					maxPermutations = i;
-					break;
-				}
-			}
-		
-			//TODO instead of adding up the distance, we could but the incremental sum into the vector
-			//     and the use binary search, or even linear search (starting with the previous known permutation limit)
-			
-			//TODO
-//			System.out.println("Distances: " + maxPermutations + " md= " + maxDist2 + " -> " + Arrays.toString(distances));
-			return maxPermutations;
-		}
-
-
-		private void recalcMasks(Node node, long[] prefix) {
-			//TODO remove this? It appears to make no sense for DIM
-
-
-			//create limits for the local node. there is a lower and an upper limit. Each limit
-			//consists of a series of DIM bit, one for each dimension.
-			//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
-			//not need to be queried.
-			//For the upper limit, a '0' indicates that the 'higher' half does not need to be 
-			//queried.
-			//
-			//              ||  lowerLimit=0 || lowerLimit=1 || upperLimit = 0 || upperLimit = 1
-			// =============||===================================================================
-			// query lower  ||     YES             NO
-			// ============ || ==================================================================
-			// query higher ||                                     NO               YES
-			//
-//			long maskHcBit = 1L << node.getPostLen();
-//			long maskVT = (-1L) << node.getPostLen();
-			long lowerLimit = 0;
-			long upperLimit = 0;
-//			//to prevent problems with signed long when using 64 bit
-//			if (maskHcBit >= 0) { //i.e. postLen < 63
-//				for (int i = 0; i < rangeMin.length; i++) {
-//					lowerLimit <<= 1;
-//					upperLimit <<= 1;
-//					long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
-//					if (rangeMin[i] >= nodeBisection) {
-//						//==> set to 1 if lower value should not be queried 
-//						lowerLimit |= 1L;
-//					}
-//					if (rangeMax[i] >= nodeBisection) {
-//						//Leave 0 if higher value should not be queried.
-//						upperLimit |= 1L;
-//					}
-//				}
-//			} else {
-//				//special treatment for signed longs
-//				//The problem (difference) here is that a '1' at the leading bit does indicate a
-//				//LOWER value, opposed to indicating a HIGHER value as in the remaining 63 bits.
-//				//The hypercube assumes that a leading '0' indicates a lower value.
-//				//Solution: We leave HC as it is.
-//
-//				for (int i = 0; i < rangeMin.length; i++) {
-//					lowerLimit <<= 1;
-//					upperLimit <<= 1;
-//					if (rangeMin[i] < 0) {
-//						//If minimum is positive, we don't need the search negative values 
-//						//==> set upperLimit to 0, prevent searching values starting with '1'.
-//						upperLimit |= 1L;
-//					}
-//					if (rangeMax[i] < 0) {
-//						//Leave 0 if higher value should not be queried
-//						//If maximum is negative, we do not need to search positive values 
-//						//(starting with '0').
-//						//--> lowerLimit = '1'
-//						lowerLimit |= 1L;
-//					}
-//				}
-//			}
-			upperLimit = (1L<<dims)-1;
-			MMM1++;
-			if (lowerLimit > 0) {
-				MMM2++;
-			}
-			if (upperLimit < ((1L<<dims)-1)) {
-				MMM3++;
-			}
-			maskLower = lowerLimit;
-			maskUpper = upperLimit;
-		}
-	
 	}
+
 	
 	NodeIteratorListReuse4(int dims, PhQueryKnnMbbPPList4<T>.KnnResultList4 results, PhFilterDistance checker) {
 		this.dims = dims;
@@ -491,7 +289,6 @@ public class NodeIteratorListReuse4<T, R> {
 	
 	void run(Node node, long[] prefix) {
 		NodeIterator nIt = pool.prepare();
-		nIt.recalcMasks(node, prefix);
 		nIt.reinitAndRun(node, prefix);
 		pool.pop();
 	}

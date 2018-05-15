@@ -6,6 +6,8 @@
  */
 package ch.ethz.globis.phtree;
 
+import java.util.Arrays;
+
 /**
  * Calculate the euclidean distance for integer values.
  * 
@@ -55,8 +57,47 @@ public class PhDistanceL implements PhDistance {
 		}
 	}
 
+	
 	@Override
-	public double dist(long l, long m) {
-		return Math.subtractExact(m, l);
+	public void knnCalcDistances(long[] kNNCenter, long[] prefix, int bitsToIgnore, double[] outDistances) {
+		long maskSingleBit = 1L << (bitsToIgnore-1);
+		if (maskSingleBit < 0) {
+			//TODO
+			//can't yet deal with negative/positive of postLen==63
+			return;
+		}
+		long maskPrefix = (-1L) << bitsToIgnore;
+		long maskPostFix = (~maskPrefix) >> 1;
+		for (int i = 0; i < prefix.length; i++) {
+			long nodeCenter = prefix[i] & maskPrefix;
+			//find coordinate closest to the node's center, however the node-center should between the
+			//resulting coordinate and the kNN-center.
+			boolean isLarger = kNNCenter[i] > (nodeCenter | maskPostFix);
+			nodeCenter |= isLarger ? 
+				//kNN center is in 'upper' quadrant
+				maskPostFix
+				:
+				//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
+				maskSingleBit;
+
+			double dist = nodeCenter - kNNCenter[i];
+			outDistances[i] = dist * dist;
+		}
+		
+		Arrays.sort(outDistances);
+	}
+	
+	@Override
+	public int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
+		double maxDist2 = maxDist * maxDist;
+		double tempDist = 0;
+		for (int i = 0; i < distances.length; i++) {
+			tempDist += distances[i];
+			if (tempDist > maxDist2) {
+				return i;
+			}
+		}
+	
+		return distances.length; //dims
 	}
 }

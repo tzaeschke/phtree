@@ -6,6 +6,8 @@
  */
 package ch.ethz.globis.phtree;
 
+import java.util.Arrays;
+
 import ch.ethz.globis.phtree.util.BitTools;
 
 
@@ -59,8 +61,49 @@ public class PhDistanceF implements PhDistance {
 		}
 	}
 
+	
 	@Override
-	public double dist(long v1, long v2) {
-		return BitTools.toDouble(v2) - BitTools.toDouble(v1);
+	public void knnCalcDistances(long[] kNNCenter, long[] prefix, int bitsToIgnore, double[] outDistances) {
+		long maskSingleBit = 1L << (bitsToIgnore-1);
+		if (maskSingleBit < 0) {
+			//TODO
+			//can't yet deal with negative/positive of postLen==63
+			return;
+		}
+		long maskPrefix = (-1L) << bitsToIgnore;
+		long maskPostFix = (~maskPrefix) >> 1;
+		for (int i = 0; i < prefix.length; i++) {
+			long nodeCenter = prefix[i] & maskPrefix;
+			//find coordinate closest to the node's center, however the node-center should between the
+			//resulting coordinate and the kNN-center.
+			boolean isLarger = kNNCenter[i] > (nodeCenter | maskPostFix);
+			nodeCenter |= isLarger ? 
+				//kNN center is in 'upper' quadrant
+				maskPostFix
+				:
+				//kNN Center is in 'lower' quadrant, move buf to 'upper' quadrant
+				maskSingleBit;
+
+			//TODO use unconverted input for nodeCenter???
+			double dist = BitTools.toDouble(nodeCenter) - BitTools.toDouble(kNNCenter[i]);
+			outDistances[i] = dist * dist;
+		}
+		
+		Arrays.sort(outDistances);
 	}
+	
+	@Override
+	public int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
+		double maxDist2 = maxDist * maxDist;
+		double tempDist = 0;
+		for (int i = 0; i < distances.length; i++) {
+			tempDist += distances[i];
+			if (tempDist > maxDist2) {
+				return i;
+			}
+		}
+	
+		return distances.length; //dims
+	}
+
 }
