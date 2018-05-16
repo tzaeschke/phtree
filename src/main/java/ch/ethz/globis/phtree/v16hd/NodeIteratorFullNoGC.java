@@ -25,8 +25,7 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
  */
 public class NodeIteratorFullNoGC<T> {
 	
-	private boolean finished;
-	private BSTIteratorAll ntIterator;
+	private final BSTIteratorAll ntIterator;
 	private PhFilter checker;
 
 
@@ -34,28 +33,16 @@ public class NodeIteratorFullNoGC<T> {
 	 * 
 	 */
 	public NodeIteratorFullNoGC() {
-		// nothing
+		this.ntIterator = new BSTIteratorAll();
 	}
 	
 	/**
-	 * 
 	 * @param node
-	 * @param rangeMin The minimum value that any found value should have. If the found value is
-	 *  lower, the search continues.
-	 * @param rangeMax
-	 * @param lower The minimum HC-Pos that a value should have.
-	 * @param upper
 	 * @param checker result verifier, can be null.
 	 */
-	private void reinit(Node node, PhFilter checker) {
-		finished = false;
+	void init(Node node, PhFilter checker) {
 		this.checker = checker;
-	
-		//Position of the current entry
-		if (ntIterator == null) {
-			ntIterator = new BSTIteratorAll();
-		}
-		ntIterator.reset(node.getRoot());
+		this.ntIterator.reset(node.getRoot());
 	}
 
 	/**
@@ -63,8 +50,13 @@ public class NodeIteratorFullNoGC<T> {
 	 * @return TRUE iff a matching element was found.
 	 */
 	boolean increment(PhEntry<T> result) {
-		getNext(result);
-		return !finished;
+		while (ntIterator.hasNextEntry()) {
+			BSTEntry be = ntIterator.nextEntry();
+			if (readValue(be, result)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 
@@ -88,26 +80,6 @@ public class NodeIteratorFullNoGC<T> {
 			result.setValueInternal((T) value);
 		}
 		return true;
-	}
-
-
-	private void getNext(PhEntry<T> result) {
-		niFindNext(result);
-	}
-	
-	
-	private void niFindNext(PhEntry<T> result) {
-		while (ntIterator.hasNextEntry()) {
-			BSTEntry be = ntIterator.nextEntry();
-			if (readValue(be, result)) {
-				return;
-			}
-		}
-		finished = true;
-	}
-
-	void init(Node node, PhFilter checker) {
-		reinit(node, checker);
 	}
 
 }

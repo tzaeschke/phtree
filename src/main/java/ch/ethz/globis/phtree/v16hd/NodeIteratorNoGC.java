@@ -25,11 +25,8 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
  */
 public class NodeIteratorNoGC<T> {
 	
-	private static final long[] START = null; 
-	
-	private long[] next;
 	private Node node;
-	private BSTIteratorMask niIterator;
+	private final BSTIteratorMask niIterator;
 	private final long[] maskLower;
 	private final long[] maskUpper;
 	private long[] rangeMin;
@@ -43,6 +40,7 @@ public class NodeIteratorNoGC<T> {
 	public NodeIteratorNoGC(int dims) {
 		this.maskLower = BitsHD.newArray(dims);
 		this.maskUpper = BitsHD.newArray(dims);
+		this.niIterator = new BSTIteratorMask();
 	}
 	
 	/**
@@ -58,15 +56,9 @@ public class NodeIteratorNoGC<T> {
 	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker) {
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
-		next = START;
 		this.checker = checker;
 	
 		this.node = node;
-
-		
-		if (niIterator == null) {
-			niIterator = new BSTIteratorMask();
-		}
 		niIterator.reset(node.getRoot(), maskLower, maskUpper);
 	}
 
@@ -76,7 +68,13 @@ public class NodeIteratorNoGC<T> {
 	 * @return TRUE iff a matching element was found.
 	 */
 	boolean increment(PhEntry<T> result) {
-		return getNext(result);
+		while (niIterator.hasNextEntry()) {
+			BSTEntry be = niIterator.nextEntry();
+			if (readValue(be, result)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private boolean readValue(BSTEntry candidate, PhEntry<T> result) {
@@ -99,37 +97,11 @@ public class NodeIteratorNoGC<T> {
 	}
 
 
-	private boolean getNext(PhEntry<T> result) {
-		return niFindNext(result);
-	}
-	
-
-	private boolean niFindNext(PhEntry<T> result) {
-		return niFindNextIter(result);
-	}
-	
-	private boolean niFindNextIter(PhEntry<T> result) {
-		while (niIterator.hasNextEntry()) {
-			BSTEntry be = niIterator.nextEntry();
-			if (readValue(be, result)) {
-				next = be.getKey(); //This is required for kNN-adjusting of iterators
-				return true;
-			}
-		}
-		return false;
-	}
-
-
-	public Node node() {
-		return node;
-	}
-
 	/**
 	 * 
 	 * @param rangeMin
 	 * @param rangeMax
-	 * @param valTemplate
-	 * @param postLen
+	 * @param prefix
 	 */
 	private void calcLimits(long[] rangeMin, long[] rangeMax, long[] prefix) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
@@ -205,36 +177,10 @@ public class NodeIteratorNoGC<T> {
 			}
 		}
 	}
-	
-	boolean adjustMinMax(long[] rangeMin, long[] rangeMax, long[] prefix) {
-		calcLimits(rangeMin, rangeMax, prefix);
-
-		if (BitsHD.isLessEq(this.maskUpper, next)) {
-			//we already fully traversed this node
-			return false;
-		}
-
-		if (BitsHD.isLess(next, this.maskLower)) {
-			niIterator.adjustMinMax(maskLower, maskUpper);
-		}
-			
-		return true;
-	}
 
 	void init(long[] rangeMin, long[] rangeMax, Node node, PhFilter checker, long[] prefix) {
 		this.node = node; //for calcLimits
 		calcLimits(rangeMin, rangeMax, prefix);
 		reinit(node, rangeMin, rangeMax, checker);
-	}
-
-	boolean verifyMinMax(long[] prefix) {
-		long mask = (-1L) << node.getPostLen()+1;
-		for (int i = 0; i < prefix.length; i++) {
-			if ((prefix[i] | ~mask) < rangeMin[i] ||
-					(prefix[i] & mask) > rangeMax[i]) {
-				return false;
-			}
-		}
-		return true;
 	}
 }

@@ -25,18 +25,12 @@ import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
  */
 public class NodeIteratorNoGC<T> {
 	
-	private static final long START = -1; 
-	
-	private final int dims;
-	private long next;
 	private Node node;
-	private BSTIteratorMask niIterator;
+	private final BSTIteratorMask niIterator;
 	private long maskLower;
 	private long maskUpper;
 	private long[] rangeMin;
 	private long[] rangeMax;
-	private boolean useHcIncrementer;
-	private boolean useNiHcIncrementer;
 	private PhFilter checker;
 
 	/**
@@ -44,7 +38,7 @@ public class NodeIteratorNoGC<T> {
 	 * @param dims dimensions
 	 */
 	public NodeIteratorNoGC(int dims) {
-		this.dims = dims;
+		niIterator = new BSTIteratorMask();
 	}
 	
 	/**
@@ -60,50 +54,24 @@ public class NodeIteratorNoGC<T> {
 	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker) {
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
-		next = START;
 		this.checker = checker;
-	
 		this.node = node;
-
-		useHcIncrementer = false;
-		useNiHcIncrementer = false;
-
-		if (dims > 6) {
-			initHCI();
-		}
-		
-		if (!useNiHcIncrementer) {
-			if (niIterator == null) {
-				niIterator = new BSTIteratorMask();
-			}
-			niIterator.reset(node.getRoot(), maskLower, maskUpper);
-		}
+		this.niIterator.reset(node.getRoot(), maskLower, maskUpper);
 	}
 
-	private void initHCI() {
-		//LHC, NI, ...
-		long maxHcAddr = ~((-1L)<<dims);
-		int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
-		//nPossibleMatch = (2^k-x)
-		long nPossibleMatch = 1L << (dims - nSetFilterBits);
-		int nChild = node.ntGetSize();
-		int logNChild = Long.SIZE - Long.numberOfLeadingZeros(nChild);
-		//the following will overflow for k=60
-		boolean useHcIncrementer = (nChild > nPossibleMatch*(double)logNChild*2);
-		//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
-		if (useHcIncrementer && PhTree16.HCI_ENABLED && dims < 50) {
-			useNiHcIncrementer = true;
-		} else {
-			useNiHcIncrementer = false;
-		}
-	}
 	
 	/**
 	 * Advances the cursor. 
 	 * @return TRUE iff a matching element was found.
 	 */
 	boolean increment(PhEntry<T> result) {
-		return getNext(result);
+		while (niIterator.hasNextEntry()) {
+			BSTEntry be = niIterator.nextEntry();
+			if (readValue(be, result)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private boolean readValue(BSTEntry candidate, PhEntry<T> result) {
@@ -125,76 +93,12 @@ public class NodeIteratorNoGC<T> {
 		return checker == null || checker.isValid(candidate.getKdKey());
 	}
 
-
-	private boolean getNext(PhEntry<T> result) {
-		return niFindNext(result);
-	}
 	
-
-	private boolean niFindNext(PhEntry<T> result) {
-		return useNiHcIncrementer ? niFindNextHCI(result) : niFindNextIter(result);
-	}
-	
-	private boolean niFindNextIter(PhEntry<T> result) {
-		while (niIterator.hasNextEntry()) {
-			BSTEntry be = niIterator.nextEntry();
-			if (readValue(be, result)) {
-				next = be.getKey(); //This is required for kNN-adjusting of iterators
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	private boolean niFindNextHCI(PhEntry<T> result) {
-		//HCI
-		//repeat until we found a value inside the given range
-		long currentPos = next; 
-		do {
-			if (currentPos != START && currentPos >= maskUpper) {
-				break;
-			}
-
-			if (currentPos == START) {
-				//starting position
-				currentPos = maskLower;
-			} else {
-				currentPos = PhTree16.inc(currentPos, maskLower, maskUpper);
-				if (currentPos <= maskLower) {
-					break;
-				}
-			}
-
-			BSTEntry be = node.ntGetEntry(currentPos);
-			if (be == null) {
-				continue;
-			}
-
-			next = currentPos;
-
-			//read and check post-fix
-			if (readValue(be, result)) {
-				return true;
-			}
-		} while (true);
-		return false;
-	}
-
-
-	private boolean checkHcPos(long pos) {
-		return ((pos | maskLower) & maskUpper) == pos;
-	}
-
-	public Node node() {
-		return node;
-	}
-
 	/**
 	 * 
 	 * @param rangeMin
 	 * @param rangeMax
-	 * @param valTemplate
-	 * @param postLen
+	 * @param prefix
 	 */
 	private void calcLimits(long[] rangeMin, long[] rangeMax, long[] prefix) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
@@ -259,52 +163,9 @@ public class NodeIteratorNoGC<T> {
 		this.maskUpper = upperLimit;
 	}
 	
-	boolean adjustMinMax(long[] rangeMin, long[] rangeMax, long[] prefix) {
-		calcLimits(rangeMin, rangeMax, prefix);
-
-		if (next >= this.maskUpper) {
-			//we already fully traversed this node
-			return false;
-		}
-
-		if (next < this.maskLower) {
-			if (!useNiHcIncrementer) {
-				niIterator.adjustMinMax(maskLower, maskUpper);
-			} else {
-				next = START;
-			}
-			return true;
-		}
-			
-		if ((useHcIncrementer || useNiHcIncrementer) && !checkHcPos(next)) {
-			//Adjust pos in HCI mode such that it works for the next inc()
-			//At this point, next is >= maskLower
-			long pos = next-1;
-			//After the following, pos==START or pos==(a valid entry such that inc(pos) is
-			//the next valid entry after the original `next`)
-			while (!checkHcPos(pos) && pos > START) {
-				//normal iteration to ensure we to get a valid POS for HCI-inc()
-				pos--;
-			}
-			next = pos;
-		}
-		return true;
-	}
-
 	void init(long[] rangeMin, long[] rangeMax, Node node, PhFilter checker, long[] prefix) {
 		this.node = node; //for calcLimits
 		calcLimits(rangeMin, rangeMax, prefix);
 		reinit(node, rangeMin, rangeMax, checker);
-	}
-
-	boolean verifyMinMax(long[] prefix) {
-		long mask = (-1L) << node.getPostLen()+1;
-		for (int i = 0; i < prefix.length; i++) {
-			if ((prefix[i] | ~mask) < rangeMin[i] ||
-					(prefix[i] & mask) > rangeMax[i]) {
-				return false;
-			}
-		}
-		return true;
 	}
 }

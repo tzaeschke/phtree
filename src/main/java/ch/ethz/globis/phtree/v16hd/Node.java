@@ -60,19 +60,21 @@ public class Node {
 		this.infixLenStored = (byte) (infixLenClassic + 1);
 		this.postLenStored = (byte) (postLenClassic + 1);
 		this.entryCnt = 0;
+		//The idea is to have at most one level of inner pages for d<=12
+		//The inner pages are all slightly larger the strictly necessary because the fill rate of leaves is < 100%
 		switch (dims) {
-		case 1: maxLeafN = 2; maxInnerN = 2; break;
-		case 2: maxLeafN = 4; maxInnerN = 2; break;
-		case 3: maxLeafN = 8; maxInnerN = 2; break;
-		case 4: maxLeafN = 16; maxInnerN = 2; break;
-		case 5: maxLeafN = 16; maxInnerN = 2+1; break;
-		case 6: maxLeafN = 16; maxInnerN = 4+1; break;
-		case 7: maxLeafN = 16; maxInnerN = 8+1; break;
-		case 8: maxLeafN = 16; maxInnerN = 16+1; break;
-		case 9: maxLeafN = 32; maxInnerN = 16+1; break;
-		case 10: maxLeafN = 32; maxInnerN = 32+1; break;
-		case 11: maxLeafN = 32; maxInnerN = 64+1; break;
-		case 12: maxLeafN = 64; maxInnerN = 64+1; break;
+		case 1: maxLeafN = 2; maxInnerN = 3; break;
+		case 2: maxLeafN = 4; maxInnerN = 3; break;
+		case 3: maxLeafN = 8; maxInnerN = 3; break;
+		case 4: maxLeafN = 16; maxInnerN = 3; break;
+		case 5: maxLeafN = 16; maxInnerN = 4+1; break;
+		case 6: maxLeafN = 16; maxInnerN = 6+1; break;
+		case 7: maxLeafN = 16; maxInnerN = 10+1; break;
+		case 8: maxLeafN = 16; maxInnerN = 20+1; break;
+		case 9: maxLeafN = 32; maxInnerN = 20+1; break;
+		case 10: maxLeafN = 32; maxInnerN = 35+1; break;
+		case 11: maxLeafN = 32; maxInnerN = 70+1; break;
+		case 12: maxLeafN = 64; maxInnerN = 70+1; break;
 		default: maxLeafN = 100; maxInnerN = 100; break;
 		}
 		this.root = bstCreateRoot();
