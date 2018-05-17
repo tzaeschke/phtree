@@ -107,7 +107,7 @@ public abstract class PhTreeHelperHD {
     }
     
     public static final long[] newHDPos(int bits) {
-    	return new long[1 + (bits >>> 6)];
+    	return new long[1 + ((bits-1) >>> 6)];
     }
 
 	/**
