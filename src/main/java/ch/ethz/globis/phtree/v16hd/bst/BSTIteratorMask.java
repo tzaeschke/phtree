@@ -18,60 +18,12 @@ import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
  */
 public class BSTIteratorMask {
 
-	static class IteratorPos {
-		BSTreePage page;
-		short pos;
-
-		void init(BSTreePage page, short pos) {
-			this.page = page;
-			this.pos = pos;
-		}
-	}
-
-	static class IteratorPosStack {
-		private final IteratorPos[] stack;
-		private int size = 0;
-		
-		public IteratorPosStack(int depth) {
-			stack = new IteratorPos[depth];
-		}
-
-		public boolean isEmpty() {
-			return size == 0;
-		}
-
-		public IteratorPos prepareAndPush(BSTreePage page, short pos) {
-			IteratorPos ni = stack[size++];
-			if (ni == null)  {
-				ni = new IteratorPos();
-				stack[size-1] = ni;
-			}
-			ni.init(page, pos);
-			return ni;
-		}
-
-		public IteratorPos peek() {
-			return stack[size-1];
-		}
-
-		public IteratorPos pop() {
-			return stack[--size];
-		}
-
-		public void clear() {
-			size = 0;
-		}
-	}
-
 	private BSTreePage currentPage = null;
-	private short currentPos = 0;
+	private int currentPos = 0;
 	private long[] minMask;
 	private long[] maxMask;
-	private final IteratorPosStack stack = new IteratorPosStack(20);
-	private long[] nextKey;
 	private BSTEntry nextValue;
-	private boolean hasValue = false;
-	
+ 	
 	public BSTIteratorMask() {
 		//nothing
 	}
@@ -81,187 +33,69 @@ public class BSTIteratorMask {
 		this.maxMask = maxMask;
 		this.currentPage = root;
 		this.currentPos = 0;
-		this.hasValue = false;
-		this.stack.clear();
-		findFirstPosInPage();
+
+		if (findFirstLeafPage()) {
+			findNext();
+		}
+
 		return this;
 	}
 
-	public void adjustMinMax(long maskLower[], long[] maskUpper) {
-		this.minMask = maskLower;
-		this.maxMask = maskUpper;
-	}
 
-	public boolean hasNextEntry() {
-		return hasValue;
-	}
-
-	
-	private void goToNextPage() {
-		if (stack.isEmpty()) {
-			currentPage = null;
-			return;
-		}
-		IteratorPos ip = stack.pop();
-		currentPage = ip.page;
-		currentPos = ip.pos;
-		currentPos++;
-		
-		while (currentPos > currentPage.getNKeys()) {
-			if (stack.isEmpty()) {
-				close();
-				return;// false;
-			}
-			ip = stack.pop();
-			currentPage = ip.page;
-			currentPos = ip.pos;
-			currentPos++;
-		}
-
-		while (!currentPage.isLeaf()) {
-			//we are not on the first page here, so we can assume that pos=0 is correct to 
-			//start with
-
-			//read last page
-			stack.prepareAndPush(currentPage, currentPos);
-			currentPage = currentPage.getPageByPos(currentPos);
-			currentPos = 0;
-		}
-	}
-	
-	
-	private boolean goToFirstPage() {
+	private boolean findFirstLeafPage() {
 		while (!currentPage.isLeaf()) {
 			//the following is only for the initial search.
 			//The stored key[i] is the min-key of the according page[i+1}
-			int pos2 = currentPage.binarySearch(currentPos, currentPage.getNKeys(), minMask);
 	    	if (currentPage.getNKeys() == -1) {
+	    		currentPage = null;
 				return false;
 	    	}
-			if (pos2 >=0) {
-		        pos2++;
-		    } else {
-		        pos2 = -(pos2+1);
-		    }
-	    	currentPos = (short)pos2;
-
-	    	BSTreePage newPage = currentPage.getPageByPos(currentPos);
-			//are we on the correct branch?
-	    	//We are searching with LONG_MIN value. If the key[] matches exactly, then the
-	    	//selected page may not actually contain any valid elements.
-	    	//In any case this will be sorted out in findFirstPosInPage()
 	    	
-	    	stack.prepareAndPush(currentPage, currentPos);
-			currentPage = newPage;
-			currentPos = 0;
+	    	currentPage = currentPage.getPageByPos(0);
 		}
 		return true;
 	}
 	
-	private void gotoPosInPage() {
-		//when we get here, we are on a valid page with a valid position 
-		//(TODO check for pos after goToPage())
-		//we only need to check the value.
-		do {
-			nextKey = currentPage.getKeys()[currentPos];
-			nextValue = currentPage.getValues()[currentPos];
-			hasValue = true;
-			currentPos++;
-
-			//now progress to next element
-
+	private void findNext() {
+		while (currentPage != null ) {
 			//first progress to next page, if necessary.
 			if (currentPos >= currentPage.getNKeys()) {
-				goToNextPage();
-				if (currentPage == null) {
-					if (!check(nextKey)) {
-						hasValue = false;
-					}
-					return;
-				}
+				currentPage = currentPage.getNextLeaf();
+				currentPos = 0;
+				continue;
 			}
 
-			//check for invalid value
-			if (BitsHD.isLess(maxMask, currentPage.getKeys()[currentPos])) {
-				close();
+			if (check(currentPage.getKeys()[currentPos])) { 
+				nextValue = currentPage.getValues()[currentPos];
+				currentPos++;
 				return;
 			}
-		} while (!check(nextKey));
-	}
-
-	private boolean check(long[] key) {
-		return BitsHD.checkHcPosHD(key, minMask, maxMask);
-	}
-
-
-	private void findFirstPosInPage() {
-		//find first page
-		if (!goToFirstPage()) {
-			close();
-			return;
+			currentPos++;
 		}
-
-		//find very first element. 
-		currentPos = (short) currentPage.binarySearch(currentPos, currentPage.getNKeys(), minMask);
-		if (currentPos < 0) {
-			currentPos = (short) -(currentPos+1);
-		}
-		
-		//check position
-		if (currentPos >= currentPage.getNKeys()) {
-			//maybe we walked down the wrong branch?
-			goToNextPage();
-			if (currentPage == null) {
-				close();
-				return;
-			}
-			//okay, try again.
-			currentPos = (short) currentPage.binarySearch(currentPos, currentPage.getNKeys(), minMask);
-			if (currentPos < 0) {
-				currentPos = (short) -(currentPos+1);
-			}
-		}
-		if (currentPos >= currentPage.getNKeys() 
-				|| BitsHD.isLess(maxMask, currentPage.getKeys()[currentPos])) {
-			close();
-			return;
-		}
-		gotoPosInPage();
 	}
 	
 
+	public boolean hasNextEntry() {
+		return currentPage != null;
+	}
+	
 	public BSTEntry nextEntry() {
 		if (!hasNextEntry()) {
 			throw new NoSuchElementException();
 		}
 
         BSTEntry ret = nextValue;
-		if (currentPage == null) {
-			hasValue = false;
-		} else {
-			gotoPosInPage();
-		}
+		findNext();
 		return ret;
 	}
 
-
-	public long[] nextKey() {
-		if (!hasNextEntry()) {
-			throw new NoSuchElementException();
-		}
-
-        long[] ret = nextKey;
-		if (currentPage == null) {
-			hasValue = false;
-		} else {
-			gotoPosInPage();
-		}
-		return ret;
+	public void adjustMinMax(long[] maskLower, long[] maskUpper) {
+		this.minMask = maskLower;
+		this.maxMask = maskUpper;
 	}
 
 	
-	private void close() {
-		currentPage = null;
+	private boolean check(long[] key) {
+		return BitsHD.checkHcPosHD(key, minMask, maxMask);
 	}
-
 }
