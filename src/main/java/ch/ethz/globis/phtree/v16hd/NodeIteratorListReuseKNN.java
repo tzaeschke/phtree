@@ -29,11 +29,7 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorToArray;
  * The NILReuse creates much less objects, but they end up in an array for reuse, which means
  * they may not be on the stack.... 
  * 
- * Version 4: Use BstAll-Iterator
- * 
- * Version 3: This implements entry ordering by Hamming distance
- * 
- * Version 2: This implements Single-Dive with search of distance=1 neighbors
+ * This implements entry ordering by Hamming distance.
  * 
  * @author ztilmann
  *
@@ -88,7 +84,7 @@ public class NodeIteratorListReuseKNN<T, R> {
 		 */
 		void reinitAndRun(Node node, long[] prefix) {
 			this.node = node;
-			niIterator.reset(node.getRoot());
+			this.niIterator.reset(node.getRoot());
 			getAll(prefix);
 		}
 
@@ -177,8 +173,8 @@ public class NodeIteratorListReuseKNN<T, R> {
 			//Okay, deep dive is finished
 			results.stopInitialDive();
 
-			//TODO???
-			if (node.getEntryCount() < 0*dims) {
+			//TODO 2 ???
+			if (node.getEntryCount() <= 0) {
 				iterateUnsorted(divePos, minimumPermutations);
 			} else {
 				iterateSortedBuffer(divePos, prefix, minimumPermutations);
