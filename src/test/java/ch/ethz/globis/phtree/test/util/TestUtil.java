@@ -40,6 +40,10 @@ public abstract class TestUtil {
 		return getInstance().newTreeV(dim);
 	}
 	
+	public static <T> PhTree<T> newTreeHD(int dim) {
+		return getInstance().newTreeHD(dim);
+	}
+
 	public static void close(PhTreeNV tree) {
 		getInstance().close(tree);
 	}

@@ -25,40 +25,35 @@ import ch.ethz.globis.phtree.util.Bits;
  *  This test harness contains all of the tests for trees whose number of dimensions k will
  *  be higher than 31.
  *
- *  The methods containing these types of trees are moved in this class as they are not currently
- *  supported by the distributed version of the Ph-Tree. This is due to the fact that the data structure
- *  used for the point-to-host mapping (PhTreeRangeV) does not support more than 31 dimensions.
- *
  */
 public class TestHighDimensions {
 
-    private PhTree<long[]> create(int dim, int depth) {
-        return TestUtil.newTree(dim, depth);
+    private PhTree<long[]> create(int dim) {
+        return TestUtil.newTree(dim);
     }
 
     @Test
     public void testHighD64Neg() {
-        final int MAX_DIM = 3;
+        final int MAX_DIM = 60;
         final int N = 1000;
-        final int DEPTH = 64;
         Random R = new Random(0);
 
         for (int DIM = 32; DIM <= MAX_DIM; DIM++) {
             //System.out.println("d="+ DIM);
             long[][] vals = new long[N][];
-            PhTree<long[]> ind = create(DIM, DEPTH);
+            PhTree<long[]> ind = create(DIM);
             for (int i = 0; i < N; i++) {
                 long[] v = new long[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextLong();
                 }
                 vals[i] = v;
-                assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
+                assertNull(Bits.toBinary(v), ind.put(v, v));
             }
 
             //delete all
             for (long[] v: vals) {
-                assertTrue("DIM=" + DIM + " v=" + Bits.toBinary(v, DEPTH), ind.contains(v));
+                assertTrue("DIM=" + DIM + " v=" + Bits.toBinary(v), ind.contains(v));
                 assertNotNull(ind.remove(v));
             }
 
@@ -80,19 +75,18 @@ public class TestHighDimensions {
     public void testQueryHighD() {
         final int MAX_DIM = 60;
         final int N = 2000;
-        final int DEPTH = 64;
-        final long mask = ~(1L<<(DEPTH-1));  //only positive numbers!
+        final long mask = ~(1L<<(63));  //only positive numbers!
         Random R = new Random(0);
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
             //System.out.println("d="+ DIM);
-            PhTree<long[]> ind = create(DIM, DEPTH);
+            PhTree<long[]> ind = create(DIM);
             for (int i = 0; i < N; i++) {
                 long[] v = new long[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextLong() & mask;
                 }
-                assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
+                assertNull(Bits.toBinary(v), ind.put(v, v));
             }
 
             //check empty result
@@ -140,19 +134,18 @@ public class TestHighDimensions {
     public void testQueryHighD64() {
         final int MAX_DIM = 60;
         final int N = 1000;
-        final int DEPTH = 64;
         final long mask = Long.MAX_VALUE;
         Random R = new Random(0);
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
             //System.out.println("d="+ DIM);
-            PhTree<long[]> ind = create(DIM, DEPTH);
+            PhTree<long[]> ind = create(DIM);
             for (int i = 0; i < N; i++) {
                 long[] v = new long[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextLong() & mask;
                 }
-                assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
+                assertNull(Bits.toBinary(v), ind.put(v, v));
             }
 
             //check empty result
@@ -200,18 +193,17 @@ public class TestHighDimensions {
     public void testQueryHighD64Neg() {
         final int MAX_DIM = 60;
         final int N = 1000;
-        final int DEPTH = 64;
         Random R = new Random(0);
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
             //System.out.println("d="+ DIM);
-            PhTree<long[]> ind = create(DIM, DEPTH);
+            PhTree<long[]> ind = create(DIM);
             for (int i = 0; i < N; i++) {
                 long[] v = new long[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextLong();
                 }
-                assertNull(Bits.toBinary(v, DEPTH), ind.put(v, v));
+                assertNull(Bits.toBinary(v), ind.put(v, v));
             }
 
             //check empty result

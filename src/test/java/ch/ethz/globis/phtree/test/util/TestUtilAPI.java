@@ -15,6 +15,7 @@ public interface TestUtilAPI {
 
 	public <T> PhTree<T> newTreeV(int dim, int depth);
 	public <T> PhTree<T> newTreeV(int dim);
+	public <T> PhTree<T> newTreeHD(int dim);
 
 	public void close(PhTreeNV tree);
 	public <T> void close(PhTree<T> tree);

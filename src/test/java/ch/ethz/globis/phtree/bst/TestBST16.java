@@ -4,7 +4,7 @@
  * This software is the proprietary information of Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.ht;
+package ch.ethz.globis.phtree.bst;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
