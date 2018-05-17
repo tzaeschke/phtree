@@ -90,16 +90,6 @@ public class TestBST16 {
 			//Check
 			BSTEntry be = ht.bstGet((Integer)i.getValue());
 			assertEquals((int)i.getValue(), (int)be.getValue());
-			
-			//TODO remove
-//			BSTIteratorAll iter = ht.iterator();
-//			long prev = -1;
-//			while (iter.hasNextEntry()) {
-//				long current = iter.nextEntry().getKey();
-//				assertEquals(prev + 1, current);
-//				prev = current;
-//			}
-//			assertEquals(i.getKey(), prev);
 		}
 		long l12 = System.currentTimeMillis();
 		assertEquals(list.size(), ht.getEntryCount());
@@ -129,7 +119,7 @@ public class TestBST16 {
 		long l52 = System.currentTimeMillis();
 
 		long l61 = System.currentTimeMillis();
-		BSTIteratorMask iterMask = ht.iteratorMask(0, 0xFFFFFFFFFFFEL);
+		BSTIteratorMask iterMask = new BSTIteratorMask().reset(ht.getRoot(), 0, 0xFFFFFFFFFFFEL);
 		prev = -2;
 		while (iterMask.hasNextEntry()) {
 			long current = iterMask.nextEntry().getKey();
@@ -138,17 +128,6 @@ public class TestBST16 {
 		}
 		assertEquals(prev, list.size() - 2);
 		long l62 = System.currentTimeMillis();
-		
-//		long l71 = System.currentTimeMillis();
-//		BSTIteratorLeafAll iterLeaf = new BSTIteratorLeafAll().reset(ht.getRoot());
-//		prev = -1;
-//		while (iterLeaf.hasNextEntry()) {
-//			long current = iterLeaf.nextEntry().getKey();
-//			assertEquals(prev + 1, current);
-//			prev = current;
-//		}
-//		assertEquals(prev, list.size() - 1);
-//		long l72 = System.currentTimeMillis();
 		
 		//replace some
 		long l31 = System.currentTimeMillis();
@@ -172,7 +151,6 @@ public class TestBST16 {
 		println(prefix + "Get:  " + (l22-l21));
 		println(prefix + "Iter: " + (l52-l51));
 		println(prefix + "IterM:" + (l62-l61));
-//		println(prefix + "IterL:" + (l72-l71));
 		println(prefix + "Load: " + (l32-l31));
 		println(prefix + "Rem : " + (l42-l41));
 		println();
@@ -224,11 +202,8 @@ public class TestBST16 {
 		BSTIteratorAll iter = ht.iterator();
 		assertFalse(iter.hasNextEntry());
 
-		BSTIteratorMask iterMask = ht.iteratorMask(0, 0xFFFFFFFFFFFEL);
+		BSTIteratorMask iterMask = new BSTIteratorMask().reset(ht.getRoot(), 0, 0xFFFFFFFFFFFEL);
 		assertFalse(iterMask.hasNextEntry());
-		
-//		BSTIteratorLeafAll iterLeaf = new BSTIteratorLeafAll().reset(ht.getRoot());
-//		assertFalse(iterLeaf.hasNextEntry());
 				
 		BSTEntry e2 = ht.bstRemove(12345, null, null);
 		assertNull(e2);
