@@ -302,6 +302,7 @@ public class BSTPool {
 	public static void reportFreeNode(BSTreePage p) {
 		POOL_KEY.offer(p.getKeys());
 		if (p.isLeaf()) {
+			p.updateNeighborsRemove();
 			POOL_ENTRY.offer(p.getValues());
 		} else {
 			POOL_NODES.offer(p.getSubPages());
@@ -310,13 +311,13 @@ public class BSTPool {
 		POOL_NODE.offer(p);
 	}
 
-	public static BSTreePage getNode(Node ind, BSTreePage parent, boolean isLeaf) {
+	public static BSTreePage getNode(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
 		BSTreePage p = POOL_NODE.get();
 		if (p != null) {
-			p.init(ind, parent, isLeaf);
+			p.init(ind, parent, isLeaf, leftPredecessor);
 			return p;
 		}
-		return new BSTreePage(ind, parent, isLeaf);
+		return new BSTreePage(ind, parent, isLeaf, leftPredecessor);
 	}
 	
 

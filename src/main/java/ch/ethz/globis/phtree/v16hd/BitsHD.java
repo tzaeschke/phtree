@@ -43,11 +43,6 @@ public class BitsHD {
 		return x >> 6;
 	}
 
-	@Deprecated
-	public static long[] bOr (long[] a, long[] b) {
-		throw new UnsupportedOperationException();
-	}
-
 
 	/**
 	 * The long[] equivalent of Long.bitCount(a ^ b).

@@ -9,8 +9,6 @@ package ch.ethz.globis.phtree.v16.bst;
 import java.util.NoSuchElementException;
 
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask.IteratorPos;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask.IteratorPosStack;
 
 /**
  * 
@@ -20,12 +18,9 @@ import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask.IteratorPosStack;
 public class BSTIteratorAll {
 
 
-	private BSTreePage currentPage = null;
-	private short currentPos = 0;
-	private final IteratorPosStack stack = new IteratorPosStack(20);
-	private long nextKey;
+	private BSTreePage currentPage;
+	private int currentPos;
 	private BSTEntry nextValue;
-	private boolean hasValue = false;
 	
 	public BSTIteratorAll() {
 		//nothing
@@ -33,99 +28,49 @@ public class BSTIteratorAll {
 	
 	public BSTIteratorAll reset(BSTreePage root) {
 		this.currentPage = root;
-		this.currentPos = -1;
-		this.hasValue = false;
-		this.stack.clear();
-		findFirstPosInPage();
+		this.currentPos = 0;
+
+		if (findFirstLeafPage()) {
+			findNext();
+		}
+
 		return this;
 	}
 
 
-	public boolean hasNextEntry() {
-		return hasValue;
-	}
-
-	
-	private void goToNextPage() {
-		if (stack.isEmpty()) {
-			//root->leaf
-			currentPage = null;
-			return;
-		}
-		IteratorPos ip = stack.pop();
-		currentPage = ip.page;
-		currentPos = ip.pos;
-		currentPos++;
-		
-		while (currentPos > currentPage.getNKeys()) {
-			if (stack.isEmpty()) {
-				close();
-				return;// false;
-			}
-			ip = stack.pop();
-			currentPage = ip.page;
-			currentPos = ip.pos;
-			currentPos++;
-		}
-
-		while (!currentPage.isLeaf()) {
-			//we are not on the first page here, so we can assume that pos=0 is correct to 
-			//start with
-
-			//read last page
-			stack.prepareAndPush(currentPage, currentPos);
-			currentPage = currentPage.getPageByPos(currentPos);
-			currentPos = 0;
-		}
-	}
-	
-	
-	private boolean goToFirstPage() {
+	private boolean findFirstLeafPage() {
 		while (!currentPage.isLeaf()) {
 			//the following is only for the initial search.
 			//The stored key[i] is the min-key of the according page[i+1}
 	    	if (currentPage.getNKeys() == -1) {
+	    		currentPage = null;
 				return false;
 	    	}
 	    	
-	    	currentPos++;
-	    	BSTreePage newPage = currentPage.getPageByPos(currentPos);
-			stack.prepareAndPush(currentPage, currentPos);
-			currentPage = newPage;
-			currentPos = -1;
+	    	currentPage = currentPage.getPageByPos(0);
 		}
 		return true;
 	}
 	
-	private void gotoPosInPage() {
-		nextKey = currentPage.getKeys()[currentPos];
-		nextValue = currentPage.getValues()[currentPos];
-		hasValue = true;
-		currentPos++;
-		
-		//now progress to next element
-		
-		//first progress to next page, if necessary.
-		if (currentPos >= currentPage.getNKeys()) {
-			goToNextPage();
-			if (currentPage == null) {
-				return;
+	private void findNext() {
+		while (currentPage != null ) {
+			//first progress to next page, if necessary.
+			if (currentPos >= currentPage.getNKeys()) {
+				currentPage = currentPage.getNextLeaf();
+				currentPos = 0;
+				continue;
 			}
-		}
-	}
 
-	private void findFirstPosInPage() {
-		//find first page
-		if (!goToFirstPage()) {
-			close();
+			nextValue = currentPage.getValues()[currentPos];
+			currentPos++;
 			return;
 		}
-
-		//find very first element. 
-		currentPos = 0;
-		gotoPosInPage();
 	}
 	
+
+	public boolean hasNextEntry() {
+		return currentPage != null;
+	}
 	
 	public BSTEntry nextEntry() {
 		if (!hasNextEntry()) {
@@ -133,32 +78,8 @@ public class BSTIteratorAll {
 		}
 
         BSTEntry ret = nextValue;
-		if (currentPage == null) {
-			hasValue = false;
-		} else {
-			gotoPosInPage();
-		}
+		findNext();
 		return ret;
-	}
-
-
-	public long nextKey() {
-		if (!hasNextEntry()) {
-			throw new NoSuchElementException();
-		}
-
-        long ret = nextKey;
-		if (currentPage == null) {
-			hasValue = false;
-		} else {
-			gotoPosInPage();
-		}
-		return ret;
-	}
-
-	
-	private void close() {
-		currentPage = null;
 	}
 
 }

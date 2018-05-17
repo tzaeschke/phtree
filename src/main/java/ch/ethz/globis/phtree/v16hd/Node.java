@@ -476,7 +476,7 @@ public class Node {
 	private BSTreePage bstCreateRoot() {
 
 		//bootstrap index
-		return bstCreatePage(null, true);
+		return bstCreatePage(null, true, null);
 	}
 
 
@@ -529,8 +529,8 @@ public class Node {
 		return page.getValueFromLeaf(key);
 	}
 
-	public BSTreePage bstCreatePage(BSTreePage parent, boolean isLeaf) {
-		return BSTreePage.create(this, parent, isLeaf);
+	public BSTreePage bstCreatePage(BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
+		return BSTreePage.create(this, parent, isLeaf, leftPredecessor);
 	}
 
 	BSTreePage getRoot() {

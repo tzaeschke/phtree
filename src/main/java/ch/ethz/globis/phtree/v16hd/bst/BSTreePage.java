@@ -29,41 +29,53 @@ public class BSTreePage {
 
 	private boolean isLeaf;
 	private BSTreePage[] subPages;
+	private BSTreePage prevLeaf;
+	private BSTreePage nextLeaf;
 
 
-	BSTreePage(Node ind, BSTreePage parent, boolean isLeaf) {
-		init(ind, parent, isLeaf);
+	BSTreePage(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
+		init(ind, parent, isLeaf, leftPredecessor);
 	}
 	
-	void init(Node ind, BSTreePage parent, boolean isLeaf) {
+	void init(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
+		nextLeaf = null;
+		prevLeaf = null;
 		this.parent = parent;
 		if (isLeaf) {
 			nEntries = 0;
 			int initialPageSize = ind.maxLeafN() <= 8 ? 2 : INITIAL_PAGE_SIZE;
 			keys = BSTPool.arrayCreateLong(initialPageSize);
 			values = BSTPool.arrayCreateEntries(initialPageSize);
+			subPages = null;
+			Node.statNLeaves++;
 		} else {
 			nEntries = -1;
 			keys = BSTPool.arrayCreateLong(ind.maxInnerN());
 			values = null;
-		}
-		
-		if (!isLeaf) {	
 			subPages = BSTPool.arrayCreateNodes(ind.maxInnerN() + 1);
 			Node.statNInner++;
-		} else {
-			subPages = null;
-			Node.statNLeaves++;
 		}
 		this.isLeaf = isLeaf;
+
+		if (isLeaf && leftPredecessor != null) {
+			nextLeaf = leftPredecessor.nextLeaf;
+			prevLeaf = leftPredecessor;
+			leftPredecessor.nextLeaf = this;
+			if (nextLeaf != null) {
+				nextLeaf.prevLeaf = this;
+			}
+		} else {
+			nextLeaf = null;
+			prevLeaf = null;
+		}
 	}
 
-	public static BSTreePage create(Node ind, BSTreePage parent, boolean isLeaf) {
-		return BSTPool.getNode(ind, parent, isLeaf);
+	public static BSTreePage create(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
+		return BSTPool.getNode(ind, parent, isLeaf, leftPredecessor);
 	}
 	
 	public static BSTreePage create(Node ind, BSTreePage parent, BSTreePage firstSubpage, BSTreePage secondSubpage) {
-		BSTreePage p = create(ind, parent, false);
+		BSTreePage p = create(ind, parent, false, null);
 		p.nEntries++;
 		p.subPages[0] = firstSubpage;
 		p.nEntries++;
@@ -213,7 +225,7 @@ public class BSTreePage {
         	return values[pos];
         } 
         
-        BSTEntry value = new BSTEntry(null, null, null);
+        BSTEntry value = new BSTEntry(key, null, null);
         
         if (nEntries < ind.maxLeafN()) {
         	//okay so we add it locally
@@ -240,7 +252,7 @@ public class BSTreePage {
         boolean isPrev = false;
         
         if (parent == null) {
-    		destP = ind.bstCreatePage(null, true);
+    		destP = ind.bstCreatePage(null, true, this);
     		isNew = true;
         } else {
 	        //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
@@ -258,7 +270,7 @@ public class BSTreePage {
 	        		destP = prev;
 	        		isPrev = true;
 	        	} else {
-	        		destP = ind.bstCreatePage(parent, true);
+	        		destP = ind.bstCreatePage(parent, true, this);
 	        		isNew = true;
 	        	}
 	        }
@@ -388,7 +400,7 @@ public class BSTreePage {
 			return;
 		} else {
 			//treat page overflow
-			BSTreePage newInner = ind.bstCreatePage(parent, false);
+			BSTreePage newInner = ind.bstCreatePage(parent, false, null);
 			
 			//TODO use optimized fill ratio for unique values, just like for leaves?.
 			int minInnerN = minInnerN(keys.length);
@@ -399,7 +411,7 @@ public class BSTreePage {
 
 			if (parent == null) {
 				//create a parent
-				BSTreePage newRoot = ind.bstCreatePage(null, false);
+				BSTreePage newRoot = ind.bstCreatePage(null, false, null);
 				newRoot.subPages[0] = this;
 				newRoot.nEntries = 0;  // 0: indicates one leaf / zero keys
 				this.setParent( newRoot );
@@ -794,6 +806,22 @@ public class BSTreePage {
 		keys = null;
 		values = null;
 		subPages = null;
+		nextLeaf = null;
+		prevLeaf = null;
+		parent = null;
+	}
+
+	BSTreePage getNextLeaf() {
+		return nextLeaf;
+	}
+
+	void updateNeighborsRemove() {
+		if (prevLeaf != null) {
+			prevLeaf.nextLeaf = nextLeaf;
+		}
+		if (nextLeaf != null) {
+			nextLeaf.prevLeaf = prevLeaf;
+		}
 	}
 
 }

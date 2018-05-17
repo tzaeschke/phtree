@@ -7,8 +7,6 @@
 package ch.ethz.globis.phtree.v16hd.bst;
 
 import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask.IteratorPos;
-import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask.IteratorPosStack;
 
 /**
  * 
@@ -17,10 +15,8 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask.IteratorPosStack;
  */
 public class BSTIteratorToArray {
 
-
 	private BSTEntry[] entries;
 	private int nEntries;
-	private final IteratorPosStack stack = new IteratorPosStack(20);
 
 	
 	public BSTIteratorToArray() {
@@ -28,50 +24,18 @@ public class BSTIteratorToArray {
 	}
 	
 	public BSTIteratorToArray reset(BSTreePage root, BSTEntry[] entries) {
-		this.stack.clear();
 		this.entries = entries;
 		this.nEntries = 0;
-		findAll(root);
+
+		//find first page
+		BSTreePage page = findFirstLeafPage(root);
+		readLeafPages(page);
+		
 		return this;
 	}
 
 
-	private BSTreePage goToNextLeafPage() {
-		if (stack.isEmpty()) {
-			//root->leaf
-			return null;
-		}
-		IteratorPos ip = stack.pop();
-		BSTreePage currentPage = ip.page;
-		short currentPos = ip.pos;
-		currentPos++;
-		
-		//traverse to root
-		while (currentPos > currentPage.getNKeys()) {
-			if (stack.isEmpty()) {
-				return null;
-			}
-			ip = stack.pop();
-			currentPage = ip.page;
-			currentPos = ip.pos;
-			currentPos++;
-		}
-
-		//traverse to leaf
-		while (!currentPage.isLeaf()) {
-			//we are not on the first page here, so we can assume that pos=0 is correct to 
-			//start with
-
-			//read last page
-			stack.prepareAndPush(currentPage, currentPos);
-			currentPage = currentPage.getPageByPos(currentPos);
-			currentPos = 0;
-		}
-		return currentPage;
-	}
-	
-	
-	private BSTreePage goToFirstPage(BSTreePage currentPage) {
+	private BSTreePage findFirstLeafPage(BSTreePage currentPage) {
 		while (!currentPage.isLeaf()) {
 			//the following is only for the initial search.
 			//The stored key[i] is the min-key of the according page[i+1}
@@ -79,37 +43,23 @@ public class BSTIteratorToArray {
 				return null;
 	    	}
 	    	
-	    	short currentPos = 0;
-	    	BSTreePage newPage = currentPage.getPageByPos(currentPos);
-			stack.prepareAndPush(currentPage, currentPos);
-			currentPage = newPage;
+	    	currentPage = currentPage.getPageByPos(0);
 		}
 		return currentPage;
 	}
 	
-	private void readLeafPage(BSTreePage currentPage) {
-		BSTEntry[] values = currentPage.getValues();
-		System.arraycopy(values, 0, entries, nEntries, currentPage.getNKeys());
-		nEntries += currentPage.getNKeys();
-	}
-
-	private void findAll(BSTreePage root) {
-		//find first page
-		BSTreePage page = goToFirstPage(root);
-		if (page == null) {
-			return;
+	
+	private void readLeafPages(BSTreePage currentPage) {
+		while (currentPage != null) {
+			BSTEntry[] values = currentPage.getValues();
+			System.arraycopy(values, 0, entries, nEntries, currentPage.getNKeys());
+			nEntries += currentPage.getNKeys();
+			currentPage = currentPage.getNextLeaf();
 		}
-
-		//iterate over all pages
-		do {
-			readLeafPage(page);
-			page = goToNextLeafPage();
-		} while (page != null);
 	}
 
 
 	public int getNEntries() {
 		return nEntries;
 	}
-
 }

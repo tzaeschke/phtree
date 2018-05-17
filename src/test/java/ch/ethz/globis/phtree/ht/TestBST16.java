@@ -7,6 +7,8 @@
 package ch.ethz.globis.phtree.ht;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 import java.util.Collections;
 import java.util.List;
@@ -80,7 +82,7 @@ public class TestBST16 {
 		long l11 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
 			//if (i%1000 == 0) 
-			//	System.out.println("ins=" + i);
+			//System.out.println("ins=" + i);
 			//ht.bstPut((Integer)i.getValue(), i);
 			BSTEntry newBE = ht.bstGetOrCreate((int)i.getValue());
 			newBE.set((int)i.getValue(), i.getKdKey(), i.getValue());
@@ -88,6 +90,16 @@ public class TestBST16 {
 			//Check
 			BSTEntry be = ht.bstGet((Integer)i.getValue());
 			assertEquals((int)i.getValue(), (int)be.getValue());
+			
+			//TODO remove
+//			BSTIteratorAll iter = ht.iterator();
+//			long prev = -1;
+//			while (iter.hasNextEntry()) {
+//				long current = iter.nextEntry().getKey();
+//				assertEquals(prev + 1, current);
+//				prev = current;
+//			}
+//			assertEquals(i.getKey(), prev);
 		}
 		long l12 = System.currentTimeMillis();
 		assertEquals(list.size(), ht.getEntryCount());
@@ -109,22 +121,34 @@ public class TestBST16 {
 		BSTIteratorAll iter = ht.iterator();
 		long prev = -1;
 		while (iter.hasNextEntry()) {
-			long current = iter.nextKey();
+			long current = iter.nextEntry().getKey();
 			assertEquals(prev + 1, current);
 			prev = current;
 		}
 		assertEquals(prev, list.size() - 1);
 		long l52 = System.currentTimeMillis();
+
 		long l61 = System.currentTimeMillis();
 		BSTIteratorMask iterMask = ht.iteratorMask(0, 0xFFFFFFFFFFFEL);
 		prev = -2;
 		while (iterMask.hasNextEntry()) {
-			long current = iterMask.nextKey();
+			long current = iterMask.nextEntry().getKey();
 			assertEquals(prev + 2, current);
 			prev = current;
 		}
 		assertEquals(prev, list.size() - 2);
 		long l62 = System.currentTimeMillis();
+		
+//		long l71 = System.currentTimeMillis();
+//		BSTIteratorLeafAll iterLeaf = new BSTIteratorLeafAll().reset(ht.getRoot());
+//		prev = -1;
+//		while (iterLeaf.hasNextEntry()) {
+//			long current = iterLeaf.nextEntry().getKey();
+//			assertEquals(prev + 1, current);
+//			prev = current;
+//		}
+//		assertEquals(prev, list.size() - 1);
+//		long l72 = System.currentTimeMillis();
 		
 		//replace some
 		long l31 = System.currentTimeMillis();
@@ -132,8 +156,6 @@ public class TestBST16 {
 			//ht.bstPut((Integer)i.getValue(), new BSTEntry(i.getKdKey(), -(Integer)i.getValue()));
 			BSTEntry newBE = ht.bstGetOrCreate((Integer)i.getValue());
 			newBE.setValue(-(Integer)i.getValue());
-
-			//if (i%1000 == 0) System.out.println("rep=" + i);
 		}
 		long l32 = System.currentTimeMillis();
 		assertEquals(list.size(), ht.getEntryCount());
@@ -141,15 +163,7 @@ public class TestBST16 {
 		//remove some
 		long l41 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
-//			System.out.println(ht.toStringTree());
-			
-			//if (i%1000 == 0) 
-//			System.out.println("rem=" + i.getValue());
-//			System.out.println("rem2=" + ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null));
 			assertEquals(-(Integer)i.getValue(), ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null).getValue());
-//			if (ht.size() % 100_000 == 0) {
-//				println(ht.getStats().toString());
-//			}
 		}
 		long l42 = System.currentTimeMillis();
 		assertEquals(0, ht.getEntryCount());
@@ -158,6 +172,7 @@ public class TestBST16 {
 		println(prefix + "Get:  " + (l22-l21));
 		println(prefix + "Iter: " + (l52-l51));
 		println(prefix + "IterM:" + (l62-l61));
+//		println(prefix + "IterL:" + (l72-l71));
 		println(prefix + "Load: " + (l32-l31));
 		println(prefix + "Rem : " + (l42-l41));
 		println();
@@ -172,4 +187,51 @@ public class TestBST16 {
 		System.out.println(str);
 	}
 	
+	
+	@Test
+	public void testEmpty() {
+		Node ht = create();
+		checkEmpty(ht);
+	}
+	
+	@Test
+	public void testEmptyAfterLoad() {
+		Node ht = create();
+		
+		for (int r = 0; r < 10; r++) {
+		
+			for (int i = 0; i < 100000; i++) {
+				BSTEntry e = ht.bstGetOrCreate(i);
+				e.set(i, new long[] {i}, i);
+			}
+			
+			for (int i = 0; i < 100000; i++) {
+				BSTEntry e = ht.bstRemove(i, new long[] {i}, null);
+				assertEquals(i, (int)e.getValue());
+			}
+		
+			checkEmpty(ht);
+		}
+	}
+	
+	private void checkEmpty(Node ht) {
+		assertEquals(0, ht.getEntryCount());
+		
+		BSTEntry e = ht.bstGet(12345);
+		assertNull(e);
+		
+		//iterate
+		BSTIteratorAll iter = ht.iterator();
+		assertFalse(iter.hasNextEntry());
+
+		BSTIteratorMask iterMask = ht.iteratorMask(0, 0xFFFFFFFFFFFEL);
+		assertFalse(iterMask.hasNextEntry());
+		
+//		BSTIteratorLeafAll iterLeaf = new BSTIteratorLeafAll().reset(ht.getRoot());
+//		assertFalse(iterLeaf.hasNextEntry());
+				
+		BSTEntry e2 = ht.bstRemove(12345, null, null);
+		assertNull(e2);
+	}
+
 }
