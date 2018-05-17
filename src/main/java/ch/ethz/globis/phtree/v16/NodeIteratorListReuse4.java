@@ -63,7 +63,7 @@ public class NodeIteratorListReuse4<T, R> {
 
 	
 	private final int dims;
-	private final PhQueryKnnMbbPPList4<T>.KnnResultList4 results;
+	private final PhQueryKnnMbbPPList<T>.KnnResultList results;
 	private final PhFilterDistance checker;
 
 	private final PhIteratorStack pool;
@@ -236,7 +236,7 @@ public class NodeIteratorListReuse4<T, R> {
 	}
 
 	
-	NodeIteratorListReuse4(int dims, PhQueryKnnMbbPPList4<T>.KnnResultList4 results, PhFilterDistance checker) {
+	NodeIteratorListReuse4(int dims, PhQueryKnnMbbPPList<T>.KnnResultList results, PhFilterDistance checker) {
 		this.dims = dims;
 		this.results = results;
 		this.pool = new PhIteratorStack();
