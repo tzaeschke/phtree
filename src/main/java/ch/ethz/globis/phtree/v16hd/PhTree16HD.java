@@ -185,7 +185,7 @@ public class PhTree16HD<T> implements PhTree<T> {
 				stats.q_nPostFixN[currentDepth]++;
 			}
 		}
-		if (entries.size() != node.ntGetSize()) {
+		if (entries.size() != node.getEntryCount()) {
 			System.err.println("WARNING: entry count mismatch: a-found/ec=" + 
 					entries.size() + "/" + node.getEntryCount());
 		}
@@ -233,7 +233,7 @@ public class PhTree16HD<T> implements PhTree<T> {
     void insertRoot(long[] key, Object value) {
         root = Node.createNode(dims, 0, DEPTH_64-1);
         long[] pos = posInArrayHD(key, root.getPostLen());
-        root.addPostPIN(pos, -1, key, value);
+        root.addEntry(pos, key, value);
         increaseNrEntries();
     }
 

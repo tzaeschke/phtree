@@ -89,27 +89,14 @@ public class NodeIteratorListReuse4<T, R> {
 		}
 
 		
-		private void checkAndRunSubnode(Node sub, long[] subPrefix) {
-			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
-				NodeIteratorListReuse.AMMN4++;
-				run(sub, subPrefix);
-			}
-		}
-
-
 		private void checkEntry(BSTEntry be) {
 			Object v = be.getValue();
-			NodeIteratorListReuse.AMM1++;
-			NodeIteratorListReuse.CE1++;
 			if (v instanceof Node) {
-				NodeIteratorListReuse.CE2++;
-				NodeIteratorListReuse.AMMN2++;
-				NodeIteratorListReuse.AMMN3++;
-				checkAndRunSubnode((Node) v, be.getKdKey());
+				Node sub = (Node) v;
+				if (results.phIsPrefixValid( be.getKdKey(), sub.getPostLen()+1)) {
+					run(sub, be.getKdKey());
+				}
 			} else if (v != null) { 
-				NodeIteratorListReuse.CE3++;
-				NodeIteratorListReuse.AMM2++;
-				NodeIteratorListReuse.AMM3++;
 				results.phOffer(be);
 			}
 		}
@@ -211,8 +198,6 @@ public class NodeIteratorListReuse4<T, R> {
 				start++;
 			}
 		
-			NodeIteratorListReuse.HD11 += bufferSize;
-
 			//Calculate how many permutations are at most possible
 			double[] distances = new double[dims];
 			PhDistance dist = checker.getDistance(); 
@@ -229,7 +214,6 @@ public class NodeIteratorListReuse4<T, R> {
 				if (Long.bitCount(buffer[i].getKey() ^ divePos) > nMaxPermutatedBits) {
 					break;
 				}
-				NodeIteratorListReuse.HD12++;
 				checkEntry(buffer[i]);
 			}
 		}

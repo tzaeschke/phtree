@@ -100,7 +100,7 @@ public class BSTreePage {
 	
 	public BSTreePage findSubPage(long[] key) {
 		//The stored value[i] is the min-values of the according page[i+1} 
-        int pos = binarySearch(0, nEntries, key);
+        int pos = binarySearch(key);
         if (pos >= 0) {
             //pos of matching key
             pos++;
@@ -112,8 +112,8 @@ public class BSTreePage {
 	}
 	
 	public BSTEntry findAndRemove(long[] key, long[] kdKey, Node node, PhTree16HD.UpdateInfo ui) {
-		//The stored value[i] is the min-values of the according page[i+1} 
-        int pos = binarySearch(0, nEntries, key);
+		//The stored value[i] is the min-values of the according        int pos = binarySearch(key);
+        int pos = binarySearch(key);
         if (pos >= 0) {
             //pos of matching key
             pos++;
@@ -136,7 +136,7 @@ public class BSTreePage {
 
 	public Object getOrCreate(long[] key, Node ind) {
 		//The stored value[i] is the min-values of the according page[i+1} 
-        int pos = binarySearch(0, nEntries, key);
+        int pos = binarySearch(key);
         if (pos >= 0) {
             //pos of matching key
             pos++;
@@ -161,7 +161,7 @@ public class BSTreePage {
 	
 
 	public BSTEntry getValueFromLeaf(long[] key) {
-		int pos = binarySearch(0, nEntries, key);
+		int pos = binarySearch(key);
 		if (pos >= 0) {
             return values[pos];
 		}
@@ -176,8 +176,8 @@ public class BSTreePage {
 	 * @param toIndex Exclusive, search stops at (toIndex-1).
 	 * @param value For non-unique trees, the value is taken into account as well.
 	 */
-	int binarySearch(int fromIndex, int toIndex, long[] key) {
-		return BitsHD.binarySearch(keys, fromIndex, toIndex, key);
+	int binarySearch(long[] key) {
+		return BitsHD.binarySearch(keys, 0, nEntries, key);
 	}
 
 	private final void putUnchecked(int pos, long[] key, BSTEntry value, Node ind) {
@@ -219,7 +219,7 @@ public class BSTreePage {
 		}
 
 		//in any case, check whether the key(+value) already exists
-        int pos = binarySearch(0, nEntries, key);
+        int pos = binarySearch(key);
         //key found? -> pos >=0
         if (pos >= 0) {
         	return values[pos];
@@ -361,7 +361,7 @@ public class BSTreePage {
 			if (keyPos == NO_POS) {
 			
 				//For now, we assume a unique index.
-				int i = binarySearch(0, nEntries, minKey);
+				int i = binarySearch(minKey);
 				//If the key has a perfect match then something went wrong. This should
 				//never happen so we don't need to check whether (i < 0).
 				keyPos = -(i+1);
@@ -503,7 +503,7 @@ public class BSTreePage {
 	
 
 	public BSTEntry remove(long[] key, long[] kdKey, Node node, PhTree16HD.UpdateInfo ui) {
-        int i = binarySearch(0, nEntries, key);
+        int i = binarySearch(key);
         if (i < 0) {
         	//key not found
         	return null;

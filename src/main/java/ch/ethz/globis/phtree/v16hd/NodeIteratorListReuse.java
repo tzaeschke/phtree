@@ -50,47 +50,6 @@ public class NodeIteratorListReuse<T, R> {
 		}
 	}
 
-	@Deprecated
-	public static long AMM1;
-	@Deprecated
-	public static long AMM2;
-	@Deprecated
-	public static long AMM3;
-	@Deprecated
-	public static long AMM4;
-	@Deprecated
-	public static long AMM5;
-
-	@Deprecated
-	public static long AMMN2;
-	@Deprecated
-	public static long AMMN3;
-	@Deprecated
-	public static long AMMN4;
-
-	@Deprecated
-	public static long MMM1;
-	@Deprecated
-	public static long MMM2;
-	@Deprecated
-	public static long MMM3;
-
-	@Deprecated
-	public static long HD11;
-	@Deprecated
-	public static long HD12;
-	@Deprecated
-	public static long HD21;
-	@Deprecated
-	public static long HD22;
-	
-	@Deprecated
-	public static long CE1;
-	@Deprecated
-	public static long CE2;
-	@Deprecated
-	public static long CE3;
-
 	
 	private final int dims;
 	private final PhResultList<T,R> results;
@@ -102,8 +61,7 @@ public class NodeIteratorListReuse<T, R> {
 	
 	private final class NodeIterator {
 	
-		private Node node;
-		private BSTIteratorMask niIterator;
+		private final BSTIteratorMask niIterator = new BSTIteratorMask();
 		private final long[] maskLower;
 		private final long[] maskUpper;
 
@@ -124,28 +82,16 @@ public class NodeIteratorListReuse<T, R> {
 		 * @param maxValue
 		 */
 		void reinitAndRun(Node node, long[] prefix) {
-			this.node = node;
-			//TODO do not pass as argument....
-			calcLimits(rangeMin, rangeMax, prefix);
+			calcLimits(node, rangeMin, rangeMax, prefix);
 
-			if (niIterator == null) {
-				niIterator = node.ntIteratorWithMask(maskLower, maskUpper);
-			} else {
-				niIterator.reset(node.getRoot(), maskLower,  maskUpper);
-			}
+			this.niIterator.reset(node.getRoot(), maskLower,  maskUpper);
 
 			getAll();
 		}
 
 		
-		private void checkAndAddResult(PhEntry<T> e) {
-			results.phOffer(e);
-			//TODO when accepted, adapt min/max?!?!?!?!
-		}
-
 		private void checkAndRunSubnode(Node sub, long[] subPrefix) {
 			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
-				AMMN4++;
 				run(sub, subPrefix);
 			}
 		}
@@ -153,23 +99,18 @@ public class NodeIteratorListReuse<T, R> {
 
 		@SuppressWarnings("unchecked")
 		private void readValue(BSTEntry candidate) {
-			AMM3++;
 			//TODO avoid getting/assigning element? -> Most entries fail!
 			PhEntry<T> result = results.phGetTempEntry();
 			result.setKeyInternal(candidate.getKdKey());
 			result.setValueInternal((T) candidate.getValue());
-			checkAndAddResult(result);
+			results.phOffer(result);
 		}
 		
 		private void checkEntry(BSTEntry be) {
 			Object v = be.getValue();
-			AMM1++;
 			if (v instanceof Node) {
-				AMMN2++;
-				AMMN3++;
 				checkAndRunSubnode((Node) v, be.getKdKey());
 			} else if (v != null) { 
-				AMM2++;
 				readValue(be);
 			}
 		}
@@ -180,26 +121,18 @@ public class NodeIteratorListReuse<T, R> {
 
 
 		private void niAllNext() {
-			//iterator?
 			niAllNextIterator();
 		}
 		
 		private void niAllNextIterator() {
-			//ITERATOR is used for DIM>6 or if results are dense 
 			while (niIterator.hasNextEntry() && results.size() < maxResults) {
 				BSTEntry be = niIterator.nextEntry();
 				checkEntry(be);
 			}
 		}
 
-		/**
-		 * 
-		 * @param rangeMin
-		 * @param rangeMax
-		 * @param valTemplate
-		 * @param postLen
-		 */
-		private void calcLimits(long[] rangeMin, long[] rangeMax, long[] prefix) {
+
+		private void calcLimits(Node node, long[] rangeMin, long[] rangeMax, long[] prefix) {
 			//create limits for the local node. there is a lower and an upper limit. Each limit
 			//consists of a series of DIM bit, one for each dimension.
 			//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
@@ -291,62 +224,6 @@ public class NodeIteratorListReuse<T, R> {
 	}
 	
 	void run(Node node, long[] prefix) {
-//		//create limits for the local node. there is a lower and an upper limit. Each limit
-//		//consists of a series of DIM bit, one for each dimension.
-//		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
-//		//not need to be queried.
-//		//For the upper limit, a '0' indicates that the 'higher' half does not need to be 
-//		//queried.
-//		//
-//		//              ||  lowerLimit=0 || lowerLimit=1 || upperLimit = 0 || upperLimit = 1
-//		// =============||===================================================================
-//		// query lower  ||     YES             NO
-//		// ============ || ==================================================================
-//		// query higher ||                                     NO               YES
-//		//
-//		long maskHcBit = 1L << node.getPostLen();
-//		long maskVT = (-1L) << node.getPostLen();
-//		long[] lowerLimit = this.0;
-//		long[] upperLimit = 0;
-//		//to prevent problems with signed long when using 64 bit
-//		if (maskHcBit >= 0) { //i.e. postLen < 63
-//			for (int i = 0; i < rangeMin.length; i++) {
-//				lowerLimit <<= 1;
-//				upperLimit <<= 1;
-//				long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
-//				if (rangeMin[i] >= nodeBisection) {
-//					//==> set to 1 if lower value should not be queried 
-//					lowerLimit |= 1L;
-//				}
-//				if (rangeMax[i] >= nodeBisection) {
-//					//Leave 0 if higher value should not be queried.
-//					upperLimit |= 1L;
-//				}
-//			}
-//		} else {
-//			//special treatment for signed longs
-//			//The problem (difference) here is that a '1' at the leading bit does indicate a
-//			//LOWER value, opposed to indicating a HIGHER value as in the remaining 63 bits.
-//			//The hypercube assumes that a leading '0' indicates a lower value.
-//			//Solution: We leave HC as it is.
-//
-//			for (int i = 0; i < rangeMin.length; i++) {
-//				lowerLimit <<= 1;
-//				upperLimit <<= 1;
-//				if (rangeMin[i] < 0) {
-//					//If minimum is positive, we don't need the search negative values 
-//					//==> set upperLimit to 0, prevent searching values starting with '1'.
-//					upperLimit |= 1L;
-//				}
-//				if (rangeMax[i] < 0) {
-//					//Leave 0 if higher value should not be queried
-//					//If maximum is negative, we do not need to search positive values 
-//					//(starting with '0').
-//					//--> lowerLimit = '1'
-//					lowerLimit |= 1L;
-//				}
-//			}
-//		}
 		NodeIterator nIt = pool.prepare();
 		nIt.reinitAndRun(node, prefix);
 		pool.pop();

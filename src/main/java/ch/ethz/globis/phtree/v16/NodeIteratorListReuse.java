@@ -50,49 +50,7 @@ public class NodeIteratorListReuse<T, R> {
 		}
 	}
 
-	@Deprecated
-	public static long AMM1;
-	@Deprecated
-	public static long AMM2;
-	@Deprecated
-	public static long AMM3;
-	@Deprecated
-	public static long AMM4;
-	@Deprecated
-	public static long AMM5;
-
-	@Deprecated
-	public static long AMMN2;
-	@Deprecated
-	public static long AMMN3;
-	@Deprecated
-	public static long AMMN4;
-
-	@Deprecated
-	public static long MMM1;
-	@Deprecated
-	public static long MMM2;
-	@Deprecated
-	public static long MMM3;
-
-	@Deprecated
-	public static long HD11;
-	@Deprecated
-	public static long HD12;
-	@Deprecated
-	public static long HD21;
-	@Deprecated
-	public static long HD22;
 	
-	@Deprecated
-	public static long CE1;
-	@Deprecated
-	public static long CE2;
-	@Deprecated
-	public static long CE3;
-
-	
-	private final int dims;
 	private final PhResultList<T,R> results;
 	private int maxResults;
 	private long[] rangeMin;
@@ -102,11 +60,10 @@ public class NodeIteratorListReuse<T, R> {
 	
 	private final class NodeIterator {
 	
-		private Node node;
-		private BSTIteratorMask niIterator;
+		private final BSTIteratorMask niIterator = new BSTIteratorMask();
 		private long maskLower;
 		private long maskUpper;
-		private boolean useHcIncrementer;
+
 
 		/**
 		 * 
@@ -119,50 +76,17 @@ public class NodeIteratorListReuse<T, R> {
 		 * 				   If the found value is lower, the search continues.
 		 * @param maxValue
 		 */
-		void reinitAndRun(Node node, long lower, long upper) {
-			this.node = node;
-			this.maskLower = lower;
-			this.maskUpper = upper;
+		void reinitAndRun(Node node, long[] prefix) {
+			calcLimits(node, rangeMin, rangeMax, prefix);
 
-			useHcIncrementer = false;
-			if (niIterator == null) {
-				niIterator = node.ntIteratorWithMask(maskLower, maskUpper);
-			} else {
-				niIterator.reset(node.getRoot(), maskLower,  maskUpper);
-			}
-
-			if (dims > 6) {
-				initHCI();
-			}
+			this.niIterator.reset(node.getRoot(), maskLower,  maskUpper);
 
 			getAll();
 		}
 
-		private void initHCI() {
-			//LHC, NI, ...
-			long maxHcAddr = ~((-1L)<<dims);
-			int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
-			//nPossibleMatch = (2^k-x)
-			long nPossibleMatch = 1L << (dims - nSetFilterBits);
-			int nChild = node.ntGetSize();
-			int logNChild = Long.SIZE - Long.numberOfLeadingZeros(nChild);
-			//the following will overflow for k=60
-			//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
-			useHcIncrementer = PhTree16.HCI_ENABLED && dims < 50 
-					&& (nChild > nPossibleMatch*(double)logNChild*2);
-			if (!useHcIncrementer) {
-				niIterator.reset(node.getRoot(), maskLower, maskUpper);
-			}
-		}
 		
-		private void checkAndAddResult(PhEntry<T> e) {
-			results.phOffer(e);
-			//TODO when accepted, adapt min/max?!?!?!?!
-		}
-
 		private void checkAndRunSubnode(Node sub, long[] subPrefix) {
 			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
-				AMMN4++;
 				run(sub, subPrefix);
 			}
 		}
@@ -170,23 +94,18 @@ public class NodeIteratorListReuse<T, R> {
 
 		@SuppressWarnings("unchecked")
 		private void readValue(BSTEntry candidate) {
-			AMM3++;
 			//TODO avoid getting/assigning element? -> Most entries fail!
 			PhEntry<T> result = results.phGetTempEntry();
 			result.setKeyInternal(candidate.getKdKey());
 			result.setValueInternal((T) candidate.getValue());
-			checkAndAddResult(result);
+			results.phOffer(result);
 		}
 		
 		private void checkEntry(BSTEntry be) {
 			Object v = be.getValue();
-			AMM1++;
 			if (v instanceof Node) {
-				AMMN2++;
-				AMMN3++;
 				checkAndRunSubnode((Node) v, be.getKdKey());
 			} else if (v != null) { 
-				AMM2++;
 				readValue(be);
 			}
 		}
@@ -197,46 +116,80 @@ public class NodeIteratorListReuse<T, R> {
 
 
 		private void niAllNext() {
-			//iterator?
-			if (useHcIncrementer) {
-				niAllNextHCI();
-			} else {
-				niAllNextIterator();
-			}
+			niAllNextIterator();
 		}
 		
 		private void niAllNextIterator() {
-			//ITERATOR is used for DIM>6 or if results are dense 
 			while (niIterator.hasNextEntry() && results.size() < maxResults) {
 				BSTEntry be = niIterator.nextEntry();
 				checkEntry(be);
 			}
-			//TODO Adapt BST-Iterator to skip sub-nodes if check(current)==false -> searchNext(inc(current))  
-			return;
-		}
+		}		
+		
 
-		private void niAllNextHCI() {
-			//HCI is used for DIM <=6 or if results are sparse
-			//repeat until we found a value inside the given range
-			long currentPos = maskLower; 
-			while (results.size() < maxResults) {
-				BSTEntry be = node.ntGetEntry(currentPos);
-				//sub-node?
-				if (be != null) {
-					checkEntry(be);
+		private void calcLimits(Node node, long[] rangeMin, long[] rangeMax, long[] prefix) {
+			//create limits for the local node. there is a lower and an upper limit. Each limit
+			//consists of a series of DIM bit, one for each dimension.
+			//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
+			//not need to be queried.
+			//For the upper limit, a '0' indicates that the 'higher' half does not need to be 
+			//queried.
+			//
+			//              ||  lowerLimit=0 || lowerLimit=1 || upperLimit = 0 || upperLimit = 1
+			// =============||===================================================================
+			// query lower  ||     YES             NO
+			// ============ || ==================================================================
+			// query higher ||                                     NO               YES
+			//
+			long maskHcBit = 1L << node.getPostLen();
+			long maskVT = (-1L) << node.getPostLen();
+			long lowerLimit = 0;
+			long upperLimit = 0;
+			//to prevent problems with signed long when using 64 bit
+			if (maskHcBit >= 0) { //i.e. postLen < 63
+				for (int i = 0; i < rangeMin.length; i++) {
+					lowerLimit <<= 1;
+					upperLimit <<= 1;
+					long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
+					if (rangeMin[i] >= nodeBisection) {
+						//==> set to 1 if lower value should not be queried 
+						lowerLimit |= 1L;
+					}
+					if (rangeMax[i] >= nodeBisection) {
+						//Leave 0 if higher value should not be queried.
+						upperLimit |= 1L;
+					}
 				}
-				
-				currentPos = PhTree16.inc(currentPos, maskLower, maskUpper);
-				if (currentPos <= maskLower) {
-					break;
+			} else {
+				//special treatment for signed longs
+				//The problem (difference) here is that a '1' at the leading bit does indicate a
+				//LOWER value, opposed to indicating a HIGHER value as in the remaining 63 bits.
+				//The hypercube assumes that a leading '0' indicates a lower value.
+				//Solution: We leave HC as it is.
+
+				for (int i = 0; i < rangeMin.length; i++) {
+					lowerLimit <<= 1;
+					upperLimit <<= 1;
+					if (rangeMin[i] < 0) {
+						//If minimum is positive, we don't need the search negative values 
+						//==> set upperLimit to 0, prevent searching values starting with '1'.
+						upperLimit |= 1L;
+					}
+					if (rangeMax[i] < 0) {
+						//Leave 0 if higher value should not be queried
+						//If maximum is negative, we do not need to search positive values 
+						//(starting with '0').
+						//--> lowerLimit = '1'
+						lowerLimit |= 1L;
+					}
 				}
 			}
+			this.maskLower = lowerLimit;
+			this.maskUpper = upperLimit;
 		}
-		
 	}
 	
-	NodeIteratorListReuse(int dims, PhResultList<T, R> results) {
-		this.dims = dims;
+	NodeIteratorListReuse(PhResultList<T, R> results) {
 		this.results = results;
 		this.pool = new PhIteratorStack();
 	}
@@ -251,64 +204,8 @@ public class NodeIteratorListReuse<T, R> {
 	}
 	
 	void run(Node node, long[] prefix) {
-		//create limits for the local node. there is a lower and an upper limit. Each limit
-		//consists of a series of DIM bit, one for each dimension.
-		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
-		//not need to be queried.
-		//For the upper limit, a '0' indicates that the 'higher' half does not need to be 
-		//queried.
-		//
-		//              ||  lowerLimit=0 || lowerLimit=1 || upperLimit = 0 || upperLimit = 1
-		// =============||===================================================================
-		// query lower  ||     YES             NO
-		// ============ || ==================================================================
-		// query higher ||                                     NO               YES
-		//
-		long maskHcBit = 1L << node.getPostLen();
-		long maskVT = (-1L) << node.getPostLen();
-		long lowerLimit = 0;
-		long upperLimit = 0;
-		//to prevent problems with signed long when using 64 bit
-		if (maskHcBit >= 0) { //i.e. postLen < 63
-			for (int i = 0; i < rangeMin.length; i++) {
-				lowerLimit <<= 1;
-				upperLimit <<= 1;
-				long nodeBisection = (prefix[i] | maskHcBit) & maskVT; 
-				if (rangeMin[i] >= nodeBisection) {
-					//==> set to 1 if lower value should not be queried 
-					lowerLimit |= 1L;
-				}
-				if (rangeMax[i] >= nodeBisection) {
-					//Leave 0 if higher value should not be queried.
-					upperLimit |= 1L;
-				}
-			}
-		} else {
-			//special treatment for signed longs
-			//The problem (difference) here is that a '1' at the leading bit does indicate a
-			//LOWER value, opposed to indicating a HIGHER value as in the remaining 63 bits.
-			//The hypercube assumes that a leading '0' indicates a lower value.
-			//Solution: We leave HC as it is.
-
-			for (int i = 0; i < rangeMin.length; i++) {
-				lowerLimit <<= 1;
-				upperLimit <<= 1;
-				if (rangeMin[i] < 0) {
-					//If minimum is positive, we don't need the search negative values 
-					//==> set upperLimit to 0, prevent searching values starting with '1'.
-					upperLimit |= 1L;
-				}
-				if (rangeMax[i] < 0) {
-					//Leave 0 if higher value should not be queried
-					//If maximum is negative, we do not need to search positive values 
-					//(starting with '0').
-					//--> lowerLimit = '1'
-					lowerLimit |= 1L;
-				}
-			}
-		}
 		NodeIterator nIt = pool.prepare();
-		nIt.reinitAndRun(node, lowerLimit, upperLimit);
+		nIt.reinitAndRun(node, prefix);
 		pool.pop();
 	}
 

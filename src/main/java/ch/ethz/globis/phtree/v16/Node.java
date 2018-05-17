@@ -111,7 +111,7 @@ public class Node {
 		long hcPos = posInArray(keyToMatch, getPostLen());
 
 		//ntPut will also increase the node-entry count
-		Object v = ntPut(hcPos, keyToMatch, newValueToInsert);
+		Object v = addEntry(hcPos, keyToMatch, newValueToInsert);
 		//null means: Did not exist, or we had to do a split...
 		if (v == null) {
 			tree.increaseNrEntries();
@@ -256,7 +256,7 @@ public class Node {
 			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;  
 			node.setInfixLen(newSubInfixLen);
 		} 
-		ntPut(hcPos, newKey, value);
+		addEntry(hcPos, newKey, value);
 		return;
 	}
 
@@ -279,23 +279,6 @@ public class Node {
 		//We use 'null' as parameter to indicate that we want replacement, rather than splitting,
 		//if the value exists.
 		replaceEntry(hcPos, kdKey, value);
-	}
-	
-	/**
-	 * General contract:
-	 * Returning a value or NULL means: Value was replaced, no change in counters
-	 * Returning a Node means: Traversal not finished, no change in counters
-	 * Returning null means: Insert successful, please update global entry counter
-	 * 
-	 * Node entry counters are updated internally by the operation
-	 * Node-counting is done by the NodePool.
-	 * 
-	 * @param hcPos
-	 * @param dims
-	 * @return
-	 */
-	Object ntPut(long hcPos, long[] kdKey, Object value) {
-		return addEntry(hcPos, kdKey, value);
 	}
 	
 	/**
@@ -327,23 +310,7 @@ public class Node {
 		BSTEntry e = getEntry(hcPos, keyToMatch);
 		return e != null ? e.getValue() : null;
 	}
-
-	int ntGetSize() {
-		return getEntryCount();
-	}
 	
-
-	/**
-	 * 
-	 * @param hcPos
-	 * @param pin position in node: ==hcPos for AHC or pos in array for LHC
-	 * @param key
-	 */
-	void addPostPIN(long hcPos, int pin, long[] key, Object value) {
-		ntPut(hcPos, key, value);
-		return;
-	}
-
 
 	private static int N_GOOD = 0;
 	private static int N = 0;
@@ -608,7 +575,21 @@ public class Node {
 	// BST handler
 	// *****************************************
 	
-	private Object addEntry(long hcPos, long[] kdKey, Object value) {
+	/**
+	 * General contract:
+	 * Returning a value or NULL means: Value was replaced, no change in counters
+	 * Returning a Node means: Traversal not finished, no change in counters
+	 * Returning null means: Insert successful, please update global entry counter
+	 * 
+	 * Node entry counters are updated internally by the operation
+	 * Node-counting is done by the NodePool.
+	 * 
+	 * @param hcPos hc pos
+	 * @param kdKey key
+	 * @param value value
+	 * @return
+	 */
+	Object addEntry(long hcPos, long[] kdKey, Object value) {
 		//Uses bstGetOrCreate() -> 
 		//- get or create entry
 		//- if value==null -> new entry, just set key,value
@@ -635,8 +616,12 @@ public class Node {
 		Object localVal = existingE.getValue();
 		if (localVal instanceof Node) {
 			Node subNode = (Node) localVal;
-			long mask = calcInfixMask(subNode.getPostLen());
-			return insertSplitPH(existingE, kdKey, value, mask);
+			if (subNode.getInfixLen() > 0) {
+				long mask = calcInfixMask(subNode.getPostLen());
+				return insertSplitPH(existingE, kdKey, value, mask);
+			}
+			//No infix conflict, just traverse subnode
+			return localVal;
 		} else {
 			if (getPostLen() > 0) {
 				long mask = calcPostfixMask();

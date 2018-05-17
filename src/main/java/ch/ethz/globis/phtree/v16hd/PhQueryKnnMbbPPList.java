@@ -255,7 +255,6 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		}
 		
 		private void internalPreAdd(PhEntryDist<T> e) {
-			NodeIteratorListReuse.AMM5++;
 			boolean needsAdjustment = internalAdd(e);
 			if (needsAdjustment) {
 				maxDistance = distData[size-1];

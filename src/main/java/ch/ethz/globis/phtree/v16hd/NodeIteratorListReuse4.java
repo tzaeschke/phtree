@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 import ch.ethz.globis.phtree.PhDistance;
-import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
@@ -91,36 +90,14 @@ public class NodeIteratorListReuse4<T, R> {
 		}
 
 		
-		private void checkAndRunSubnode(Node sub, long[] subPrefix) {
-			if (results.phIsPrefixValid(subPrefix, sub.getPostLen()+1)) {
-				NodeIteratorListReuse.AMMN4++;
-				run(sub, subPrefix);
-			}
-		}
-
-
-		@SuppressWarnings("unchecked")
-		private void readValue(BSTEntry candidate) {
-			//TODO avoid getting/assigning element? -> Most entries fail!
-			PhEntry<T> result = results.phGetTempEntry();
-			result.setKeyInternal(candidate.getKdKey());
-			result.setValueInternal((T) candidate.getValue());
-			results.phOffer(result);
-		}
-		
 		private void checkEntry(BSTEntry be) {
 			Object v = be.getValue();
-			NodeIteratorListReuse.AMM1++;
-			NodeIteratorListReuse.CE1++;
 			if (v instanceof Node) {
-				NodeIteratorListReuse.CE2++;
-				NodeIteratorListReuse.AMMN2++;
-				NodeIteratorListReuse.AMMN3++;
-				checkAndRunSubnode((Node) v, be.getKdKey());
+				Node sub = (Node) v;
+				if (results.phIsPrefixValid(be.getKdKey(), sub.getPostLen()+1)) {
+					run(sub, be.getKdKey());
+				}
 			} else if (v != null) { 
-				NodeIteratorListReuse.CE3++;
-				NodeIteratorListReuse.AMM2++;
-				NodeIteratorListReuse.AMM3++;
 				results.phOffer(be);
 			}
 		}
@@ -235,8 +212,6 @@ public class NodeIteratorListReuse4<T, R> {
 				start++;
 			}
 
-			NodeIteratorListReuse.HD11 += bufferSize;
-
 			//Calculate how many permutations are at most possible
 			double[] distances = new double[dims];
 			PhDistance dist = checker.getDistance(); 
@@ -253,7 +228,6 @@ public class NodeIteratorListReuse4<T, R> {
 				if (BitsHD.xorBitCount(buffer[i].getKey(), divePos) > nMaxPermutatedBits) {
 					break;
 				}
-				NodeIteratorListReuse.HD12++;
 				checkEntry(buffer[i]);
 			}
 		}
