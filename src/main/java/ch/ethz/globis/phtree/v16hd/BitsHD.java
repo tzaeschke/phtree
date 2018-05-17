@@ -192,7 +192,7 @@ public class BitsHD {
 
 
 	public static long[] newArray(int bits) {
-    	return new long[1 + (bits >>> 6)];
+    	return new long[1 + ((bits-1) >>> 6)];
 	}
 
 	public static void set(long[] dst, long[] src) {

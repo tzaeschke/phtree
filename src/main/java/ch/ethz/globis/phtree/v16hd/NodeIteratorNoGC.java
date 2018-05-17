@@ -145,7 +145,7 @@ public class NodeIteratorNoGC<T> {
 					//Leave 0 if higher value should not be queried.
 					upperLimit[maskSlot] |= mask1;
 				}
-				if ((mask1 >>= 1) == 0) {
+				if ((mask1 >>>= 1) == 0) {
 					mask1 = 1L << 63;
 					maskSlot++;
 				}
@@ -170,7 +170,7 @@ public class NodeIteratorNoGC<T> {
 					//--> lowerLimit = '1'
 					lowerLimit[maskSlot] |= mask1;
 				}
-				if ((mask1 >>= 1) == 0) {
+				if ((mask1 >>>= 1) == 0) {
 					mask1 = 1L << 63;
 					maskSlot++;
 				}

@@ -118,7 +118,7 @@ public class TestJavaPerf {
 //			x <<= xShift;
 //			//val[dim] = (val[dim] | x) & (~x);
 //			val[dim] = (val[dim] | x) & (~x);
-//			mask >>= 1;
+//			mask >>>= 1;
 //		}
 		for (int dim = 0; dim < DIM; dim++) {
 			int x = pos & (1 << (DIM-dim-1));
