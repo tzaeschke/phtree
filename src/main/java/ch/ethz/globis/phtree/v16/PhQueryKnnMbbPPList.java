@@ -58,7 +58,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	private PhTree16<T> pht;
 	private PhDistance distance;
 	private int currentPos = -1;
-	private final NodeIteratorListReuse4<T, PhEntryDist<T>> iter;
+	private final NodeIteratorListReuseKNN<T, PhEntryDist<T>> iter;
 	private final PhFilterDistance checker;
 	private final KnnResultList results; 
 
@@ -72,7 +72,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		this.pht = pht;
 		this.checker = new PhFilterDistance();
 		this.results = new KnnResultList(dims);
-		this.iter = new NodeIteratorListReuse4<>(dims, results, checker);
+		this.iter = new NodeIteratorListReuseKNN<>(dims, results, checker);
 	}
 
 	@Override

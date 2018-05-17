@@ -6,18 +6,17 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16hd;
+package ch.ethz.globis.phtree.v16;
 
 import java.util.Arrays;
 import java.util.Comparator;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhFilterDistance;
-import ch.ethz.globis.phtree.PhTreeHelperHD;
-import ch.ethz.globis.phtree.util.BitsLong;
-import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorToArray;
+import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.v16.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
+import ch.ethz.globis.phtree.v16.bst.BSTIteratorToArray;
 
 
 /**
@@ -40,11 +39,11 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorToArray;
  * @param <T> value type
  * @param <R> result type
  */
-public class NodeIteratorListReuse4<T, R> {
+public class NodeIteratorListReuseKNN<T, R> {
 	
 	private class PhIteratorStack {
 		@SuppressWarnings("unchecked")
-		private final NodeIterator[] stack = new NodeIteratorListReuse4.NodeIterator[64];
+		private final NodeIterator[] stack = new NodeIteratorListReuseKNN.NodeIterator[64];
 		private int size = 0;
 
 
@@ -77,10 +76,7 @@ public class NodeIteratorListReuse4<T, R> {
 		private BSTEntry[] buffer;
 		private int bufferSize;
 		private final BSTEComp COMP = new BSTEComp();
-		private final long[] divePos = BitsHD.newArray(dims);
 
-		
-		
 		/**
 		 * 
 		 * @param node Node
@@ -88,7 +84,7 @@ public class NodeIteratorListReuse4<T, R> {
 		 */
 		void reinitAndRun(Node node, long[] prefix) {
 			this.node = node;
-			niIterator.reset(node.getRoot());
+			this.niIterator.reset(node.getRoot());
 			getAll(prefix);
 		}
 
@@ -97,7 +93,7 @@ public class NodeIteratorListReuse4<T, R> {
 			Object v = be.getValue();
 			if (v instanceof Node) {
 				Node sub = (Node) v;
-				if (results.phIsPrefixValid(be.getKdKey(), sub.getPostLen()+1)) {
+				if (results.phIsPrefixValid( be.getKdKey(), sub.getPostLen()+1)) {
 					run(sub, be.getKdKey());
 				}
 			} else if (v != null) { 
@@ -127,30 +123,18 @@ public class NodeIteratorListReuse4<T, R> {
 			//calc 'divePos', ie. whether prefix is below/above 'center' for each dimension
 			long[] kNNCenter = checker.getCenter();
 	    	
+	        long relativeKNNpos = 0;
 	        //We want to get the center, so no +1 for postLen
 	        long prefixMask = (-1L) << node.getPostLen()+1;
 	        long prefixBit = 1L << node.getPostLen();
-	    	long[] relativeKNNpos = BitsHD.newArray(dims);
-	        //get fraction
-	        int bitsPerSlot = BitsHD.mod65x(dims);
-	        int valsetPos = 0;
-	        //result slot (rs)
-	        for (int rs = 0; rs < relativeKNNpos.length; rs++) {
-	        	long pos = 0;
-	            for (int i = 0; i < bitsPerSlot; i++) {
-		        	pos <<= 1;
-		        	//set pos-bit if bit is set in value
-		        	long nodeCenter = (prefix[valsetPos] & prefixMask) | prefixBit;
-		        	pos |= (kNNCenter[valsetPos] > nodeCenter) ? 1 : 0;
-		        	valsetPos++;
-	            }
-	            relativeKNNpos[rs] = pos;
-	            bitsPerSlot = 64;
+	        for (int i = 0; i < prefix.length; i++) {
+	        	relativeKNNpos <<= 1;
+	        	//set pos-bit if bit is set in value
+	        	long nodeCenter = (prefix[i] & prefixMask) | prefixBit;
+	        	relativeKNNpos |= (kNNCenter[i] > nodeCenter) ? 1 : 0;
 	        }
-        
-	        
+			
         	iterateSortedBuffer(relativeKNNpos, prefix, 0);
-        	BitsLong.arrayReplace(relativeKNNpos, null);
 		}
 
 		private void niDepthFirstNeighborsSecond(long[] prefix) {
@@ -160,7 +144,7 @@ public class NodeIteratorListReuse4<T, R> {
 
 			//First attempt deep dive
 			long[] kNNCenter = checker.getCenter();
-			PhTreeHelperHD.posInArrayHD(kNNCenter, node.getPostLen(), divePos);
+			long divePos = PhTreeHelper.posInArray(kNNCenter, node.getPostLen());
 			BSTEntry be = node.getEntry(divePos, null);
 			int minimumPermutations = 0;
 			if (be != null) {
@@ -177,7 +161,6 @@ public class NodeIteratorListReuse4<T, R> {
 			//Okay, deep dive is finished
 			results.stopInitialDive();
 
-			//TODO???
 			if (node.getEntryCount() < 0*dims) {
 				iterateUnsorted(divePos, minimumPermutations);
 			} else {
@@ -185,17 +168,17 @@ public class NodeIteratorListReuse4<T, R> {
 			}
 		}
 		
-		private void iterateUnsorted(long[] divePos, int minimumPermutations) {
+		private void iterateUnsorted(long divePos, int minimumPermutations) {
 			niIterator.reset(node.getRoot());
 			while (niIterator.hasNextEntry()) {
 				BSTEntry be = niIterator.nextEntry();
-				if (BitsHD.xorBitCount(be.getKey(), divePos) >= minimumPermutations) {
+				if (Long.bitCount(be.getKey() ^ divePos) >= minimumPermutations) {
 					checkEntry(be);
 				}
 			}
 		}
 		
-		private void iterateSortedBuffer(long[] divePos, long[] prefix, int minimumPermutations) {
+		private void iterateSortedBuffer(long divePos, long[] prefix, int minimumPermutations) {
 			if (buffer == null || buffer.length < node.getEntryCount()) {
 				buffer = new BSTEntry[node.getEntryCount()];
 			}
@@ -211,10 +194,10 @@ public class NodeIteratorListReuse4<T, R> {
 			
 			//Omit anything that we already traversed (there should be at most one entry at the moment) 
 			int start = 0;
-			while (start < bufferSize && BitsHD.xorBitCount(buffer[start].getKey(), divePos) < minimumPermutations) {
+			while (start < bufferSize && Long.bitCount(buffer[start].getKey() ^ divePos) < minimumPermutations) {
 				start++;
 			}
-
+		
 			//Calculate how many permutations are at most possible
 			double[] distances = new double[dims];
 			PhDistance dist = checker.getDistance(); 
@@ -226,9 +209,9 @@ public class NodeIteratorListReuse4<T, R> {
 			for (int i = start; i < bufferSize; i++) {
 				if (checker.getMaxDist() < knownMaxDist) {
 					knownMaxDist = checker.getMaxDist();
-					nMaxPermutatedBits = dist.knnCalcMaximumPermutationCount(distances, checker.getMaxDist());
+					nMaxPermutatedBits = dist.knnCalcMaximumPermutationCount(distances, knownMaxDist);
 				}
-				if (BitsHD.xorBitCount(buffer[i].getKey(), divePos) > nMaxPermutatedBits) {
+				if (Long.bitCount(buffer[i].getKey() ^ divePos) > nMaxPermutatedBits) {
 					break;
 				}
 				checkEntry(buffer[i]);
@@ -237,7 +220,7 @@ public class NodeIteratorListReuse4<T, R> {
 	}
 
 	
-	NodeIteratorListReuse4(int dims, PhQueryKnnMbbPPList<T>.KnnResultList results, PhFilterDistance checker) {
+	NodeIteratorListReuseKNN(int dims, PhQueryKnnMbbPPList<T>.KnnResultList results, PhFilterDistance checker) {
 		this.dims = dims;
 		this.results = results;
 		this.pool = new PhIteratorStack();
@@ -256,11 +239,11 @@ public class NodeIteratorListReuse4<T, R> {
 	}
 
 	private static class BSTEComp implements Comparator<BSTEntry> {
-		long[] key;
+		long key;
 	    @Override
 		public int compare(BSTEntry a, BSTEntry b) {
-	    	int h1 = BitsHD.xorBitCount(a.getKey(), key);
-	    	int h2 = BitsHD.xorBitCount(b.getKey(), key);
+	    	int h1 = Long.bitCount(a.getKey() ^ key);
+	    	int h2 = Long.bitCount(b.getKey() ^ key);
             return h1 - h2;
 	    }
 	}
