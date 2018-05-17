@@ -24,13 +24,13 @@ import ch.ethz.globis.phtree.test.util.TestUtil;
 
 public class TestIndexUpdate extends TestSuper {
 
-	private <T> PhTree<T> create(int dim, int depth) {
-		return TestUtil.newTree(dim, depth);
+	private <T> PhTree<T> create(int dim) {
+		return TestUtil.newTree(dim);
 	}
 	
 	@Test
 	public void testSmokeTest() {
-		PhTree<long[]> t = create(3, 64);
+		PhTree<long[]> t = create(3);
 		long[] p1 = new long[]{2,3,4};
 		long[] p2 = new long[]{5,6,7};
 		assertNull(t.update(p1, p2));
@@ -62,7 +62,7 @@ public class TestIndexUpdate extends TestSuper {
 			}
 		}
 		
-		PhTree<long[]> tree = create(K, 64);
+		PhTree<long[]> tree = create(K);
 		for (long[] r: data) {
 			//System.out.println("Inserting: " + r);
 			tree.put(r, r);
@@ -106,7 +106,7 @@ public class TestIndexUpdate extends TestSuper {
 			}
 		}
 		
-		PhTree<long[]> tree = create(K, 64);
+		PhTree<long[]> tree = create(K);
 		for (long[] r: data) {
 			//System.out.println("Inserting: " + r);
 			tree.put(r, r);
@@ -153,7 +153,7 @@ public class TestIndexUpdate extends TestSuper {
 			}
 		}
 		
-		PhTree<long[]> tree = create(K, 64);
+		PhTree<long[]> tree = create(K);
 		for (long[] r: data) {
 			//System.out.println("Inserting: " + r + " / " + Arrays.toString(r));
 			tree.put(r, r);
@@ -199,7 +199,7 @@ public class TestIndexUpdate extends TestSuper {
 			}
 		}
 		
-		PhTree<long[]> tree = create(K, 64);
+		PhTree<long[]> tree = create(K);
 		for (long[] r: data) {
 			//System.out.println("Inserting: " + r);
 			tree.put(r, r);
@@ -231,7 +231,7 @@ public class TestIndexUpdate extends TestSuper {
 	
     @Test
     public void testUpdateKey() {
-		PhTree<String> phTree = create(2, 64);
+		PhTree<String> phTree = create(2);
         long[] key = {1, 2};
         long[] key2 = {-1, -2};
         String value = "Hello, world";
@@ -241,5 +241,20 @@ public class TestIndexUpdate extends TestSuper {
         phTree.update(key, key2);
         assertEquals(value, phTree.get(key2));
         assertNull(phTree.get(key));
+    }
+	
+    @Test
+    public void testUpdateKey2() {
+		PhTree<Integer> phTree = create(2);
+        long[] key01 = {0, 1};
+        long[] key10 = {1, 0};
+        long[] key2a = {0, 0};
+        long[] key2b = {1, 1};
+        phTree.put(key01, 1);
+        phTree.put(key10, 2);
+        phTree.put(key2a, 5);
+        phTree.update(key2a, key2b);
+        assertEquals(5, (int)phTree.get(key2b));
+        assertNull(phTree.get(key2a));
     }
 }
