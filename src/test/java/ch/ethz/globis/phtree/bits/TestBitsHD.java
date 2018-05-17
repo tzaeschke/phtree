@@ -140,7 +140,8 @@ public class TestBitsHD {
 		PhTreeHelperHD.applyHcPosHD(posHD, 1, temp);
 		assertArrayEquals(valTempOut, temp);
 		
-		long[] posHDread = PhTreeHelperHD.posInArrayHD(temp, 1);
+		long[] posHDread = BitsHD.newArray(posHD.length);
+		PhTreeHelperHD.posInArrayHD(temp, 1, posHDread);
 		assertArrayEquals(posHD, posHDread);
 	}
 	

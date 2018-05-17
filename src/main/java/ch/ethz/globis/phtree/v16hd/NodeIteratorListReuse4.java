@@ -77,7 +77,10 @@ public class NodeIteratorListReuse4<T, R> {
 		private BSTEntry[] buffer;
 		private int bufferSize;
 		private final BSTEComp COMP = new BSTEComp();
+		private final long[] divePos = BitsHD.newArray(dims);
 
+		
+		
 		/**
 		 * 
 		 * @param node Node
@@ -157,7 +160,7 @@ public class NodeIteratorListReuse4<T, R> {
 
 			//First attempt deep dive
 			long[] kNNCenter = checker.getCenter();
-			long[] divePos = PhTreeHelperHD.posInArrayHD(kNNCenter, node.getPostLen());
+			PhTreeHelperHD.posInArrayHD(kNNCenter, node.getPostLen(), divePos);
 			BSTEntry be = node.ntGetEntry(divePos);
 			int minimumPermutations = 0;
 			if (be != null) {

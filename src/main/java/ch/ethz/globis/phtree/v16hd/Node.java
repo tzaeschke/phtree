@@ -105,11 +105,11 @@ public class Node {
 	 * @param pos The position of the node when mapped to a vector.
 	 * @return The sub node or null.
 	 */
-	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree16HD<?> tree) {
-		long[] hcPos = PhTreeHelperHD.posInArrayHD(keyToMatch, getPostLen());
+	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree16HD<?> tree, long[] hcBuf) {
+		PhTreeHelperHD.posInArrayHD(keyToMatch, getPostLen(), hcBuf);
 
 		//ntPut will also increase the node-entry count
-		Object v = addEntry(hcPos, keyToMatch, newValueToInsert);
+		Object v = addEntry(hcBuf, keyToMatch, newValueToInsert);
 		//null means: Did not exist, or we had to do a split...
 		if (v == null) {
 			tree.increaseNrEntries();
@@ -127,14 +127,15 @@ public class Node {
 	 * @param tree
 	 * @return The sub node or null.
 	 */
-	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent, UpdateInfo insertRequired, PhTree16HD<?> tree) {
+	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent, UpdateInfo insertRequired, 
+			PhTree16HD<?> tree, long[] hcBuf) {
 		
-		long[] hcPos = PhTreeHelperHD.posInArrayHD(keyToMatch, getPostLen());
+		PhTreeHelperHD.posInArrayHD(keyToMatch, getPostLen(), hcBuf);
 		
 		if (getOnly) {
-			return ntGetEntryIfMatches(hcPos, keyToMatch);
+			return ntGetEntryIfMatches(hcBuf, keyToMatch);
 		}			
-		Object v = ntRemoveEntry(hcPos, keyToMatch, insertRequired);
+		Object v = ntRemoveEntry(hcBuf, keyToMatch, insertRequired);
 		if (v != null && !(v instanceof Node)) {
 			//Found and removed entry.
 			tree.decreaseNrEntries();
@@ -165,15 +166,16 @@ public class Node {
      * @param mcb most conflicting bit
      * @return A new node or 'null' if there are no conflicting bits
      */
-    public Node createNode(long[] key1, Object val1, long[] key2, Object val2,
-    		int mcb) {
+    public Node createNode(long[] key1, Object val1, long[] key2, Object val2, int mcb) {
         //determine length of infix
         int newLocalInfLen = getPostLen() - mcb;
         int newPostLen = mcb-1;
         Node newNode = createNode(key1.length, newLocalInfLen, newPostLen);
 
-        long[] posSub1 = PhTreeHelperHD.posInArrayHD(key1, newPostLen);
-        long[] posSub2 = PhTreeHelperHD.posInArrayHD(key2, newPostLen);
+        long[] posSub1 = BitsHD.newArray(key1.length);
+        PhTreeHelperHD.posInArrayHD(key1, newPostLen, posSub1);
+        long[] posSub2 = BitsHD.newArray(key2.length);
+        PhTreeHelperHD.posInArrayHD(key2, newPostLen, posSub2);
         if (BitsHD.isLess(posSub1, posSub2)) {
         	newNode.writeEntry(0, posSub1, key1, val1);
         	newNode.writeEntry(1, posSub2, key2, val2);
@@ -216,7 +218,10 @@ public class Node {
 		//We know that there is only a leaf node with only a single entry, so...
 		BSTEntry nte = root.getFirstValue();
 		
-		long[] posInParent = PhTreeHelperHD.posInArrayHD(key, parent.getPostLen());
+		//TODO should we pass around BSTEntry instead of Node? Then we would not have 
+		//to allocate/recalculate posInParent ...
+		long[] posInParent = BitsHD.newArray(key.length);
+		PhTreeHelperHD.posInArrayHD(key, parent.getPostLen(), posInParent);
 		if (nte.getValue() instanceof Node) {
 			long[] newPost = nte.getKdKey();
 			//connect sub to parent

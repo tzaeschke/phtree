@@ -216,34 +216,36 @@ public class PhTree16HD<T> implements PhTree<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public T put(long[] key, T value) {
+		long[] hcBuf = BitsHD.newArray(dims);
 		Object nonNullValue = value == null ? PhTreeHelper.NULL : value;
 		if (getRoot() == null) {
-			insertRoot(key, nonNullValue);
+			insertRoot(key, nonNullValue, hcBuf);
 			return null;
 		}
 
 		Object o = getRoot();
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
-			o = currentNode.doInsertIfMatching(key, nonNullValue, this);
+			o = currentNode.doInsertIfMatching(key, nonNullValue, this, hcBuf);
 		}
 		return (T) o;
     }
 
-    void insertRoot(long[] key, Object value) {
+    private void insertRoot(long[] key, Object value, long[] hcBuf) {
         root = Node.createNode(dims, 0, DEPTH_64-1);
-        long[] pos = posInArrayHD(key, root.getPostLen());
-        root.addEntry(pos, key, value);
+        posInArrayHD(key, root.getPostLen(), hcBuf);
+        root.addEntry(hcBuf, key, value);
         increaseNrEntries();
     }
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public boolean contains(long... key) {
+		long[] hcBuf = BitsHD.newArray(dims);
 		Object o = getRoot();
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
-			o = currentNode.doIfMatching(key, true, null, null, this);
+			o = currentNode.doIfMatching(key, true, null, null, this, hcBuf);
 		}
 		return (T) o != null;
 	}
@@ -252,10 +254,11 @@ public class PhTree16HD<T> implements PhTree<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public T get(long... key) {
+		long[] hcBuf = BitsHD.newArray(dims);
 		Object o = getRoot();
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
-			o = currentNode.doIfMatching(key, true, null, null, this);
+			o = currentNode.doIfMatching(key, true, null, null, this, hcBuf);
 		}
 		return o == PhTreeHelper.NULL ? null : (T) o;
 	}
@@ -269,11 +272,12 @@ public class PhTree16HD<T> implements PhTree<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public T remove(long... key) {
+		long[] hcBuf = BitsHD.newArray(dims);
 		Object o = getRoot();
 		Node parentNode = null;
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
-			o = currentNode.doIfMatching(key, false, parentNode, null, this);
+			o = currentNode.doIfMatching(key, false, parentNode, null, this, hcBuf);
 			parentNode = currentNode;
 		}
 		return (T) o;
@@ -291,6 +295,7 @@ public class PhTree16HD<T> implements PhTree<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public T update(long[] oldKey, long[] newKey) {
+		long[] hcBuf = BitsHD.newArray(dims);
 		Node[] stack = new Node[64];
 		int stackSize = 0;
 		
@@ -301,7 +306,7 @@ public class PhTree16HD<T> implements PhTree<T> {
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
 			stack[stackSize++] = currentNode;
-			o = currentNode.doIfMatching(oldKey, false, parentNode, ui, this);
+			o = currentNode.doIfMatching(oldKey, false, parentNode, ui, this, hcBuf);
 			parentNode = currentNode;
 		}
 		
@@ -320,7 +325,7 @@ public class PhTree16HD<T> implements PhTree<T> {
 					o = stack[stackSize];
 					while (o instanceof Node) {
 						Node currentNode = (Node) o;
-						o = currentNode.doInsertIfMatching(newKey, value, this);
+						o = currentNode.doInsertIfMatching(newKey, value, this, hcBuf);
 					}
 					ui.insertRequired = NO_INSERT_REQUIRED;
 					break;

@@ -229,6 +229,48 @@ public abstract class PhTreeHelperHD {
     }
 
     /**
+     * Encode the bits at the given position of all attributes into a hyper-cube address.
+     * Currently, the first attribute determines the left-most (high-value) bit of the address 
+     * (left to right ordered)
+     * 
+     * @param valSet vector
+     * @param postLen the postfix length
+     * @param out output
+     */
+    public static final void posInArrayHD(long[] valSet, int postLen, long[] out) {
+        //n=DIM,  i={0..n-1}
+        // i = 0 :  |0|1|0|1|0|1|0|1|
+        // i = 1 :  | 0 | 1 | 0 | 1 |
+        // i = 2 :  |   0   |   1   |
+        //len = 2^n
+        //Following formula was for inverse ordering of current ordering...
+        //pos = sum (i=1..n, len/2^i) = sum (..., 2^(n-i))
+
+    	long valMask = 1l << postLen;
+//    	long pos = 0;
+//        for (int i = 0; i < valSet.length; i++) {
+//        	pos <<= 1;
+//        	//set pos-bit if bit is set in value
+//            pos |= (valMask & valSet[i]) >>> postLen;
+//        }
+
+    	//get fraction
+        int bitsPerSlot = BitsHD.mod65x(valSet.length);
+        int valsetPos = 0;
+        //result slot (rs)
+        for (int rs = 0; rs < out.length; rs++) {
+        	long pos = 0;
+            for (int i = 0; i < bitsPerSlot; i++) {
+            	pos <<= 1;
+            	//set pos-bit if bit is set in value
+                pos |= (valMask & valSet[valsetPos++]) >>> postLen;
+            }
+            out[rs] = pos;
+            bitsPerSlot = 64;
+        }
+    }
+
+    /**
      * Transpose the value from long[DIM] to long[DEPTH].
      * Transposition occurs such that high-order bits end up in the first value of 'tv'.
      * Value from DIM=0 end up as highest order bits in 'tv'.
