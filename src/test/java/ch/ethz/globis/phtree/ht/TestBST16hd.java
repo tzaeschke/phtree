@@ -117,7 +117,8 @@ public class TestBST16hd {
 		assertEquals(prev[0], list.size() - 1);
 		long l52 = System.currentTimeMillis();
 		long l61 = System.currentTimeMillis();
-		BSTIteratorMask iterMask = ht.iteratorMask(new long[] {0}, new long[] {0xFFFFFFFFFFFEL});
+		BSTIteratorMask iterMask = 
+				new BSTIteratorMask().reset(ht.getRoot(), new long[] {0}, new long[] {0xFFFFFFFFFFFEL});
 		prev = new long[] {-2};
 		while (iterMask.hasNextEntry()) {
 			long[] current = iterMask.nextEntry().getKey();

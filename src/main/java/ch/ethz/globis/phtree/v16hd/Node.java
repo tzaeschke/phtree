@@ -18,7 +18,6 @@ import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v16hd.PhTree16HD.UpdateInfo;
 import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
 import ch.ethz.globis.phtree.v16hd.bst.BSTPool;
 import ch.ethz.globis.phtree.v16hd.bst.BSTreePage;
 
@@ -133,9 +132,10 @@ public class Node {
 		PhTreeHelperHD.posInArrayHD(keyToMatch, getPostLen(), hcBuf);
 		
 		if (getOnly) {
-			return ntGetEntryIfMatches(hcBuf, keyToMatch);
+			BSTEntry e = getEntry(hcBuf, keyToMatch);
+			return e != null ? e.getValue() : null;
 		}			
-		Object v = ntRemoveEntry(hcBuf, keyToMatch, insertRequired);
+		Object v = removeEntry(hcBuf, keyToMatch, insertRequired);
 		if (v != null && !(v instanceof Node)) {
 			//Found and removed entry.
 			tree.decreaseNrEntries();
@@ -231,10 +231,12 @@ public class Node {
 
 			//update parent, the position is the same
 			//we use newPost as Infix
-			parent.replaceEntryWithSub(posInParent, newPost, sub2);
+			//Replace sub!
+			parent.replaceEntry(posInParent, newPost, sub2);
 		} else {
 			//this is also a post
-			parent.replaceSubWithPost(posInParent, nte.getKdKey(), nte.getValue());
+			//Replace post!
+			parent.replaceEntry(posInParent, nte.getKdKey(), nte.getValue());
 		}
 
 		//TODO return old key/BSTEntry to pool
@@ -262,63 +264,12 @@ public class Node {
 		addEntry(hcPos, newKey, value);
 		return;
 	}
-
-	private void replaceEntryWithSub(long[] hcPos, long[] infix, Node newSub) {
-		ntReplaceEntry(hcPos, infix, newSub);
-		return;
-	}
-
 	
-	/**
-	 * Replace a sub-node with a postfix, for example if the current sub-node is removed, 
-	 * it may have to be replaced with a post-fix.
-	 */
-	void replaceSubWithPost(long[] hcPos, long[] key, Object value) {
-		ntReplaceEntry(hcPos, key, value);
-		return;
-	}
-
-	void ntReplaceEntry(long[] hcPos, long[] kdKey, Object value) {
-		//We use 'null' as parameter to indicate that we want replacement, rather than splitting,
-		//if the value exists.
-		replaceEntry(hcPos, kdKey, value);
-	}
-	
-	/**
-	 * General contract:
-	 * Returning a value or NULL means: Value was removed, please update global entry counter
-	 * Returning a Node means: Traversal not finished, no change in counters
-	 * Returning null means: Entry not found, no change in counters
-	 * 
-	 * Node entry counters are updated internally by the operation
-	 * Node-counting is done by the NodePool.
-	 * 
-	 * @param hcPos
-	 * @param dims
-	 * @return
-	 */
-	Object ntRemoveAnything(long[] hcPos, int dims) {
-    	return removeEntry(hcPos, null, null);
-	}
-
-	Object ntRemoveEntry(long[] hcPos, long[] key, UpdateInfo ui) {
-    	return removeEntry(hcPos, key, ui);
-	}
-
-	BSTEntry ntGetEntry(long[] hcPos) {
-		return getEntry(hcPos, null);
-	}
-
-	Object ntGetEntryIfMatches(long[] hcPos, long[] keyToMatch) {
-		BSTEntry e = getEntry(hcPos, keyToMatch);
-		return e != null ? e.getValue() : null;
-	}
-
 
 	private static int N_GOOD = 0;
 	private static int N = 0;
 	
-	boolean checkInfixNt(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
+	boolean checkInfix(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
 		//first check if node-prefix allows sub-node to contain any useful values
 
 		if (PhTreeHelperHD.DEBUG) {
@@ -369,11 +320,11 @@ public class Node {
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	@SuppressWarnings("unchecked")
-	<T> boolean checkAndGetEntryNt(BSTEntry candidate, PhEntry<T> result, long[] rangeMin, long[] rangeMax) {
+	<T> boolean checkAndGetEntry(BSTEntry candidate, PhEntry<T> result, long[] rangeMin, long[] rangeMax) {
 		Object value = candidate.getValue();
 		if (value instanceof Node) {
 			Node sub = (Node) value;
-			if (!checkInfixNt(sub.getInfixLen(), candidate.getKdKey(), rangeMin, rangeMax)) {
+			if (!checkInfix(sub.getInfixLen(), candidate.getKdKey(), rangeMin, rangeMax)) {
 				return false;
 			}
 			result.setKeyInternal(candidate.getKdKey());
@@ -425,14 +376,6 @@ public class Node {
 
 	public int postLenStored() {
 		return postLenStored;
-	}
-
-    BSTIteratorMask ntIteratorWithMask(long[] maskLower, long[] maskUpper) {
-    	return new BSTIteratorMask().reset(getRoot(), maskLower, maskUpper);
-	}
-    
-	BSTIteratorAll ntIteratorAll() {
-		return new BSTIteratorAll().reset(getRoot());
 	}
     
     
@@ -505,12 +448,8 @@ public class Node {
 		return BSTreePage.create(this, parent, isLeaf, leftPredecessor);
 	}
 
-	BSTreePage getRoot() {
+	public BSTreePage getRoot() {
 		return root;
-	}
-
-	public BSTIteratorMask iteratorMask(long[] minMask, long[] maxMask) {
-		return new BSTIteratorMask().reset(root, minMask, maxMask);
 	}
 
 	public void bstUpdateRoot(BSTreePage newRoot) {
@@ -669,6 +608,20 @@ public class Node {
 		return prev;
 	}
 
+	/**
+	 * General contract:
+	 * Returning a value or NULL means: Value was removed, please update global entry counter
+	 * Returning a Node means: Traversal not finished, no change in counters
+	 * Returning null means: Entry not found, no change in counters
+	 * 
+	 * Node entry counters are updated internally by the operation
+	 * Node-counting is done by the NodePool.
+	 * 
+	 * @param hcPos hc pos
+	 * @param key key
+	 * @param ui UpdateInfo
+	 * @return See contract.
+	 */
 	private Object removeEntry(long[] hcPos, long[] key, UpdateInfo ui) {
 		//Only remove value-entries, node-entries are simply returned without removing them
 		BSTEntry prev = bstRemove(hcPos, key, ui);
@@ -710,7 +663,7 @@ public class Node {
 	}
 	
 	
-	private BSTEntry getEntry(long[] hcPos, long[] keyToMatch) {
+	BSTEntry getEntry(long[] hcPos, long[] keyToMatch) {
 		BSTEntry be = bstGet(hcPos);
 		if (be == null) {
 			return null;

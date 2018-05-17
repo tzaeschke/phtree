@@ -78,7 +78,7 @@ public class NodeIteratorNoGC<T> {
 	}
 
 	private boolean readValue(BSTEntry candidate, PhEntry<T> result) {
-		if (!node.checkAndGetEntryNt(candidate, result, rangeMin, rangeMax)) {
+		if (!node.checkAndGetEntry(candidate, result, rangeMin, rangeMax)) {
 			return false;
 		}
 		

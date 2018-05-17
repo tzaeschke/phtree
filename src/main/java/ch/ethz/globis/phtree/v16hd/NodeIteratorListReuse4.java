@@ -161,7 +161,7 @@ public class NodeIteratorListReuse4<T, R> {
 			//First attempt deep dive
 			long[] kNNCenter = checker.getCenter();
 			PhTreeHelperHD.posInArrayHD(kNNCenter, node.getPostLen(), divePos);
-			BSTEntry be = node.ntGetEntry(divePos);
+			BSTEntry be = node.getEntry(divePos, null);
 			int minimumPermutations = 0;
 			if (be != null) {
 				if (be.getValue() instanceof Node) {
