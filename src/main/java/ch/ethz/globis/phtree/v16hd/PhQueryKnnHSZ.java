@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16hd;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,9 +18,9 @@ import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
-import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
+import ch.ethz.globis.phtree.PhTreeHelperHD;
+import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -38,7 +38,7 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	private static final PhDEComp COMP = new PhDEComp();
 
 	private final int dims;
-	private PhTree16<T> pht;
+	private PhTree16HD<T> pht;
 	private PhDistance distance;
 	private long[] center;
 	private final PhFilterDistance checker;
@@ -54,7 +54,7 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	 * Create a new kNN/NNS search instance.
 	 * @param pht the parent tree
 	 */
-	public PhQueryKnnHSZ(PhTree16<T> pht) {
+	public PhQueryKnnHSZ(PhTree16HD<T> pht) {
 		this.dims = pht.getDim();
 		this.pht = pht;
 		this.checker = new PhFilterDistance();
@@ -134,6 +134,8 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	}
 	
 	private void search(int k) {
+		//TODO buffer
+		long[] relativeQuadrantOfCenter = BitsHD.newArray(dims);
 		while (!queueLx.isEmpty() || !queueEst.isEmpty()) {
 
 			//ensure that 1st LX entry is valid
@@ -161,11 +163,10 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 					double[] distances = new double[dims];
 					distance.knnCalcDistances(center, candidate.getKey(), node.getPostLen() + 1, distances);
 
-					long relativeQuadrantOfCenter;
 					if (candidate.dist() <= 0) {
-						relativeQuadrantOfCenter = PhTreeHelper.posInArray(center, node.getPostLen());
+						PhTreeHelperHD.posInArrayHD(center, node.getPostLen(), relativeQuadrantOfCenter);
 					} else {
-						relativeQuadrantOfCenter = calcRelativeQuadrants(node, candidate.getKey());
+						calcRelativeQuadrants(node, candidate.getKey(), relativeQuadrantOfCenter);
 					}
 
 					while (iterNode.hasNextEntry()) {
@@ -238,8 +239,8 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	
 	private static final double EPS = 0.999999999;
 	
-	private double estimateDist(BSTEntry e2, long centerQuadrant, double[] distances) {
-		int permCount = Long.bitCount(centerQuadrant ^ e2.getKey());
+	private double estimateDist(BSTEntry e2, long[] centerQuadrant, double[] distances) {
+		int permCount = BitsHD.xorBitCount(centerQuadrant, e2.getKey());
 		return permCount == 0 ? 0 : distances[permCount-1]*EPS;
 		
 //		return distance.knnCalcMaximumPermutationCount(distances, maxDist)
@@ -270,6 +271,32 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
         }
         return relativeKNNpos;
 	}
+	
+	private void calcRelativeQuadrants(Node node, long[] prefix, long[] relativeKNNpos) {
+		
+		//calc 'divePos', ie. whether prefix is below/above 'center' for each dimension
+		long[] kNNCenter = center;
+    	
+        //We want to get the center, so no +1 for postLen
+        long prefixMask = (-1L) << node.getPostLen()+1;
+        long prefixBit = 1L << node.getPostLen();
+        //get fraction
+        int bitsPerSlot = BitsHD.mod65x(dims);
+        int valsetPos = 0;
+        //result slot (rs)
+        for (int rs = 0; rs < relativeKNNpos.length; rs++) {
+        	long pos = 0;
+            for (int i = 0; i < bitsPerSlot; i++) {
+	        	pos <<= 1;
+	        	//set pos-bit if bit is set in value
+	        	long nodeCenter = (prefix[valsetPos] & prefixMask) | prefixBit;
+	        	pos |= (kNNCenter[valsetPos] > nodeCenter) ? 1 : 0;
+	        	valsetPos++;
+            }
+            relativeKNNpos[rs] = pos;
+            bitsPerSlot = 64;
+        }
+ 	}
 	
 	
 	private PhEntryDist<Object> createEntry(long[] key, Object val, double dist) {
