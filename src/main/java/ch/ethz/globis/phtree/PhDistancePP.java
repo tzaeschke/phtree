@@ -94,19 +94,13 @@ public class PhDistancePP implements PhDistance {
 		}
 		
 		Arrays.sort(outDistances);
-	}
-	
-	@Override
-	public int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
-		double maxDist2 = maxDist * maxDist;
-		double tempDist = 0;
-		for (int i = 0; i < distances.length; i++) {
-			tempDist += distances[i];
-			if (tempDist > maxDist2) {
-				return i;
-			}
+
+		//create totals
+		for (int i = 1; i < outDistances.length; i++) {
+			outDistances[i] += outDistances[i-1];
 		}
-	
-		return distances.length; //dims
+		for (int i = 0; i < outDistances.length; i++) {
+			outDistances[i] = Math.sqrt(outDistances[i]);
+		}
 	}
 }

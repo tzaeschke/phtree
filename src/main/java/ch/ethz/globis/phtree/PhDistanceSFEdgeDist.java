@@ -142,23 +142,9 @@ public class PhDistanceSFEdgeDist implements PhDistanceSF {
 		for (int i = 1; i < dimsHalf; i++) {
 			outDistances[i] += outDistances[i-1];
 		}
-	}
-	
-	@Override
-	public int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
-		double maxDist2 = maxDist * maxDist;
-		//TODO binary search for large dimensions?
-//		if (distances.length > 0) {
-//			int pos = Arrays.binarySearch(distances, maxDist2);
-//			return pos < 0 ? -(pos+1) : (pos + 1);
-//		}
-		for (int i = 0; i < distances.length; i++) {
-			if (distances[i] > maxDist2) {
-				return i * 2;  //TBH, this was determined experimentally, I don't really understand it... 
-			}
+		for (int i = 0; i < outDistances.length; i++) {
+			outDistances[i] = Math.sqrt(outDistances[i]);
 		}
-	
-		return distances.length; //dims
 	}
 
 }

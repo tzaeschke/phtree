@@ -38,20 +38,6 @@ public class PhDistanceF implements PhDistance {
 	}
 
 	@Override
-	public double dist(long[] v1, long[] v2, double maxValue) {
-		double max2 = maxValue * maxValue;
-		double d = 0;
-		for (int i = 0; i < v1.length; i++) {
-			double dl = BitTools.toDouble(v1[i]) - BitTools.toDouble(v2[i]);
-			d += dl*dl;
-			if (d > max2) {
-				return Double.POSITIVE_INFINITY;
-			}
-		}
-		return Math.sqrt(d);
-	}
-
-	@Override
 	public void toMBB(double distance, long[] center, long[] outMin,
 			long[] outMax) {
 		for (int i = 0; i < center.length; i++) {
@@ -95,23 +81,9 @@ public class PhDistanceF implements PhDistance {
 		for (int i = 1; i < outDistances.length; i++) {
 			outDistances[i] += outDistances[i-1];
 		}
-	}
-	
-	@Override
-	public int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
-		double maxDist2 = maxDist * maxDist;
-		//TODO binary search for large dimensions?
-//		if (distances.length > 0) {
-//			int pos = Arrays.binarySearch(distances, maxDist2);
-//			return pos < 0 ? -(pos+1) : (pos + 1);
-//		}
-		for (int i = 0; i < distances.length; i++) {
-			if (distances[i] > maxDist2) {
-				return i;
-			}
+		for (int i = 0; i < outDistances.length; i++) {
+			outDistances[i] = Math.sqrt(outDistances[i]);
 		}
-	
-		return distances.length; //dims
 	}
 
 }

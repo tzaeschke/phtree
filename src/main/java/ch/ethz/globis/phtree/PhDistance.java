@@ -24,20 +24,6 @@ public interface PhDistance {
 
 	
 	/**
-	 * Returns the distance between v1 and v2.
-	 * 
-	 * @param v1 one value
-	 * @param v2 other value
-	 * @param maxValue Maximum Value. If distance is larger than the maximum value it returns Double.POSITIVE_INFINITY.
-	 * @return The distance or Double.POSITIVE_INFINITY.
-	 */
-	default double dist(long[] v1, long[] v2, double maxValue) {
-		double dist = dist(v1, v2);
-		return dist > maxValue ? Double.POSITIVE_INFINITY : dist;
-	}
-
-	
-	/**
 	 * Calculate the minimum bounding box for all points that are less than 
 	 * {@code distance} away from {@code center}.
 	 * @param distance distance
@@ -96,17 +82,4 @@ public interface PhDistance {
 		//-> nothing
 	}
 	
-	
-	/**
-	 * See {@link #knnCalcDistances(long[], long[], int, double[])}.
-	 * 
-	 * @param distances Distance array from {@link #knnCalcDistances(long[], long[], int, double[])}
-	 * @param maxDist Known max dist.
-	 * @return Maximum allowable permutation count.
-	 */
-	default int knnCalcMaximumPermutationCount(double[] distances, double maxDist) {
-		throw new UnsupportedOperationException("Please implement the new kNN distance helper functions.");
-		//Default implementation: Correct but inefficient:
-		//return distances.length;
-	}
 }
