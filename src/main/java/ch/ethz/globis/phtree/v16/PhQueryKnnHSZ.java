@@ -16,11 +16,11 @@ import java.util.PriorityQueue;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntryDist;
-import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
+
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -41,7 +41,6 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	private PhTree16<T> pht;
 	private PhDistance distance;
 	private long[] center;
-	private final PhFilterDistance checker;
 	private final ArrayList<PhEntryDist<T>> results = new ArrayList<>(); 
 	private final ArrayList<PhEntryDist<Object>> pool = new ArrayList<>(); 
 	private final PriorityQueue<PhEntryDist<Object>> queueEst = new PriorityQueue<>(COMP);
@@ -57,7 +56,6 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	public PhQueryKnnHSZ(PhTree16<T> pht) {
 		this.dims = pht.getDim();
 		this.pht = pht;
-		this.checker = new PhFilterDistance();
 	}
 
 	@Override
@@ -77,7 +75,7 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 
 	@Override
 	public PhEntryDist<T> nextEntryReuse() {
-		//TODO
+		//Reusing happens only via pooling
 		return iterResult.next();
 	}
 
@@ -113,7 +111,6 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 		
 		search(nMin);
 		iterResult = results.iterator();
-		
 		return this;
 	}
 
@@ -128,12 +125,24 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 		while (!queueEst.isEmpty() && (queueLx.isEmpty() || queueEst.peek().dist() <= queueLx.peek().dist())) {
 			//move to queueLx
 			PhEntryDist<Object> entry = queueEst.poll();
-			assignDistance(entry);
+			entry.setDist(calcLxDistance(entry));
 			queueLx.add( entry ); 
 		}
 	}
 	
+
+	@SuppressWarnings("unchecked")
 	private void search(int k) {
+		//Optimizations that DON'T work:
+		//
+		// A) Get a node from LX with dist() == 0; traverse children; childNode has XOR-PERM == 0
+		//    Idea: in this case we are in the quadrant that contains the center, so we don;t need to calculate dist()
+		//    Problems: 
+		//    In this case the subNode covers the 'center', but only if
+		//    - We are not in the root node (otherwise distances[] are always 0)
+		//    - If there is no infix....  If there is a infix, the algorithm is still correct, 
+		//      but it may traverse the subnode too early compared to other nodes....
+		
 		while (!queueLx.isEmpty() || !queueEst.isEmpty()) {
 
 			//ensure that 1st LX entry is valid
@@ -145,7 +154,6 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 			Object val = candidate.getValue();
 			if (!(val instanceof Node)) {
 				//data entry
-//TODO				if (checker == null || checker.isValid(candidate.getKey())) {
 				results.add((PhEntryDist<T>) candidate);
 				if (results.size() >= k) {
 					return;
@@ -157,6 +165,9 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 				if (node.getEntryCount() > 4) {
 					//Use estimated distances
 
+					//current minimum (after candidate is removed)
+					double currentMin = queueLx.isEmpty() ? Double.POSITIVE_INFINITY : queueLx.peek().dist();
+					
 					//Calculate how many permutations are at most possible -> distances
 					double[] distances = new double[dims];
 					distance.knnCalcDistances(center, candidate.getKey(), node.getPostLen() + 1, distances);
@@ -171,61 +182,31 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 					while (iterNode.hasNextEntry()) {
 						BSTEntry e2 = iterNode.nextEntry();
 						double d = estimateDist(e2, relativeQuadrantOfCenter, distances);
-//						double dLx = calcDistance(createEntry(e2.getKdKey(), e2.getValue(), -1));
-						//TODO return dLx-1 if perm==0 and d==0...!?!?!?!   candidate.dts() == 0 ???
-//						if (d <= 0 && dLx == -1) {
-//							//Quadrant that contains the 'center'
-//							PhEntryDist<Object> match = createEntry(e2.getKdKey(), e2.getValue(), 0);
-//							queueLx.add(match);
-//							continue;
-//						} else {
-//							if (dLx < d) {
-//								//TODO
-//								System.out.println("distances: " + Arrays.toString(distances));
-//								throw new IllegalStateException("d-dLX: " + d + " / " + dLx);
-//							}
+
+						if (d <= currentMin) {
+							//add directly to Lx queue
+							PhEntryDist<Object> newLx = createLxEntry(e2);
+							queueLx.add(newLx);
+							currentMin = currentMin < newLx.dist() ? currentMin : newLx.dist();
+						} else {
 							queueEst.add( createEntry(e2.getKdKey(), e2.getValue(), d) );
-//						}
+						}
 					}
 				} else {
 					//Add directly to main queue
 					while (iterNode.hasNextEntry()) {
 						BSTEntry e2 = iterNode.nextEntry();
-						PhEntryDist<Object> subE = createEntry(e2.getKdKey(), e2.getValue(), -1);
-						assignDistance(subE);
+						PhEntryDist<Object> subE = createLxEntry(e2);
 						queueLx.add( subE ); 
 					}
 				}
-//TODO				pool.add(candidate);
+				pool.add(candidate);
 			}				
 		}
 	}
+
 	
-	
-//	private void assignDistance(PhEntryDist<Object> e) {
-//		BSTEntry e2 = (BSTEntry) e.getValue();
-//		double d;
-//		if (e2.getValue() instanceof Node) {
-//			Node sub = (Node) e2.getValue();
-//			d = distToNode(e2.getKdKey(), sub.getPostLen() + 1);
-//		} else {
-//			d = distance.dist(center, e2.getKdKey());
-//		}
-//		e.setDist(d);
-//	}
-	
-	private void assignDistance(PhEntryDist<Object> e) {
-		double d;
-		if (e.getValue() instanceof Node) {
-			Node sub = (Node) e.getValue();
-			d = distToNode(e.getKey(), sub.getPostLen() + 1);
-		} else {
-			d = distance.dist(center, e.getKey());
-		}
-		e.setDist(d);
-	}
-	
-	private double calcDistance(PhEntryDist<Object> e) {
+	private double calcLxDistance(PhEntryDist<Object> e) {
 		double d;
 		if (e.getValue() instanceof Node) {
 			Node sub = (Node) e.getValue();
@@ -236,22 +217,36 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 		return d;
 	}
 	
+	private PhEntryDist<Object> createLxEntry(BSTEntry e) {
+		//calculate distance
+		double d;
+		if (e.getValue() instanceof Node) {
+			Node sub = (Node) e.getValue();
+			d = distToNode(e.getKdKey(), sub.getPostLen() + 1);
+		} else {
+			d = distance.dist(center, e.getKdKey());
+		}
+
+		//create and return entry
+		return createEntry(e.getKdKey(), e.getValue(), d);
+	}
+	
+	
+	private PhEntryDist<Object> createEntry(long[] key, Object val, double dist) {
+		if (pool.isEmpty()) {
+			return new PhEntryDist<Object>(key, val, dist);
+		}
+		PhEntryDist<Object> e = pool.remove(pool.size() - 1);
+		e.setKeyInternal(key);
+		e.set(val, dist);
+		return e;
+	}
+	
 	private static final double EPS = 0.999999999;
 	
 	private double estimateDist(BSTEntry e2, long centerQuadrant, double[] distances) {
 		int permCount = Long.bitCount(centerQuadrant ^ e2.getKey());
 		return permCount == 0 ? 0 : distances[permCount-1]*EPS;
-		
-//		return distance.knnCalcMaximumPermutationCount(distances, maxDist)
-		
-//		double dEst;
-//		if (e2.getValue() instanceof Node) {
-//			Node sub = (Node) e2.getValue();
-//			dEst = distToNode(e2.getKdKey(), sub.getPostLen() + 1);
-//		} else {
-//			dEst = distance.dist(center, e2.getKdKey());
-//		}
-//		return dEst;
 	}
 	
 	private long calcRelativeQuadrants(Node node, long[] prefix) {
@@ -269,17 +264,6 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
         	relativeKNNpos |= (kNNCenter[i] >= nodeCenter) ? 1 : 0;
         }
         return relativeKNNpos;
-	}
-	
-	
-	private PhEntryDist<Object> createEntry(long[] key, Object val, double dist) {
-		if (pool.isEmpty()) {
-			return new PhEntryDist<Object>(key, val, dist);
-		}
-		PhEntryDist<Object> e = pool.remove(pool.size() - 1);
-		e.setKeyInternal(key);
-		e.set(val, dist);
-		return e;
 	}
 
 
