@@ -32,7 +32,7 @@ public class PhDistanceF_L1 implements PhDistance {
 		double d = 0;
 		for (int i = 0; i < v1.length; i++) {
 			double dl = BitTools.toDouble(v1[i]) - BitTools.toDouble(v2[i]);
-			d += dl;
+			d += Math.abs(dl);
 		}
 		return d;
 	}
@@ -72,7 +72,7 @@ public class PhDistanceF_L1 implements PhDistance {
 
 			//TODO use unconverted input for nodeCenter???
 			double dist = BitTools.toDouble(nodeCenter) - BitTools.toDouble(kNNCenter[i]);
-			outDistances[i] = dist;
+			outDistances[i] = Math.abs(dist);
 		}
 		
 		Arrays.sort(outDistances);
