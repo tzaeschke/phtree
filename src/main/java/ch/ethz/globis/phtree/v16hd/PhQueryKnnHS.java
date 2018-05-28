@@ -16,7 +16,6 @@ import java.util.PriorityQueue;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntryDist;
-import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
@@ -37,7 +36,6 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	private PhTree16HD<T> pht;
 	private PhDistance distance;
 	private long[] center;
-	private final PhFilterDistance checker;
 	private final ArrayList<PhEntryDist<T>> results = new ArrayList<>(); 
 	private final ArrayList<PhEntryDist<Object>> pool = new ArrayList<>(); 
 	private final PriorityQueue<PhEntryDist<Object>> queue = new PriorityQueue<>(COMP);
@@ -52,7 +50,6 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	public PhQueryKnnHS(PhTree16HD<T> pht) {
 		this.dims = pht.getDim();
 		this.pht = pht;
-		this.checker = new PhFilterDistance();
 	}
 
 	@Override
@@ -72,7 +69,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 
 	@Override
 	public PhEntryDist<T> nextEntryReuse() {
-		//TODO
+		//Reusing happens only via pooling
 		return iterResult.next();
 	}
 
@@ -102,10 +99,8 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 		}
 		
 		//Initialize queue
-		long[] rootKey = new long[dims];
-		double d = this.distance.dist(rootKey, center);
-		//TODO use d=0 (lies in Node!!!)
-		PhEntryDist<Object> rootE = new PhEntryDist<>(rootKey, pht.getRoot(), d);
+		//use d=0 (lies in Node!!!)
+		PhEntryDist<Object> rootE = createEntry(new long[dims], pht.getRoot(), 0);
 		this.queue.add(rootE);
 		
 		search(nMin);
@@ -115,18 +110,17 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	}
 
 	
+	@SuppressWarnings("unchecked")
 	private void search(int k) {
 		while (!queue.isEmpty()) {
 			PhEntryDist<Object> candidate = queue.poll();
 			Object o = candidate.getValue();
 			if (!(o instanceof Node)) {
 				//data entry
-//TODO				if (checker == null || checker.isValid(candidate.getKey())) {
-					results.add((PhEntryDist<T>) candidate);
-					if (results.size() >= k) {
-						return;
-					}
-//				}
+				results.add((PhEntryDist<T>) candidate);
+				if (results.size() >= k) {
+					return;
+				}
 			} else {
 				//inner node
 				Node node = (Node)o;
@@ -142,7 +136,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 						queue.add(createEntry(e2.getKdKey(), e2.getValue(), d));
 					}
 				}
-//TODO				pool.add(candidate);
+				pool.add(candidate);
 			}				
 		}
 	}

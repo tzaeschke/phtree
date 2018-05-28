@@ -46,6 +46,8 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	private final PriorityQueue<PhEntryDist<Object>> queueLx = new PriorityQueue<>(COMP);
 	private final BSTIteratorAll iterNode = new BSTIteratorAll();
 	private Iterator<PhEntryDist<T>> iterResult;
+	//Field, to reduce garbage collection. Gets reset for every loop in the query. 
+	private final long[] relativeQuadrantOfCenter;
 
 
 	/**
@@ -55,6 +57,7 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	public PhQueryKnnHSZ(PhTree16HD<T> pht) {
 		this.dims = pht.getDim();
 		this.pht = pht;
+		this.relativeQuadrantOfCenter = BitsHD.newArray(dims);
 	}
 
 	@Override
@@ -74,7 +77,7 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 
 	@Override
 	public PhEntryDist<T> nextEntryReuse() {
-		//TODO
+		//Reusing happens only via pooling
 		return iterResult.next();
 	}
 
@@ -105,7 +108,7 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 		}
 		
 		//Initialize queue
-		PhEntryDist<Object> rootE = new PhEntryDist<>(new long[dims], pht.getRoot(), 0);
+		PhEntryDist<Object> rootE = createEntry(new long[dims], pht.getRoot(), 0);
 		this.queueLx.add(rootE);
 		
 		search(nMin);
@@ -132,8 +135,6 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 	
 	@SuppressWarnings("unchecked")
 	private void search(int k) {
-		//TODO buffer
-		long[] relativeQuadrantOfCenter = BitsHD.newArray(dims);
 		while (!queueLx.isEmpty() || !queueEst.isEmpty()) {
 
 			//ensure that 1st LX entry is valid

@@ -106,7 +106,7 @@ public class PhQueryKnnHSZ<T> implements PhKnnQuery<T> {
 		}
 		
 		//Initialize queue
-		PhEntryDist<Object> rootE = new PhEntryDist<>(new long[dims], pht.getRoot(), 0);
+		PhEntryDist<Object> rootE = createEntry(new long[dims], pht.getRoot(), 0);
 		this.queueLx.add(rootE);
 		
 		search(nMin);
