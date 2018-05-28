@@ -500,7 +500,7 @@ public class PhTree16HD<T> implements PhTree<T> {
 	}
 
 	/**
-	 * Locate nearest neighbours for a given point in space.
+	 * Locate nearest neighbors for a given point in space.
 	 * @param nMin number of values to be returned. More values may or may not be returned when 
 	 * several have	the same distance.
 	 * @param v center point
@@ -548,28 +548,6 @@ public class PhTree16HD<T> implements PhTree<T> {
 
 	void adjustCounts(int deletedPosts) {
 		nEntries.addAndGet(-deletedPosts);
-	}
-
-
-	/**
-	 * Best HC incrementer ever. 
-	 * @param v
-	 * @param min
-	 * @param max
-	 * @return next valid value or min.
-	 */
-	static long inc(long v, long min, long max) {
-		//first, fill all 'invalid' bits with '1' (bits that can have only one value).
-		long r = v | (~max);
-		//increment. The '1's in the invalid bits will cause bitwise overflow to the next valid bit.
-		r++;
-		//remove invalid bits.
-		return (r & max) | min;
-
-		//return -1 if we exceed 'max' and cause an overflow or return the original value. The
-		//latter can happen if there is only one possible value (all filter bits are set).
-		//The <= is also owed to the bug tested in testBugDecrease()
-		//return (r <= v) ? -1 : r;
 	}
 	
 }
