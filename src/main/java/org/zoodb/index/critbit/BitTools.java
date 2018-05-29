@@ -1,22 +1,19 @@
 /*
- * Copyright 2009-2014 Tilmann Zaeschke. All rights reserved.
+ * Copyright 2009-2017 Tilmann Zaeschke. All rights reserved.
  * 
- * This file is part of ZooDB.
+ * This file is part of TinSpin.
  * 
- * ZooDB is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * ZooDB is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with ZooDB.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * See the README and COPYING files for further information. 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.zoodb.index.critbit;
 
@@ -55,6 +52,82 @@ public class BitTools {
 		int iVal = (int) value;
 		return Float.intBitsToFloat(iVal >= 0.0 ? iVal : iVal ^ 0x7FFFFFFF);
 	}
+
+	/**
+	 * @param value Value to be transformed
+	 * @param ret The array used to store the return value
+	 * @return long representation.
+	 */
+	public static long[] toSortableLong(double[] value, long[] ret) {
+		//To create a sortable long, we convert the double to a long using the IEEE-754 standard,
+		//which stores floats in the form <sign><exponent-127><mantissa> .
+		//This result is properly ordered longs for all positive doubles. Negative values have
+		//inverse ordering. For negative doubles, we therefore simply invert them to make them 
+		//sortable, however the sign must be inverted again to stay negative.
+		for (int i = 0; i < value.length; i++) {
+			long r = Double.doubleToRawLongBits(value[i]);
+			ret[i] = (r >= 0) ? r : r ^ 0x7FFFFFFFFFFFFFFFL;
+		} 
+		return ret;
+	}
+
+	public static long[] toSortableLong(float[] value, long[] ret) {
+		//see toSortableLong(double)
+		for (int i = 0; i < value.length; i++) {
+			int r =  Float.floatToRawIntBits(value[i]);
+			ret[i] = (r >= 0) ? r : r ^ 0x7FFFFFFF;
+		}
+		return ret;
+	}
+
+	public static double[] toDouble(long value[], double[] ret) {
+		for (int i = 0; i < value.length; i++) {
+			ret[i] = Double.longBitsToDouble(
+					value[i] >= 0.0 ? value[i] : value[i] ^ 0x7FFFFFFFFFFFFFFFL);
+		}
+		return ret;
+	}
+
+	public static float[] toFloat(long[] value, float[] ret) {
+		for (int i = 0; i < value.length; i++) {
+			int iVal = (int) value[i];
+			ret[i] = Float.intBitsToFloat(iVal >= 0.0 ? iVal : iVal ^ 0x7FFFFFFF);
+		}
+		return ret;
+	}
+
+	public static long toSortableLong(String s) {
+		// store magic number: 6 chars + (hash >> 16)
+		long n = 0;
+		int i = 0;
+		for ( ; i < 6 && i < s.length(); i++ ) {
+			n |= (byte) s.charAt(i);
+			n = n << 8;
+		}
+		//Fill with empty spaces if string is too short
+		for ( ; i < 6; i++) {
+			n = n << 8;
+		}
+		n = n << 8;
+
+		//add hashcode
+		n |= (0xFFFF & s.hashCode());
+		return n;
+	}
+
+
+	/**
+	 * Reverses the value, considering that not all 64bits of the long value are used.
+	 * @param l value to be reversed
+	 * @param usedBits Number of bits to be considered 
+	 * @return Reversed value
+	 */
+	public static long reverse(long l, int usedBits) {
+		long r = Long.reverse(l);
+		r >>>= (64-usedBits);
+		return r;
+	}
+
 
 	/**
 	 * Splits a value and write it to trgV at position trg1 and trg2.

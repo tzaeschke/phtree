@@ -1,22 +1,19 @@
 /*
- * Copyright 2009-2014 Tilmann Zaeschke. All rights reserved.
+ * Copyright 2009-2017 Tilmann Zaeschke. All rights reserved.
  * 
- * This file is part of ZooDB.
+ * This file is part of TinSpin.
  * 
- * ZooDB is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * ZooDB is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with ZooDB.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * See the README and COPYING files for further information. 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.zoodb.index.critbit;
 
@@ -31,27 +28,64 @@ import org.zoodb.index.critbit.CritBit.QueryIterator;
  */
 public interface CritBit1D<V> {
 
-	/* @see CritBit#put(long[], Object) */
+	/**
+	 * @param key key
+	 * @param value value 
+	 * @return previous value or 'null' if none existed
+	 *
+	 * @see CritBit#put(long[], Object) 
+	 */
 	V put(long[] key, V value);
 
-	/* @see CritBit#contains(long[]) */
+	/** 
+	 * @param key key
+	 * @return 'true' if the key exists
+	 *
+	 * @see CritBit#contains(long[]) 
+	 */
 	boolean contains(long[] key);
 
-	/* @see CritBit#query(long[], long[]) */
+	/** 
+	 * @param min Lower left corner of the query window
+	 * @param max Upper right corner of the query window
+	 * @return Iterator over query result
+	 * 
+	 * @see CritBit#query(long[], long[]) 
+	 */
 	QueryIterator<V> query(long[] min, long[] max);
 
-	/* @see CritBit#size() */
+	/** 
+	 * @return Number of entries
+	 *  
+	 * @see CritBit#size() 
+	 */
 	int size();
 
-	/* @see CritBit#remove(long[]) */
+	/** 
+	 * @param key key
+	 * @return previous value or 'null' if none existed
+	 * 
+	 * @see CritBit#remove(long[]) 
+	 */
 	V remove(long[] key);
 
-	/* @see CritBit#printTree() */
+	/** 
+	 * @see CritBit#printTree()
+	 */
 	void printTree();
 
-	/* @see CritBit#get(long[]) */
+	/** 
+	 * @param key key
+	 * @return the value or 'null' if the key does not exists
+	 * 
+	 * @see CritBit#get(long[]) 
+	 */
 	V get(long[] key);
 
-	/* @see CritBit#iterator() */
+	/**
+	 * @return Iterator over all entries
+	 * 
+	 * @see CritBit#iterator() 
+	 */
 	FullIterator<V> iterator();
 }

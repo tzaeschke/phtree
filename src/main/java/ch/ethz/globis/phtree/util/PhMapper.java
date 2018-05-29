@@ -24,6 +24,8 @@ import ch.ethz.globis.phtree.PhEntry;
  */
 @FunctionalInterface
 public interface PhMapper<T, R> extends Serializable {
+	
+    public static final long serialVersionUID = 1L;
 
 	static <T> PhMapper<T, PhEntry<T>> PVENTRY() {
 		return e -> e;

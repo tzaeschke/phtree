@@ -22,7 +22,9 @@ import java.io.Serializable;
 @FunctionalInterface
 public interface PhMapperKey<R> extends Serializable{
 
-	static PhMapperKey<long[]> LONG_ARRAY() { 
+    public static final long serialVersionUID = 1L;
+
+    static PhMapperKey<long[]> LONG_ARRAY() { 
 		return ((point) -> (point)); 
 	}
 	
