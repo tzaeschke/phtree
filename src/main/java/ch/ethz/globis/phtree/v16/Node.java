@@ -147,11 +147,7 @@ public class Node {
 		return v;
 	}
 	
-	public long calcPostfixMask() {
-		return ~((-1L)<<getPostLen());
-	}
-	
-	public long calcInfixMask(int subPostLen) {
+	private long calcInfixMask(int subPostLen) {
 		//We use a simplified mask, because the prefix is always present
 		//long mask = ~((-1L)<<(getPostLen()-subPostLen-1));
 		return (-1L) << (subPostLen+1);
@@ -556,14 +552,13 @@ public class Node {
 			Node subNode = (Node) localVal;
 			if (subNode.getInfixLen() > 0) {
 				long mask = calcInfixMask(subNode.getPostLen());
-				return insertSplitPH(existingE, kdKey, value, mask);
+				return insertSplit(existingE, kdKey, value, mask);
 			}
 			//No infix conflict, just traverse subnode
 			return localVal;
 		} else {
 			if (getPostLen() > 0) {
-				long mask = calcPostfixMask();
-				return insertSplitPH(existingE, kdKey, value, mask);
+				return insertSplit(existingE, kdKey, value, -1L);
 			}
 			//perfect match -> replace value
 			existingE.set(existingE.getKey(), kdKey, value);
@@ -572,7 +567,7 @@ public class Node {
 	}
 	
 
-	public Object insertSplitPH(BSTEntry currentEntry, long[] newKey, Object newValue, long mask) {
+	public Object insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, long mask) {
 		if (mask == 0) {
 			//There won't be any split, no need to check.
 			return currentEntry.getValue();
@@ -677,24 +672,26 @@ public class Node {
 			Node sub = (Node) be.getValue();
 			if (sub.getInfixLen() > 0) {
 				final long mask = calcInfixMask(sub.getPostLen());
-				if (!readAndCheckKdKey(be.getKdKey(), keyToMatch, mask)) {
-					return false;
-				}
+				return checkKdKey(be.getKdKey(), keyToMatch, mask);
 			}
-		} else {
-			long[] candidate = be.getKdKey();
-			for (int i = 0; i < keyToMatch.length; i++) {
-				if (candidate[i] != keyToMatch[i]) {
-					return false;
-				}
+			return true;
+		} 
+		
+		return checkKdKey(be.getKdKey(), keyToMatch);
+	}
+	
+	private static boolean checkKdKey(long[] allKeys, long[] keyToMatch, long mask) {
+		for (int i = 0; i < keyToMatch.length; i++) {
+			if (((allKeys[i] ^ keyToMatch[i]) & mask) != 0) {
+				return false;
 			}
 		}
 		return true;
 	}
-	
-	private static boolean readAndCheckKdKey(long[] allKeys, long[] keyToMatch, long mask) {
+
+	private static boolean checkKdKey(long[] allKeys, long[] keyToMatch) {
 		for (int i = 0; i < keyToMatch.length; i++) {
-			if (((allKeys[i] ^ keyToMatch[i]) & mask) != 0) {
+			if ((allKeys[i] ^ keyToMatch[i]) != 0) {
 				return false;
 			}
 		}
