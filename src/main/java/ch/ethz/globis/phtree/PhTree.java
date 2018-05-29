@@ -11,6 +11,7 @@ import java.util.List;
 import ch.ethz.globis.phtree.util.PhIteratorBase;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
+import ch.ethz.globis.phtree.v13.PhTree13;
 import ch.ethz.globis.phtree.v16.PhTree16;
 import ch.ethz.globis.phtree.v16hd.PhTree16HD;
 
@@ -192,8 +193,10 @@ public interface PhTree<T> {
 	public static <T> PhTree<T> create(int dim) {
 		if (dim > 60) {
 			return new PhTree16HD<>(dim);
+		} else if (dim >= 4) {
+			return new PhTree16<>(dim);
 		}
-		return new PhTree16<>(dim);
+		return new PhTree13<>(dim);
 	}
 
 	/**
@@ -206,8 +209,10 @@ public interface PhTree<T> {
 	public static <T> PhTree<T> create(PhTreeConfig cfg) {
 		if (cfg.getDim() > 60) {
 			return new PhTree16HD<>(cfg);
+		} else if (cfg.getDim() >=4) {
+			return new PhTree16<>(cfg);
 		}
-		return new PhTree16<>(cfg);
+		return new PhTree13<>(cfg);
 	}
 
 	/**
