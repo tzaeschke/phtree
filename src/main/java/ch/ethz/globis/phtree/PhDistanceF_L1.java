@@ -12,7 +12,7 @@ import ch.ethz.globis.phtree.util.BitTools;
 
 
 /**
- * Calculate the L1 (Manhatten/Taxi) distance for encoded {@code double} values.
+ * Calculate the L1 (Manhattan/Taxi) distance for encoded {@code double} values.
  * 
  * @see PhDistance
  * 
