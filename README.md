@@ -102,11 +102,11 @@ There are currently two main versions, the classic PH-Tree (called **PH1**, late
 
 ### Advantages
 
-- Memory efficient (PH1 only): Due to prefix sharing and other optimisations the tree may consume less memory than a flat array of integers/floats.
+- Memory efficient (PH1 only): Due to prefix sharing and other optimizations the tree may consume less memory than a flat array of integers/floats.
 - Update efficiency: The performance of `insert()`, `update()` and `delete()` operations is almost independent of the size of the tree. For low dimensions performance may even increase(!) with growing tree size (> 1M entries).
 - Small queries / spatial join: The PH-Tree (**PH1 only**) excels at 'small' window queries (small = small result size, such as 0 or 1). Experiments have shown that a brute force spatial join with the PH-Tree may be faster than dedicated solutions such as [TOUCH](https://infoscience.epfl.ch/record/186338/files/sigfp132-nobari_1.pdf) (simulating experiments as described in the TOUCH paper).  
 - Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more.
-- Scalability with dimension: Updates and 'contains()' scale almost horizontally with increasing dimensionality. Depending on the dataset, window queries may scale up to 20 dimensions or more. _k_NN queries also scale well, much better than kD-trees, but can't quite compete with specialized solution such as CoverTree. 
+- Scalability with dimension: Updates and 'contains()' scale almost horizontally with increasing dimensionality. Depending on the dataset, window queries may scale up to 20 dimensions or more. _k_NN (nearest neighbor) queries also scale well, much better than kD-trees, but can't quite compete with specialized solution such as CoverTree. 
 - Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
 - Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (maximum depth is 64, see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency, see also the section on concurrency below.
 - IO / persistence: The nodes of PH2 use internally B+Trees. These lend themselves to page base storage, at least for higher dimensions where nodes contain more entries.
@@ -125,14 +125,14 @@ There are currently two main versions, the classic PH-Tree (called **PH1**, late
 ### Generally
 
 - The tree performs best with large datasets with 1 million entries or more. Performance may actually increase with large datasets.
-- The tree performs best on window queries or nearest neighbour queries that return few result (window queries: 1-1000) because of the comparatively high extraction cost of values. 
+- The tree performs best on window queries or nearest neighbor queries that return few result (window queries: 1-1000) because of the comparatively high extraction cost of values. 
 
 
 ### Differences to original PH-Tree
 
 PH1 introduced:
 - Support for rectangle data
-- Support for _k_ nearest neighbour queries
+- Support for _k_ nearest neighbor queries
 - Dedicated `update()` method that combines `put()` and `remove()`
 - Automatic splitting of large nodes greatly improves update performance for data with more than 10 dimensions
 - General performance improvements and reduced garbage collection load
@@ -140,7 +140,7 @@ PH1 introduced:
 PH2 introduced:
 - Much simpler implementation based on B+Trees (instead of AHC/LHC nodes with bitstreaming).
 - Support for >62 dimensions, theoretical limit now 2^31 dimensions
-- New _k_NN nearest neighbour search following [Hjaltason and Samet: "Distance browsing in spatial databases."](https://pdfs.semanticscholar.org/0c67/15c8b7e8239cf7d7703e11a88e9cd5ab7714.pdf).
+- New _k_NN nearest neighbor search following [Hjaltason and Samet: "Distance browsing in spatial databases."](https://pdfs.semanticscholar.org/0c67/15c8b7e8239cf7d7703e11a88e9cd5ab7714.pdf).
 - Generally better insertion/update performance for dim>8
 
 
@@ -157,7 +157,7 @@ The four variants are:
 
 They can be created with `PhTreeXYZ.create(dimensions)`. This will create a PH1 tree (v13) for small dimensions, a PH2 (v16) for dimensions up to 60 and a PH2 (v16HD) if more dimensions are required.
 The old non-value API is still available in the `tst` folder.
-All queries return specialised iterators that give direct access to key, value or entry.
+All queries return specialized iterators that give direct access to key, value or entry.
 The `queryAll()` methods return lists of entries and are especially useful for small result sets. 
 
 The packages `ch.ethz.globis.pht.v*` contain different versions of the PH-tree. They are the actual implementations of the four interfaces mentioned above.
@@ -200,9 +200,9 @@ __**Garbage Collector**__
 See also the section about _iterators_ (below) on how to avoid GC from performing queries.
 
 
-# Perfomance Optimisation
+# Perfomance Optimization
 
-Suggestions for performance optimisation can also be found in the PDF "The PH-Tree revisited", which is available in this repository.
+Suggestions for performance optimization can also be found in the PDF "The PH-Tree revisited", which is available in this repository.
 
 ### Updates
 
@@ -213,13 +213,13 @@ For updating the keys of entries (AKA moving objects index), consider using `upd
 - `queryExtent()`:      Fastest option when traversing (almost) all of the tree
 - `query()`:            Fastest option for for average result size > 50 (depending on data)
 - `queryAll()`:         Fastest option for for average result size < 50 (depending on data)
-- `nearestNeighbour()`: Nearest neighbour query
+- `nearestNeighbour()`: Nearest neighbor query
 - `rangeQuery()`:       Returns everything with a spherical range
 
 ### Iterators (PH1)
 
 All iterators return by default the value of a stored key/value pair. All iterators also provide
-three specialised methods `nextKey()`, `nextValue()` and `nextEntry()` to return only the key, only the value (just as `next()`) or the combined entry object. Iterating over the entry object has the disadvantage that the entries need to be created and create load on the GC (garbage collector). However, the entries provide easy access to the key, especially for SOLID keys.
+three specialized methods `nextKey()`, `nextValue()` and `nextEntry()` to return only the key, only the value (just as `next()`) or the combined entry object. Iterating over the entry object has the disadvantage that the entries need to be created and create load on the GC (garbage collector). However, the entries provide easy access to the key, especially for SOLID keys.
 
 The `nextValue()` and `next()` methods do not cause any GC (garbage collector) load and simply return the value associated with the result key.
 The `nextKey()` and `nextEntry()` always create new key objects or new key and additional `PhEntry` objects respectively. There are two ways to avoid this:
