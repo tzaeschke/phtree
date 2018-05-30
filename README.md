@@ -31,6 +31,10 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 
 # News
 
+### 2018-05-30
+
+Released version 2.0.1 of the PH-Tree. This release contains some minor fixes and documentation updates.
+
 ### 2018-05-29
 
 Released version 2.0.0 of the PH-Tree (partial reimplementation). There are three new versions:
@@ -94,23 +98,27 @@ Released version 0.3.0 of the PH-tree (internal version: v11). Features (partly 
 
 # Main Properties
 
+There are currently two main versions, the classic PH-Tree (called **PH1**, latest implementation v13) and the new PH-Tree (called **PH2**, latest implementation v16/v16HD).
+
 ### Advantages
 
-- Memory efficient: Due to prefix sharing and other optimisations the tree may consume less memory than a flat array of integers/floats.
-- Update efficiency: The performance of `insert()`, `update()` and `delete()` operations is almost independent of the size of the tree. For low dimensions performance may even improve with larger trees (> 1M entries).
+- Memory efficient (PH1 only): Due to prefix sharing and other optimisations the tree may consume less memory than a flat array of integers/floats.
+- Update efficiency: The performance of `insert()`, `update()` and `delete()` operations is almost independent of the size of the tree. For low dimensions performance may even increase(!) with growing tree size (> 1M entries).
+- Small queries / spatial join: The PH-Tree (**PH1 only**) excels at 'small' window queries (small = small result size, such as 0 or 1). Experiments have shown that a brute force spatial join with the PH-Tree may be faster than dedicated solutions such as [TOUCH](https://infoscience.epfl.ch/record/186338/files/sigfp132-nobari_1.pdf) (simulating experiments as described in the TOUCH paper).  
 - Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more.
-- Scalability with dimension: Updates and 'contains()' scale very well to the current maximum of 62 dimensions. Depending on the dataset, queries may scale up to 20 dimensions or more.
+- Scalability with dimension: Updates and 'contains()' scale almost horizontally with increasing dimensionality. Depending on the dataset, window queries may scale up to 20 dimensions or more. _k_NN queries also scale well, much better than kD-trees, but can't quite compete with specialized solution such as CoverTree. 
 - Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
 - Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (maximum depth is 64, see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency, see also the section on concurrency below.
+- IO / persistence: The nodes of PH2 use internally B+Trees. These lend themselves to page base storage, at least for higher dimensions where nodes contain more entries.
 
 
 ### Disadvantages
 
-- The current implementation will not work with more then 62 dimensions.
+- The PH1 will not work with more then 62 dimensions. The PH2 supports up to 2^31 dimensions but at the cost of increased memory requiremts.
 - Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more.
-- Performance/dimensionality: depending on the dataset, performance of queries may degrade when using data with more than 10-20 dimensions. 
+- Performance/dimensionality: depending on the dataset, performance of window queries may degrade when using data with more than 30 dimensions. 
 - Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better than traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
-- Storage: The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about [iterators](#iterators) below on some strategies to avoid this problem. 
+- Storage (PH1 only): The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about _iterators_ below on some strategies to avoid this problem. 
 
 
 
@@ -122,11 +130,18 @@ Released version 0.3.0 of the PH-tree (internal version: v11). Features (partly 
 
 ### Differences to original PH-Tree
 
+PH1 introduced:
 - Support for rectangle data
-- Support for k nearest neighbour queries
+- Support for _k_ nearest neighbour queries
 - Dedicated `update()` method that combines `put()` and `remove()`
 - Automatic splitting of large nodes greatly improves update performance for data with more than 10 dimensions
 - General performance improvements and reduced garbage collection load
+
+PH2 introduced:
+- Much simpler implementation based on B+Trees (instead of AHC/LHC nodes with bitstreaming).
+- Support for >62 dimensions, theoretical limit now 2^31 dimensions
+- New _k_NN nearest neighbour search following [Hjaltason and Samet: "Distance browsing in spatial databases."](https://pdfs.semanticscholar.org/0c67/15c8b7e8239cf7d7703e11a88e9cd5ab7714.pdf).
+- Generally better insertion/update performance for dim>8
 
 
 # Interfaces / Abstract Classes
@@ -140,7 +155,7 @@ The four variants are:
 - `PhTreeSolid`     For intervals/rectangles/boxes (solids) with integer coordinates.
 - `PhTreeSolidF`    For intervals/rectangles/boxes (solids) with floating point coordinates.
 
-They can be created with `PhTreeXYZ.create(dimensions)`. The default key-width is 64bit per dimension.
+They can be created with `PhTreeXYZ.create(dimensions)`. This will create a PH1 tree (v13) for small dimensions, a PH2 (v16) for dimensions up to 60 and a PH2 (v16HD) if more dimensions are required.
 The old non-value API is still available in the `tst` folder.
 All queries return specialised iterators that give direct access to key, value or entry.
 The `queryAll()` methods return lists of entries and are especially useful for small result sets. 
@@ -152,7 +167,7 @@ scalability (size and dimensionality) as well as storage requirements.
 
 # Tuning Memory Usage vs Performance
 
-__**Configuration**__
+__**Configuration (PH1)**__
 
 `Node.AHC_LHC_BIAS = 2.0`: This defines when the tree should switch from LHC to AHC representation for a given node. With the given default of 2.0, the tree uses AHC unless it requires more than 2.0 times the memory of LHC.
 In practice this has only limited effect on memory, but a higher value tends to slightly increase performance of most operations. Commonly used values are 1.0, 1.5 and 2.0. 
@@ -163,6 +178,11 @@ Using higher values reduces memory consumption but slows down any modification t
 
 `NtNode.MAX_DIM = 6`: This defines the dimensionality of NT (nested tree) representation. For example, a d=20 dimensional node will be split in a d=6 root node, two levels of d=6 nodes below that any at the bottom a d=2 node. This adds up to 3*6+2=20. This was introduced to speed up modification (insert, remove, ...) of large nodes. Unfortunately, NT representation is very memory intensive.
 This setting has not been well researched. Higher values should reduce memory consumption at the cost of modification speed. Commonly used values are 4, 6 and 8.
+
+__**Configuration (PH2)**__
+
+PH2 is currently not configurable. There are hardcoded page sizes for the internal B+Tree that can be found in the `Node` class, but these should have little impact on performance. 
+
 
 
 __**Preprocessing and 32bit vs 64 bit**__
@@ -177,7 +197,7 @@ by 1,000,000 before casting the to (long) and adding them to the tree.
 
 __**Garbage Collector**__
 
-See also the section about [iterators](#iterators) on how to avoid GC from performing queries.
+See also the section about _iterators_ (below) on how to avoid GC from performing queries.
 
 
 # Perfomance Optimisation
@@ -196,7 +216,7 @@ For updating the keys of entries (AKA moving objects index), consider using `upd
 - `nearestNeighbour()`: Nearest neighbour query
 - `rangeQuery()`:       Returns everything with a spherical range
 
-### Iterators
+### Iterators (PH1)
 
 All iterators return by default the value of a stored key/value pair. All iterators also provide
 three specialised methods `nextKey()`, `nextValue()` and `nextEntry()` to return only the key, only the value (just as `next()`) or the combined entry object. Iterating over the entry object has the disadvantage that the entries need to be created and create load on the GC (garbage collector). However, the entries provide easy access to the key, especially for SOLID keys.
@@ -208,6 +228,10 @@ The `nextKey()` and `nextEntry()` always create new key objects or new key and a
 The disadvantage is that the key and `PhEntry` objects need to be copied if they are needed locally beyond the next call to `nextEntryReuse()`.
 
 Another way to reduce GC is to reuse the iterators when performing multiple queries. This can be done by calling `PhQuery.reset(..)`, which will abort the current query and reset the iterator to the first element that fits the min/max values provided in the `reset(..)` call. This can be useful because an iterator consists of more than hundred Java objects. In some scenarios this increased overall performance of about 20%.  
+
+### Iterators (PH2)
+
+In PH2, the iterators support the same interfaces as PH1, however there is less reuse happening. The reason is that PH2 does not compress keys internally and stores full entry objects. These can be directly returned. **However, care should be taken that returned objects are not modified, because that may invalidate the tree.**
 
 
 ### Wrappers
@@ -270,7 +294,6 @@ Read only access (all types of queries) can safely be done by any number of thre
 Any write access must be synchronized with any other concurrent write or read access (`iterator.next()` counts as read access). For example, a wrapper class could use a Java `ReadWriteLock` to ensure that write access is always exclusive:  
 
 ```
-
 	private final ReadWriteLock lock = new ReentrantReadWriteLock(true);
 	
 	public void put(...) {
