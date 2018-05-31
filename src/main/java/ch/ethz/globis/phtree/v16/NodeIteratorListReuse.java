@@ -79,7 +79,7 @@ public class NodeIteratorListReuse<T, R> {
 		void reinitAndRun(Node node, long[] prefix) {
 			calcLimits(node, rangeMin, rangeMax, prefix);
 
-			this.niIterator.reset(node.getRoot(), maskLower,  maskUpper);
+			this.niIterator.reset(node.getRoot(), maskLower,  maskUpper, node.getEntryCount());
 
 			getAll();
 		}

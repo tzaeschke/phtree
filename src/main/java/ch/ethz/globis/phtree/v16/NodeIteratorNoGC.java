@@ -56,7 +56,7 @@ public class NodeIteratorNoGC<T> {
 		this.rangeMax = rangeMax;
 		this.checker = checker;
 		this.node = node;
-		this.niIterator.reset(node.getRoot(), maskLower, maskUpper);
+		this.niIterator.reset(node.getRoot(), maskLower, maskUpper, node.getEntryCount());
 	}
 
 	
