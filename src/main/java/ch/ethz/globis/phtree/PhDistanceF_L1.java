@@ -83,4 +83,9 @@ public class PhDistanceF_L1 implements PhDistance {
 		}
 	}
 
+	@Override
+	public String toString() {
+		return getClass().getSimpleName();
+	}
+
 }

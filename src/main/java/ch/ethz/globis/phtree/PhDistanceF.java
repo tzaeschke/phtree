@@ -86,4 +86,8 @@ public class PhDistanceF implements PhDistance {
 		}
 	}
 
+	@Override
+	public String toString() {
+		return getClass().getSimpleName();
+	}
 }
