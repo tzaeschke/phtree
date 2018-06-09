@@ -52,19 +52,19 @@ public class BSTIteratorAll {
 		return true;
 	}
 	
+	
 	private void findNext() {
-		while (currentPage != null ) {
-			//first progress to next page, if necessary.
-			if (currentPos >= currentPage.getNKeys()) {
-				currentPage = currentPage.getNextLeaf();
-				currentPos = 0;
-				continue;
+		//first progress to next page, if necessary.
+		if (currentPos >= currentPage.getNKeys()) {
+			currentPage = currentPage.getNextLeaf();
+			if (currentPage == null) {
+				return;
 			}
-
-			nextValue = currentPage.getValues()[currentPos];
-			currentPos++;
-			return;
+			currentPos = 0;
 		}
+
+		nextValue = currentPage.getValues()[currentPos];
+		currentPos++;
 	}
 	
 

@@ -50,7 +50,7 @@ Released version 2.0.0 of the PH-Tree (partial reimplementation). There are thre
   * Internal B+Tree structure (with configurable page sizes) makes it more suitable for disk based storage.
   * **API Contract Change**: The PH-Tree now stores keys (long[]/double[]) internally. Modifying them
   after storing them in the tree will make the tree invalid.
-
+- The `PhTree` factory class will automatically choose one of v13, v16 and v16HD, depending on the number of dimensions. 
 
 
 ### 2017-09-17

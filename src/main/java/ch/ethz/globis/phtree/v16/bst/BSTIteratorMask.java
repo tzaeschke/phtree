@@ -79,24 +79,23 @@ public class BSTIteratorMask {
 	}
 	
 	private void findNext() {
-		while (currentPage != null ) {
-			//first progress to next page, if necessary.
-			if (currentPos >= currentPage.getNKeys()) {
-				currentPage = currentPage.getNextLeaf();
-				currentPos = 0;
-				continue;
-			}
-
-			long key = currentPage.getKeys()[currentPos]; 
-			if (check(key)) { 
-				nextValue = currentPage.getValues()[currentPos];
-				currentPos++;
-				return;
-			} else if (key > maxMask) {
-				currentPage = null;
-				return;
-			}
-			currentPos++;
+		while (currentPage != null) {
+		    int nKeys = currentPage.getNKeys();
+		    long[] keys = currentPage.getKeys();
+		    while (currentPos < nKeys) {
+				long key = keys[currentPos]; 
+		        if (check(key)) {
+					nextValue = currentPage.getValues()[currentPos];
+			        currentPos++;
+		            return;
+				} else if (key > maxMask) {
+					currentPage = null;
+					return;
+		        }
+		        currentPos++;
+		    }
+		    currentPage = currentPage.getNextLeaf();
+		    currentPos = 0;
 		}
 	}
 	
