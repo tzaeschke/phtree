@@ -119,7 +119,7 @@ public class TestBST16 {
 		long l52 = System.currentTimeMillis();
 
 		long l61 = System.currentTimeMillis();
-		BSTIteratorMask iterMask = new BSTIteratorMask().reset(ht.getRoot(), 0, 0xFFFFFFFFFFFEL);
+		BSTIteratorMask iterMask = new BSTIteratorMask().reset(ht.getRoot(), 0, 0xFFFFFFFFFFFEL, ht.getEntryCount());
 		prev = -2;
 		while (iterMask.hasNextEntry()) {
 			long current = iterMask.nextEntry().getKey();
@@ -202,7 +202,7 @@ public class TestBST16 {
 		BSTIteratorAll iter = ht.iterator();
 		assertFalse(iter.hasNextEntry());
 
-		BSTIteratorMask iterMask = new BSTIteratorMask().reset(ht.getRoot(), 0, 0xFFFFFFFFFFFEL);
+		BSTIteratorMask iterMask = new BSTIteratorMask().reset(ht.getRoot(), 0, 0xFFFFFFFFFFFEL, ht.getEntryCount());
 		assertFalse(iterMask.hasNextEntry());
 				
 		BSTEntry e2 = ht.bstRemove(12345, null, null);
