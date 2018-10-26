@@ -11,9 +11,6 @@ Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
 
 The current version of the PH-tree is discussed in more detail here: ([PDF](https://github.com/tzaeschke/phtree/blob/master/PhTreeRevisited.pdf)) (2015).
 
-Contact:
-{zaeschke,zimmerli,norrie)@inf.ethz.ch
-
 Maven:
 
 ```
