@@ -4,12 +4,16 @@ The PH-tree is a multi-dimensional indexing and storage structure.
 By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
 It supports kNN (k nearest neighbor) queries, range queries, window queries and fast update/move/reinsert of individual entries.
 
-The PH-tree was developed at ETH Zurich and first published in:
+Documents
+
+- The PH-tree was developed at ETH Zurich and first published in:
 "The PH-Tree: A Space-Efficient Storage Structure and Multi-Dimensional Index" ([PDF](https://github.com/tzaeschke/phtree/blob/master/PH-Tree-v1.1-2014-06-28.pdf)), 
 Tilmann Zäschke, Christoph Zimmerli and Moira C. Norrie, 
 Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
+- The current version of the PH-tree is discussed in more detail in this [PDF](https://github.com/tzaeschke/phtree/blob/master/PhTreeRevisited.pdf) (2015).
+- There is a Master Thesis: [Cluster-Computing and Parallelization for the Multi-Dimensional PH-Index](http://e-collection.library.ethz.ch/eserv/eth:47729/eth-47729-01.pdf).
+- The hypercube navigation is discussed in detail in this [PDF](https://github.com/tzaeschke/phtree/blob/master/Z-Ordered_Hypercube_Navigation.pdf) (2017).
 
-The current version of the PH-tree is discussed in more detail here: ([PDF](https://github.com/tzaeschke/phtree/blob/master/PhTreeRevisited.pdf)) (2015).
 
 Maven:
 
@@ -17,7 +21,7 @@ Maven:
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.0.0</version>
+    <version>2.0.1</version>
 </dependency>
 ```
 
