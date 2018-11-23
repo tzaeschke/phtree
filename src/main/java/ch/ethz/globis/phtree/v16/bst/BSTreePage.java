@@ -170,13 +170,7 @@ public class BSTreePage {
 	}
 
 
-	/**
-	 * Binary search.
-	 * 
-	 * @param toIndex Exclusive, search stops at (toIndex-1).
-	 * @param value For non-unique trees, the value is taken into account as well.
-	 */
-	int binarySearch(long key) {
+	public int binarySearch(long key) {
 		if (nEntries <=6) {
 			return linearSearch(key);
 		}
@@ -677,11 +671,11 @@ public class BSTreePage {
 		this.parent = parent;
 	}
 	
-	final long[] getKeys() {
+	public final long[] getKeys() {
 		return keys;
 	}
 
-	final BSTEntry[] getValues() {
+	public final BSTEntry[] getValues() {
 		return values;
 	}
 
@@ -840,7 +834,7 @@ public class BSTreePage {
 		parent = null;
 	}
 
-	BSTreePage getNextLeaf() {
+	public BSTreePage getNextLeaf() {
 		return nextLeaf;
 	}
 

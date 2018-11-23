@@ -11,7 +11,7 @@ package ch.ethz.globis.phtree.v16;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
+import ch.ethz.globis.phtree.v16.bst.BSTreePage;
 
 
 
@@ -26,29 +26,22 @@ import ch.ethz.globis.phtree.v16.bst.BSTIteratorMask;
 public class NodeIteratorNoGC<T> {
 	
 	private Node node;
-	private final BSTIteratorMask niIterator;
 	private long maskLower;
 	private long maskUpper;
 	private long[] rangeMin;
 	private long[] rangeMax;
 	private PhFilter checker;
 
-	/**
-	 * 
-	 * @param dims dimensions
-	 */
-	public NodeIteratorNoGC(int dims) {
-		niIterator = new BSTIteratorMask();
-	}
+	private BSTreePage currentPage = null;
+	private int currentPos = 0;
+
 	
 	/**
 	 * 
 	 * @param node
 	 * @param rangeMin The minimum value that any found value should have. If the found value is
 	 *  lower, the search continues.
-	 * @param rangeMax
-	 * @param lower The minimum HC-Pos that a value should have.
-	 * @param upper
+	 * @param rangeMax The maximum value.
 	 * @param checker result verifier, can be null.
 	 */
 	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker) {
@@ -56,7 +49,7 @@ public class NodeIteratorNoGC<T> {
 		this.rangeMax = rangeMax;
 		this.checker = checker;
 		this.node = node;
-		this.niIterator.reset(node.getRoot(), maskLower, maskUpper, node.getEntryCount());
+		this.reset(node.getRoot(), node.getEntryCount());
 	}
 
 	
@@ -65,13 +58,7 @@ public class NodeIteratorNoGC<T> {
 	 * @return TRUE iff a matching element was found.
 	 */
 	boolean increment(PhEntry<T> result) {
-		while (niIterator.hasNextEntry()) {
-			BSTEntry be = niIterator.nextEntry();
-			if (readValue(be, result)) {
-				return true;
-			}
-		}
-		return false;
+		return findNext(result);
 	}
 
 	private boolean readValue(BSTEntry candidate, PhEntry<T> result) {
@@ -167,5 +154,68 @@ public class NodeIteratorNoGC<T> {
 		this.node = node; //for calcLimits
 		calcLimits(rangeMin, rangeMax, prefix);
 		reinit(node, rangeMin, rangeMax, checker);
+	}
+	
+	private void reset(BSTreePage root, int nEntries) {
+		this.currentPage = root;
+		this.currentPos = 0;
+
+		//special optimization if only one quadrant matches
+		if (nEntries > 4 && Long.bitCount(maskLower ^ maskUpper) == 0) {
+			final long key = maskLower;
+			BSTreePage page = root;
+			while (page != null && !page.isLeaf()) {
+				page = page.findSubPage(key);
+			}
+			if (page != null) {
+				currentPos = page.binarySearch(key);
+				if (currentPos >= 0) {
+					//This is a hack: We assign this to indicate whether there is a value.
+					currentPage = page;
+				} else {
+					currentPage = null;
+				}
+			} else {
+				currentPage = null;
+			}
+			return;
+		}
+
+		//find first leaf page
+		while (!currentPage.isLeaf()) {
+	    	currentPage = currentPage.getFirstSubPage();
+		}
+
+		return;
+	}
+
+
+	private boolean findNext(PhEntry<T> result) {
+		while (currentPage != null) {
+		    int nKeys = currentPage.getNKeys();
+		    long[] keys = currentPage.getKeys();
+		    while (currentPos < nKeys) {
+				long key = keys[currentPos]; 
+		        if (check(key)) {
+		        	BSTEntry nextValue = currentPage.getValues()[currentPos];
+					if (readValue(nextValue, result)) {
+				        currentPos++;
+						return true;
+					}
+				} else if (key > maskUpper) {
+					currentPage = null;
+					return false;
+		        }
+		        currentPos++;
+		    }
+		    currentPage = currentPage.getNextLeaf();
+		    currentPos = 0;
+		}
+		return false;
+	}
+	
+
+	private boolean check(long key) {
+		return ((key | maskLower) & maskUpper) == key;
 	}
 }

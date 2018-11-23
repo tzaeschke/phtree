@@ -45,7 +45,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 		public NodeIteratorNoGC<T> prepareAndPush(Node node, long[] prefix) {
 			NodeIteratorNoGC<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NodeIteratorNoGC<>(dims);
+				ni = new NodeIteratorNoGC<>();
 				stack[size-1] = ni;
 			}
 			ni.init(rangeMin, rangeMax, node, checker, prefix);
