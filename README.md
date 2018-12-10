@@ -21,7 +21,7 @@ Maven:
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.0.1</version>
+    <version>2.0.2</version>
 </dependency>
 ```
 
@@ -31,6 +31,10 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 
 
 # News
+
+### 2018-12-04
+
+Released version 2.0.2 of the PH-Tree. This release contains a minor fix and documentation updates.
 
 ### 2018-05-30
 

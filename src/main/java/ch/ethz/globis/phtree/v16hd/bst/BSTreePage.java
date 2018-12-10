@@ -774,7 +774,7 @@ public class BSTreePage {
 			stats.nNodesLeaf++;
 			stats.nEntriesLeaf += nEntries;
 			stats.capacityLeaf += keys.length;
-			if (nEntries < 1 && parent.parent != null) {
+			if (nEntries < 1 && parent != null && parent.parent != null) {
 				throw new IllegalStateException();
 			}
 		} else {
