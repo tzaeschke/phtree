@@ -94,10 +94,10 @@ import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
 public class PhTree13<T> implements PhTree<T> {
 
 	//Enable HC incrementer / iteration
-	public static final boolean HCI_ENABLED = true; 
+	public static final boolean HCI_ENABLED = true;
 	//Enable AHC mode in nodes
-	static final boolean AHC_ENABLED = true; 
-	
+	static final boolean AHC_ENABLED = true;
+
 	//This threshold is used to decide during query iteration whether the first value
 	//should be found by binary search or by full scan.
 	public static final int LHC_BINARY_SEARCH_THRESHOLD = 50;

@@ -25,6 +25,9 @@ import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhDistanceL;
@@ -227,11 +230,10 @@ public class PhTree16<T> implements PhTree<T> {
 		return stats;
 	}
 
-
 	@SuppressWarnings("unchecked")
 	@Override
 	public T put(long[] key, T value) {
-		Object nonNullValue = value == null ? PhTreeHelper.NULL : value;
+		Object nonNullValue = maskNull(value);
 		if (getRoot() == null) {
 			insertRoot(key, nonNullValue);
 			return null;
@@ -344,6 +346,222 @@ public class PhTree16<T> implements PhTree<T> {
 		uiPool.offer(ui);
 		return (T) value;
 	}
+
+
+	// Overrides of new  Java 8 methods
+
+	@Override
+	public T getOrDefault(long[] key, T defaultValue) {
+		T e = get(key);
+		return e == null ? defaultValue : e;
+	}
+
+	@Override
+	public T putIfAbsent(long[] key, T value) {
+		if (getRoot() == null) {
+			insertRoot(key, maskNull(value));
+			return null;
+		}
+
+		Object o = getRoot();
+		while (true) {
+			Node currentNode = (Node) o;
+			long hcPos = posInArray(key, currentNode.getPostLen());
+			BSTEntry e = currentNode.getEntry(hcPos, key);
+			if (e == null) {
+				increaseNrEntries();
+				currentNode.addEntry(hcPos, key, maskNull(value), this);
+				return null;
+			}
+			o = e.getValue();
+			if (!(o instanceof Node)) {
+				return unmaskNull(o);
+			}
+		}
+	}
+
+	@Override
+	public boolean remove(long[] key, T value) {
+		if (getRoot() == null) {
+			return false;
+		}
+
+		Object o = getRoot();
+		Node parentNode = null;
+		while (true) {
+			Node currentNode = (Node) o;
+			long hcPos = posInArray(key, currentNode.getPostLen());
+			BSTEntry e = currentNode.getEntry(hcPos, key);
+			if (e == null) {
+				return false;
+			}
+			o = e.getValue();
+			if (!(o instanceof Node)) {
+				if (Objects.equals(o, maskNull(value))) {
+					//TODO remove Entry directly -> aboid double binary search
+					currentNode.removeEntry(hcPos, key, parentNode, this);
+					return true;
+				}
+				return false;
+			}
+			parentNode = currentNode;
+		}
+	}
+
+	@Override
+	public boolean replace(long[] key, T oldValue, T newValue) {
+		if (getRoot() == null) {
+			return false;
+		}
+
+		Object o = getRoot();
+		while (true) {
+			Node currentNode = (Node) o;
+			long hcPos = posInArray(key, currentNode.getPostLen());
+			BSTEntry e = currentNode.getEntry(hcPos, key);
+			if (e == null) {
+				return false;
+			}
+			o = e.getValue();
+			if (!(o instanceof Node)) {
+				if (Objects.equals(maskNull(oldValue), o)) {
+					e.setValue(maskNull(newValue));
+					return true;
+				}
+				return false;
+			}
+		}
+	}
+
+	@Override
+	public T replace(long[] key, T value) {
+		if (getRoot() == null) {
+			return null;
+		}
+
+		Object o = getRoot();
+		while (true) {
+			Node currentNode = (Node) o;
+			long hcPos = posInArray(key, currentNode.getPostLen());
+			BSTEntry e = currentNode.getEntry(hcPos, key);
+			if (e == null) {
+				return null;
+			}
+			o = e.getValue();
+			if (!(o instanceof Node)) {
+				e.setValue(maskNull(value));
+				return unmaskNull(o);
+			}
+		}
+	}
+
+	@Override
+	public T computeIfAbsent(long[] key, Function<long[], ? extends T> mappingFunction) {
+		if (getRoot() == null) {
+			T newValue = mappingFunction.apply(key);
+			if (newValue != null) {
+				insertRoot(key, maskNull(newValue));
+			}
+			return newValue;
+		}
+
+		Object o = getRoot();
+		while (true) {
+			Node currentNode = (Node) o;
+			long hcPos = posInArray(key, currentNode.getPostLen());
+			BSTEntry e = currentNode.getEntry(hcPos, key);
+			if (e == null) {
+				T newValue = mappingFunction.apply(key);
+				if (newValue != null) {
+					increaseNrEntries();
+					currentNode.addEntry(hcPos, key, maskNull(newValue), this);
+				}
+				return newValue;
+			}
+			o = e.getValue();
+			if (!(o instanceof Node)) {
+				return unmaskNull(o);
+			}
+		}
+	}
+
+	public T computeIfPresent(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		if (getRoot() == null) {
+			return null;
+		}
+
+		Object o = getRoot();
+		Node parentNode = null;
+		while (true) {
+			Node currentNode = (Node) o;
+			long hcPos = posInArray(key, currentNode.getPostLen());
+			BSTEntry e = currentNode.getEntry(hcPos, key);
+			if (e == null) {
+				return null;
+			}
+			o = e.getValue();
+			if (!(o instanceof Node)) {
+				T newValue = remappingFunction.apply(key, unmaskNull(o));
+				if (newValue == null) {
+					//TODO remove Entry directly -> aboid double binary search
+					currentNode.removeEntry(hcPos, key, parentNode, this);
+					return null;
+				}
+				e.setValue(maskNull(newValue));
+				return newValue;
+			}
+			parentNode = currentNode;
+		}
+	}
+
+	private Object maskNull(T value) {
+		return value == null ? PhTreeHelper.NULL : value;
+	}
+
+	@SuppressWarnings("unchecked")
+	private T unmaskNull(Object value) {
+		return value == PhTreeHelper.NULL ? null : (T) value;
+	}
+
+	@Override
+	public T compute(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		if (getRoot() == null) {
+			T newValue = remappingFunction.apply(key, null);
+			if (newValue != null) {
+				insertRoot(key, maskNull(newValue));
+			}
+			return newValue;
+		}
+
+		Object o = getRoot();
+		Node parentNode = null;
+		while (true) {
+			Node currentNode = (Node) o;
+			long hcPos = posInArray(key, currentNode.getPostLen());
+			BSTEntry e = currentNode.getEntry(hcPos, key);
+			if (e == null) {
+				T newValue = remappingFunction.apply(key, null);
+				if (newValue != null) {
+					increaseNrEntries();
+					currentNode.addEntry(hcPos, key, maskNull(newValue), this);
+				}
+				return newValue;
+			}
+			o = e.getValue();
+			if (!(o instanceof Node)) {
+				T newValue = remappingFunction.apply(key, unmaskNull(o));
+				if (newValue == null) {
+					//TODO remove Entry directly -> aboid double binary search
+					currentNode.removeEntry(hcPos, key, parentNode, this);
+					return null;
+				}
+				e.setValue(maskNull(newValue));
+				return newValue;
+			}
+			parentNode = currentNode;
+		}
+	}
+
 
 	@Override
 	public String toString() {

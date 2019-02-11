@@ -595,6 +595,18 @@ public class Node {
 		be.set(hcPos, kdKey, value);
 	}
 
+	Object removeEntry(long hcPos, long[] keyToMatch, Node parent, PhTree16<?> tree) {
+		Object v = removeEntry(hcPos, keyToMatch, (UpdateInfo)null, tree);
+		if (v != null && !(v instanceof Node)) {
+			//Found and removed entry.
+			tree.decreaseNrEntries();
+			if (getEntryCount() == 1) {
+				mergeIntoParentNt(keyToMatch, parent, tree);
+			}
+		}
+		return v;
+	}
+
 	/**
 	 * General contract:
 	 * Returning a value or NULL means: Value was removed, please update global entry counter
@@ -650,7 +662,7 @@ public class Node {
 	}
 	
 	
-	private BSTEntry getEntry(long hcPos, long[] keyToMatch) {
+	BSTEntry getEntry(long hcPos, long[] keyToMatch) {
 		BSTEntry be = bstGet(hcPos);
 		if (be == null) {
 			return null;

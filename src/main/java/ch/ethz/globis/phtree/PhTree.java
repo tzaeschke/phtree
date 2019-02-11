@@ -20,6 +20,8 @@
 package ch.ethz.globis.phtree;
 
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import ch.ethz.globis.phtree.util.PhIteratorBase;
 import ch.ethz.globis.phtree.util.PhMapper;
@@ -308,5 +310,41 @@ public interface PhTree<T> {
 	 * Clear the tree.
 	 */
 	void clear();
+
+
+	// Overrides of JDK8 Map extension methods
+
+	default T getOrDefault(long[] key, T defaultValue) {
+		T t = get(key);
+		return t == null ? defaultValue : t;
+	}
+
+	default T putIfAbsent(long[] key, T value) {
+		throw new UnsupportedOperationException();
+	}
+
+	default boolean remove(long[] key, T value) {
+		throw new UnsupportedOperationException();
+	}
+
+	default boolean replace(long[] key, T oldValue, T newValue) {
+		throw new UnsupportedOperationException();
+	}
+
+	default T replace(long[] key, T value) {
+		throw new UnsupportedOperationException();
+	}
+
+	default T computeIfAbsent(long[] key, Function<long[], ? extends T> mappingFunction) {
+		throw new UnsupportedOperationException();
+	}
+
+	default T computeIfPresent(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		throw new UnsupportedOperationException();
+	}
+
+	default T compute(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		throw new UnsupportedOperationException();
+	}
 }
 
