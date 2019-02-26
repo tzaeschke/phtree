@@ -1,10 +1,20 @@
 /*
- * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich
- * and Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v16hd;
 
@@ -100,8 +110,9 @@ public class Node {
 
 	/**
 	 * Returns the value (T or Node) if the entry exists and matches the key.
-	 * @param posInNode
-	 * @param pos The position of the node when mapped to a vector.
+	 * @param keyToMatch search key
+	 * @param newValueToInsert new value
+	 * @param tree tree
 	 * @return The sub node or null.
 	 */
 	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree16HD<?> tree, long[] hcBuf) {
@@ -120,10 +131,9 @@ public class Node {
 	 * Returns the value (T or Node) if the entry exists and matches the key.
 	 * @param keyToMatch The key of the entry
 	 * @param getOnly True if we only get the value. False if we want to delete it.
-	 * @param parent
-	 * @param newKey
-	 * @param insertRequired
-	 * @param tree
+	 * @param parent parent node
+	 * @param insertRequired insertion info
+	 * @param tree tree
 	 * @return The sub node or null.
 	 */
 	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent, UpdateInfo insertRequired, 
@@ -189,7 +199,7 @@ public class Node {
      * @return the position of the most significant conflicting bit (starting with 1) or
      * 0 in case of no conflicts.
      */
-    public static int calcConflictingBits(long[] v1, long[] v2, long mask) {
+    private static int calcConflictingBits(long[] v1, long[] v2, long mask) {
 		//long mask = (1l<<node.getPostLen()) - 1l; // e.g. (0-->0), (1-->1), (8-->127=0x01111111)
      	//write all differences to diff, we just check diff afterwards
 		long diff = 0;
@@ -244,12 +254,11 @@ public class Node {
 	/**
 	 * Writes a complete entry.
 	 * This should only be used for new nodes.
-	 * 
-	 * @param pin
-	 * @param hcPos
-	 * @param newKey
-	 * @param value
-	 * @param newSubInfixLen -infix len for sub-nodes. This is ignored for post-fixes.
+	 *
+	 * @param pin position in node
+	 * @param hcPos HC pos
+	 * @param newKey new key
+	 * @param value new value
 	 */
 	private void writeEntry(int pin, long[] hcPos, long[] newKey, Object value) {
 		if (value instanceof Node) {
@@ -258,14 +267,13 @@ public class Node {
 			node.setInfixLen(newSubInfixLen);
 		} 
 		addEntry(hcPos, newKey, value);
-		return;
 	}
 	
 
 	private static int N_GOOD = 0;
 	private static int N = 0;
 	
-	boolean checkInfix(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
+	private boolean checkInfix(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
 		//first check if node-prefix allows sub-node to contain any useful values
 
 		if (PhTreeHelperHD.DEBUG) {
@@ -303,16 +311,17 @@ public class Node {
 		return true;
 	}
 
-	public static long mask1100(int zeroBits) {
+	private static long mask1100(int zeroBits) {
 		return zeroBits == 64 ? 0 : ((-1L) << zeroBits);
 	}
 	
 	/**
 	 * Get post-fix.
-	 * @param hcPos
-	 * @param in The entry to check. 
-	 * @param range After the method call, this contains the postfix if the postfix matches the
+	 * @param candidate candidate entry to check.
+	 * @param result return value
+	 * @param rangeMin After the method call, this contains the postfix if the postfix matches the
 	 * range. Otherwise it contains only part of the postfix.
+	 * @param rangeMax see rangeMin
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	@SuppressWarnings("unchecked")
@@ -358,7 +367,7 @@ public class Node {
 		return infixLenStored() - 1;
 	}
 	
-	int infixLenStored() {
+	private int infixLenStored() {
 		return infixLenStored;
 	}
 
@@ -370,7 +379,7 @@ public class Node {
 		return postLenStored - 1;
 	}
 
-	public int postLenStored() {
+	int postLenStored() {
 		return postLenStored;
 	}
     
@@ -525,7 +534,7 @@ public class Node {
 	 * @param hcPos hc pos
 	 * @param kdKey key
 	 * @param value value
-	 * @return
+	 * @return see above
 	 */
 	Object addEntry(long[] hcPos, long[] kdKey, Object value) {
 		//Uses bstGetOrCreate() -> 
@@ -571,7 +580,7 @@ public class Node {
 	}
 	
 
-	public Object insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, long mask) {
+	private Object insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, long mask) {
 		if (mask == 0) {
 			//There won't be any split, no need to check.
 			return currentEntry.getValue();

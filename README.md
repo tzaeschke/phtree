@@ -14,6 +14,7 @@ Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
 - There is a Master thesis about [Cluster-Computing and Parallelization for the Multi-Dimensional PH-Index](http://e-collection.library.ethz.ch/eserv/eth:47729/eth-47729-01.pdf) (2015).
 - The hypercube navigation is discussed in detail in [Efficient Z-Ordered Traversal of Hypercube Indexes](https://github.com/tzaeschke/phtree/blob/master/Z-Ordered_Hypercube_Navigation.pdf) (2017).
 
+Since 2019, development is kindly supported by [Improbable](https://improbable.io).
 
 Maven:
 
@@ -339,16 +340,26 @@ The source code is not maintained anymore and lacks a number of features of the 
   
  
 
-# License
+# License / Copyright / Contributors
 
 The code is licensed under the Apache License 2.0.
 
-The PH-tree (namespace `ch.ethz`) is copyright 2011-2016 by 
-ETH Zurich,
+#### Copyright holders of different parts of the code are as follows.
+
+The PH-tree (namespace `ch.ethz`):
+Copyright 2011-2016 by ETH Zurich,
 Institute for Information Systems,
 Universitätsstrasse 6,
 8092 Zurich,
 Switzerland.
+
+Copyright 2016-2019 by Tilmann Zäschke,
+zoodb@gmx.de.
+
+Copyright 2019 by Improbable
+10 Bishops Square, 
+London E1 6EG,
+United Kingdom of Great Britain
 
 The critbit tree (namespace `org.zoodb`) is copyright 2009-2018 by
 Tilmann Zäschke,

@@ -1,10 +1,21 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich
- * and Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v13;
 
@@ -170,9 +181,9 @@ public class Node {
 
 	/**
 	 * 
-	 * @param pin
-	 * @param hcPos
-	 * @param outVal
+	 * @param pin pos in node
+	 * @param hcPos HC-pos
+	 * @param outVal output
 	 * @return whether the infix length is > 0
 	 */
 	boolean getInfixOfSub(int pin, long hcPos, long[] outVal) {
@@ -193,8 +204,9 @@ public class Node {
 
 	/**
 	 * Returns the value (T or Node) if the entry exists and matches the key.
-	 * @param posInNode
-	 * @param pos The position of the node when mapped to a vector.
+	 * @param keyToMatch search key
+	 * @param newValueToInsert new value
+	 * @param tree tree
 	 * @return The sub node or null.
 	 */
 	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree13<?> tree) {
@@ -252,10 +264,10 @@ public class Node {
 	 * Returns the value (T or Node) if the entry exists and matches the key.
 	 * @param keyToMatch The key of the entry
 	 * @param getOnly True if we only get the value. False if we want to delete it.
-	 * @param parent
-	 * @param newKey
-	 * @param insertRequired
-	 * @param tree
+	 * @param parent parent node
+	 * @param newKey new key
+	 * @param insertRequired insert info
+	 * @param tree tree
 	 * @return The sub node or null.
 	 */
 	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent,
@@ -346,13 +358,14 @@ public class Node {
 	/**
 	 * Splitting occurs if a node with an infix has to be split, because a new value to be inserted
 	 * requires a partially different infix.
-	 * @param newKey
-	 * @param newValue
-	 * @param currentKdKey WARNING: For AHC/LHC, this is an empty buffer
-	 * @param currentValue
-	 * @param node
-	 * @param parent
-	 * @param posInParent
+	 * @param newKey new key
+	 * @param newValue new value
+	 * @param currentValue current value
+	 * @param pin pos in node
+	 * @param hcPos HC pos
+	 * @param tree tree
+	 * @param offs bit offset
+	 * @param mask mit bask
 	 * @return The value
 	 */
 	private Object insertSplit(long[] newKey, Object newValue, Object currentValue,
@@ -438,7 +451,7 @@ public class Node {
     }
     
     /**
-     * @param v1
+     * @param v1 vector
      * @param outV The 2nd kd-key is read into outV
      * @return the position of the most significant conflicting bit (starting with 1) or
      * 0 in case of no conflicts.
@@ -571,8 +584,8 @@ public class Node {
 	}
 
 	/**
-	 * @param posInNode
-	 * @param pos The position of the node when mapped to a vector.
+	 * @param posInNode position in node
+	 * @param hcPos HC pos
 	 * @return The sub node or null.
 	 */
 	Object getEntryByPIN(int posInNode, long hcPos, long[] postBuf) {
@@ -598,8 +611,8 @@ public class Node {
 
 
 	/**
-	 * @param posInNode
-	 * @param pos The position of the node when mapped to a vector.
+	 * @param hcPos HC pos
+	 * @param postBuf postfix return value
 	 * @return The sub node or null.
 	 */
 	Object getEntry(long hcPos, long[] postBuf) {
@@ -612,8 +625,10 @@ public class Node {
 
 
 	/**
-	 * @param posInNode
-	 * @param pos The position of the node when mapped to a vector.
+	 * @param posInNode position in node
+	 * @param hcPos HC pos
+	 * @param subNodePrefix prefix for subnodes
+	 * @param outKey return value
 	 * @return The sub node or null.
 	 */
 	Object getEntryPIN(int posInNode, long hcPos, long[] subNodePrefix, long[] outKey) {
@@ -656,11 +671,10 @@ public class Node {
 	 * Writes a complete entry.
 	 * This should only be used for new nodes.
 	 * 
-	 * @param pin
-	 * @param hcPos
-	 * @param newKey
-	 * @param value
-	 * @param newSubInfixLen -infix len for sub-nodes. This is ignored for post-fixes.
+	 * @param pin position in node
+	 * @param hcPos HC pos
+	 * @param newKey new key
+	 * @param value new value
 	 */
 	private void writeEntry(int pin, long hcPos, long[] newKey, Object value) {
 		if (isNT()) {
@@ -766,9 +780,9 @@ public class Node {
 	 * Node entry counters are updated internally by the operation
 	 * Node-counting is done by the NodePool.
 	 * 
-	 * @param hcPos
-	 * @param dims
-	 * @return
+	 * @param hcPos HC pos
+	 * @param kdKey main key
+	 * @return see above
 	 */
 	Object ntPut(long hcPos, long[] kdKey, Object value) {
 		return NodeTreeV13.addEntry(ind, hcPos, kdKey, value, this);
@@ -783,9 +797,9 @@ public class Node {
 	 * Node entry counters are updated internally by the operation
 	 * Node-counting is done by the NodePool.
 	 * 
-	 * @param hcPos
-	 * @param dims
-	 * @return
+	 * @param hcPos HC pos
+	 * @param dims dimensionality
+	 * @return see above
 	 */
 	Object ntRemoveAnything(long hcPos, int dims) {
     	return NodeTreeV13.removeEntry(ind, hcPos, dims, null, null, null, null);
@@ -866,9 +880,10 @@ public class Node {
 	
 	/**
 	 * 
-	 * @param hcPos
+	 * @param hcPos HC pos
 	 * @param pin position in node: ==hcPos for AHC or pos in array for LHC
-	 * @param key
+	 * @param key new key
+	 * @param value new value
 	 */
 	void addPostPIN(long hcPos, int pin, long[] key, Object value) {
 		final int dims = key.length;
@@ -1007,11 +1022,8 @@ public class Node {
 
 	/**
 	 * 
-	 * @param bufSubCnt
-	 * @param bufPostCnt
-	 * @param dims
-	 * @param posToRemove
-	 * @param removeSub Remove sub or post?
+	 * @param dims dimensions
+	 * @param posToRemove position to remove
 	 * @return Previous value if post was removed
 	 */
 	private Object ntDeconstruct(int dims, long posToRemove) {
@@ -1100,14 +1112,14 @@ public class Node {
 
 	/**
 	 * Get post-fix.
-	 * @param pin
-	 * @param hcPos
+	 * @param pin pos in node
+	 * @param hcPos HC pos
 	 * @param inOutPrefix Input key with prefix. This may be modified in this method!
 	 *              After the method call, this contains the postfix if the postfix matches the
 	 * range. Otherwise it contains only part of the postfix.
 	 * @param outKey Postfix output if the entry is a postfix
-	 * @param rangeMin
-	 * @param rangeMax
+	 * @param rangeMin minimum
+	 * @param rangeMax maximum
 	 * @return Subnode or value if the postfix matches the range, otherwise NOT_FOUND.
 	 */
 	Object checkAndGetEntryPIN(int pin, long hcPos, long[] inOutPrefix, long[] outKey,
@@ -1240,10 +1252,13 @@ public class Node {
 	
 	/**
 	 * Get post-fix.
-	 * @param hcPos
-	 * @param in The entry to check. 
-	 * @param range After the method call, this contains the postfix if the postfix matches the
+	 * @param hcPos HC pos
+	 * @param value current value of entry
+	 * @param result result
+	 * @param valTemplate The entry to check.
+	 * @param rangeMin After the method call, this contains the postfix if the postfix matches the
 	 * range. Otherwise it contains only part of the postfix.
+	 * @param rangeMax see rangeMin
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	@SuppressWarnings("unchecked")
@@ -1406,8 +1421,8 @@ public class Node {
 	
 	/**
 	 * 
-	 * @param pos
-	 * @param dims
+	 * @param hcPos HC pos
+	 * @param dims dimensions
 	 * @return The position of the entry, for example as in the value[]. 
 	 */
 	int getPosition(long hcPos, final int dims) {
