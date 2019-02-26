@@ -1,10 +1,21 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich
- * and Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v13;
 
@@ -230,7 +241,7 @@ public class PhTree13<T> implements PhTree<T> {
 		return (T) o;
     }
 
-    void insertRoot(long[] key, Object value) {
+    private void insertRoot(long[] key, Object value) {
         root = Node.createNode(dims, 0, DEPTH_64-1);
         long pos = posInArray(key, root.getPostLen());
         root.addPostPIN(pos, -1, key, value);
@@ -542,9 +553,9 @@ public class PhTree13<T> implements PhTree<T> {
 
 	/**
 	 * Best HC incrementer ever. 
-	 * @param v
-	 * @param min
-	 * @param max
+	 * @param v current value
+	 * @param min min mask
+	 * @param max max mask
 	 * @return next valid value or min.
 	 */
 	static long inc(long v, long min, long max) {
