@@ -14,7 +14,7 @@ Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
 - There is a Master thesis about [Cluster-Computing and Parallelization for the Multi-Dimensional PH-Index](http://e-collection.library.ethz.ch/eserv/eth:47729/eth-47729-01.pdf) (2015).
 - The hypercube navigation is discussed in detail in [Efficient Z-Ordered Traversal of Hypercube Indexes](https://github.com/tzaeschke/phtree/blob/master/Z-Ordered_Hypercube_Navigation.pdf) (2017).
 
-Since 2019, development is kindly supported by [Improbable Worlds](https://improbable.io).
+Since 2019, development is kindly supported by [Improbable](https://improbable.io).
 
 Maven:
 
@@ -356,7 +356,7 @@ Switzerland.
 Copyright 2016-2019 by Tilmann Zäschke,
 zoodb@gmx.de.
 
-Copyright 2019 by Improbable Worlds
+Copyright 2019 by Improbable
 10 Bishops Square, 
 London E1 6EG,
 United Kingdom of Great Britain
