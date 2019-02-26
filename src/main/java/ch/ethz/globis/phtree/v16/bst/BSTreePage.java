@@ -19,6 +19,7 @@
 package ch.ethz.globis.phtree.v16.bst;
 
 import java.util.Arrays;
+import java.util.function.BiFunction;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v16.Node;
@@ -150,6 +151,31 @@ public class BSTreePage {
 	}
 	
 
+	public <T> BSTEntry findAndCompute(long key, long[] kdKey, Node node,
+								   boolean doIfAbsent, boolean doIfPresent,
+								   BiFunction<long[], ? super T, ? extends T> mappingFunction) {
+		//The stored value[i] is the min-values of the according page[i+1}
+		int pos = binarySearch(key);
+		if (pos >= 0) {
+			//pos of matching key
+			pos++;
+		} else {
+			pos = -(pos+1);
+		}
+		//read page before that value
+		BSTreePage page = subPages[pos];
+		BSTEntry result = null;
+		if (page.isLeaf()) {
+			result = page.computeLeaf(key, kdKey, node, doIfAbsent, doIfPresent, mappingFunction);
+			checkUnderflowSubpageLeaf(pos, node);
+		} else {
+			result = page.findAndCompute(key, kdKey, node, doIfAbsent, doIfPresent, mappingFunction);
+			handleUnderflowSubInner(pos);
+		}
+		return result;
+	}
+
+
 	public Object getOrCreate(long key, Node ind) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(key);
@@ -267,9 +293,12 @@ public class BSTreePage {
         //key found? -> pos >=0
         if (pos >= 0) {
         	return values[pos];
-        } 
-        
-        BSTEntry value = new BSTEntry(key, null, null);
+        }
+		return create(key, pos, parent, posPageInParent, ind);
+	}
+
+	private BSTEntry create(long key, int pos, BSTreePage parent, int posPageInParent, Node ind) {
+		BSTEntry value = new BSTEntry(key, null, null);
         
         if (nEntries < ind.maxLeafN()) {
         	//okay so we add it locally
@@ -546,28 +575,94 @@ public class BSTreePage {
 	
 
 	public BSTEntry remove(long key, long[] kdKey, Node node, PhTree16.UpdateInfo ui) {
-        int i = binarySearch(key);
-        if (i < 0) {
-        	//key not found
-        	return null;
-        }
-        
-        // first remove the element
-        BSTEntry prevValue = values[i];
-        REMOVE_OP op = node.bstInternalRemoveCallback(prevValue, kdKey, ui);
-        switch (op) {
-		case REMOVE_RETURN:
-        	System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
-        	System.arraycopy(values, i+1, values, i, nEntries-i-1);
-        	nEntries--;
-        	node.decEntryCount();
-        	return prevValue;
-		case KEEP_RETURN:
-			return prevValue;
-		case KEEP_RETURN_NULL:
+		int i = binarySearch(key);
+		if (i < 0) {
+			//key not found
 			return null;
-		default:
-			throw new IllegalArgumentException();
+		}
+
+		// first remove the element
+		BSTEntry prevValue = values[i];
+		REMOVE_OP op = node.bstInternalRemoveCallback(prevValue, kdKey, ui);
+		switch (op) {
+			case REMOVE_RETURN:
+				System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
+				System.arraycopy(values, i+1, values, i, nEntries-i-1);
+				nEntries--;
+				node.decEntryCount();
+				return prevValue;
+			case KEEP_RETURN:
+				return prevValue;
+			case KEEP_RETURN_NULL:
+				return null;
+			default:
+				throw new IllegalArgumentException();
+		}
+	}
+
+
+	public <T> BSTEntry computeLeaf(long key, long[] kdKey,
+								Node node, boolean doIfAbsent, boolean doIfPresent,
+								BiFunction<long[], ? super T, ? extends T> mappingFunction) {
+		int i = binarySearch(key);
+		if (i < 0) {
+			//key not found
+			if (doIfAbsent) {
+				T newValue = mappingFunction.apply(kdKey, null);
+				if (newValue != null) {
+					BSTEntry e = parent.getOrCreateInLeaf(key, parent, posInParent, node);
+					e.set(key, kdKey, newValue);
+					return e;
+				}
+			}
+			return null;
+		}
+
+
+		BSTEntry currentEntry = values[i];
+		if (!node.matches(currentEntry, key)) {
+			//Key found, but entry does not match
+
+		}
+
+		//We have a matching entry
+		if (currentEntry.getValue() instanceof Node) {
+			//return entry with subnode
+			return currentEntry;
+		}
+		if (doIfPresent) {
+			//replace
+			int bitPosOfDiff = Node.calcConflictingBits(key, ui.newKey, -1L);
+			if (bitPosOfDiff <= getPostLen()) {
+				//replace
+				//simply replace kdKey!!
+				//Replacing the long[] should be correct (and fastest, and avoiding GC)
+				currentEntry.set(currentEntry.getKey(), ui.newKey, currentEntry.getValue());
+				return REMOVE_OP.KEEP_RETURN;
+			} else {
+				ui.insertRequired = bitPosOfDiff;
+			}
+		}
+		return REMOVE_OP.REMOVE_RETURN;
+
+
+
+		// first remove the element
+		BSTEntry prevValue = values[i];
+		REMOVE_OP op = node.bstInternalRemoveCallback(prevValue, kdKey, ui);
+		switch (op) {
+			case REMOVE_RETURN:
+				System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
+				System.arraycopy(values, i+1, values, i, nEntries-i-1);
+				nEntries--;
+				node.decEntryCount();
+				return prevValue;
+			case KEEP_RETURN:
+				return prevValue;
+			case KEEP_RETURN_NULL:
+				return null;
+			default:
+				throw new IllegalArgumentException();
 		}
 	}
 	
