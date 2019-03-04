@@ -6,33 +6,20 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16s;
 
-import static ch.ethz.globis.phtree.PhTreeHelper.align8;
-import static ch.ethz.globis.phtree.PhTreeHelper.debugCheck;
-import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import ch.ethz.globis.phtree.PhDistance;
-import ch.ethz.globis.phtree.PhDistanceL;
-import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.PhFilterDistance;
-import ch.ethz.globis.phtree.PhFilterWindow;
-import ch.ethz.globis.phtree.PhRangeQuery;
-import ch.ethz.globis.phtree.PhTree;
-import ch.ethz.globis.phtree.PhTreeConfig;
-import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.*;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.util.unsynced.LongArrayPool;
-import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.BSTPool;
+import ch.ethz.globis.phtree.v16s.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16s.bst.BSTIteratorAll;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static ch.ethz.globis.phtree.PhTreeHelper.*;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -87,7 +74,7 @@ import ch.ethz.globis.phtree.v16.bst.BSTPool;
  * @param <T> The value type of the tree 
  *
  */
-public class PhTree16<T> implements PhTree<T> {
+public class PhTree16s<T> implements PhTree<T> {
 
 	//Enable HC incrementer / iteration
 	public static final boolean HCI_ENABLED = true; 
@@ -103,23 +90,20 @@ public class PhTree16<T> implements PhTree<T> {
 	//Dimension. This is the number of attributes of an entity.
 	private final int dims;
 
-	private int nEntries = 0;
+	private final AtomicInteger nEntries = new AtomicInteger();
 
 	private Node root = null;
 
-    private final ObjectPool<Node> nodePool;
-    private final LongArrayPool bitPool;
-    private final BSTPool bstPool;
-
-    Node getRoot() {
+	Node getRoot() {
 		return root;
 	}
 
-	public PhTree16(int dim) {
+    void changeRoot(Node newRoot) {
+        this.root = newRoot;
+    }
+
+	public PhTree16s(int dim) {
 		dims = dim;
-        this.nodePool = ObjectPool.create(Node::new);
-        this.bitPool = LongArrayPool.create();
-        this.bstPool = BSTPool.create();
 		debugCheck();
 
 		switch (dims) {
@@ -139,7 +123,7 @@ public class PhTree16<T> implements PhTree<T> {
 		}
 	}
 
-	public PhTree16(PhTreeConfig cnf) {
+	public PhTree16s(PhTreeConfig cnf) {
 		this(cnf.getDimActual());
 		if (cnf.getConcurrencyType() != PhTreeConfig.CONCURRENCY_NONE) {
 			throw new UnsupportedOperationException("type= " + cnf.getConcurrencyType());
@@ -147,16 +131,16 @@ public class PhTree16<T> implements PhTree<T> {
 	}
 
 	void increaseNrEntries() {
-		nEntries++;
+		nEntries.incrementAndGet();
 	}
 
 	void decreaseNrEntries() {
-		nEntries--;
+		nEntries.decrementAndGet();
 	}
 
 	@Override
 	public int size() {
-		return nEntries;
+		return nEntries.get();
 	}
 
 	@Override
@@ -183,7 +167,7 @@ public class PhTree16<T> implements PhTree<T> {
 					throw new IllegalStateException();
 				}
 				getStats(currentDepth + 1, sub, stats);
-			} else {
+			} else if (child != null) {
 				stats.q_nPostFixN[currentDepth]++;
 			}
 		}
@@ -198,7 +182,7 @@ public class PhTree16<T> implements PhTree<T> {
 		//count children
 		int nChildren = node.getEntryCount();
 		stats.size += 16;
-		if (nChildren == 1 && (node != getRoot()) && nEntries > 1) {
+		if (nChildren == 1 && (node != getRoot()) && nEntries.get() > 1) {
 			//This should not happen! Except for a root node if the tree has <2 entries.
 			System.err.println("WARNING: found lonely node...");
 		}
@@ -233,9 +217,9 @@ public class PhTree16<T> implements PhTree<T> {
     }
 
     private void insertRoot(long[] key, Object value) {
-        root = Node.createNode(dims, 0, DEPTH_64-1, this);
+        root = Node.createNode(dims, 0, DEPTH_64-1);
         long pos = posInArray(key, root.getPostLen());
-        root.addEntry(pos, key, value, this);
+        root.addEntry(pos, key, value);
         increaseNrEntries();
     }
 
@@ -493,7 +477,7 @@ public class PhTree16<T> implements PhTree<T> {
 
 	@Override
 	public int getBitDepth() {
-		return PhTree16.DEPTH_64;
+		return PhTree16s.DEPTH_64;
 	}
 
 	/**
@@ -540,19 +524,12 @@ public class PhTree16<T> implements PhTree<T> {
 	@Override
 	public void clear() {
 		root = null;
-		nEntries = 0;
+		nEntries.set(0);
 	}
 
-    ObjectPool<Node> nodePool() {
-        return nodePool;
-    }
-
-    LongArrayPool longPool() {
-        return bitPool;
-    }
-
-    public BSTPool bstPool() {
-        return bstPool;
-    }
+	void adjustCounts(int deletedPosts) {
+		nEntries.addAndGet(-deletedPosts);
+	}
+	
 }
 

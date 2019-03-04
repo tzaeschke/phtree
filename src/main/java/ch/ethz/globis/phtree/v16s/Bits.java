@@ -6,9 +6,9 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16s;
 
-import ch.ethz.globis.phtree.util.unsynced.LongArrayOps;
+import ch.ethz.globis.phtree.util.BitsLong;
 
 
 /**
@@ -17,7 +17,7 @@ import ch.ethz.globis.phtree.util.unsynced.LongArrayOps;
  * @author ztilmann
  *
  */
-public class Bits extends LongArrayOps {
+public class Bits extends BitsLong {
 
 
 }

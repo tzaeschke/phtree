@@ -549,6 +549,6 @@ public class PhTree16HD<T> implements PhTree<T> {
 	void adjustCounts(int deletedPosts) {
 		nEntries.addAndGet(-deletedPosts);
 	}
-	
+
 }
 

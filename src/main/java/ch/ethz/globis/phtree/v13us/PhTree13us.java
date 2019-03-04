@@ -114,7 +114,6 @@ public class PhTree13us<T> implements PhTree<T> {
 
 	private Node root = null;
 
-	//private final NodePool nodePool = NodePool.create();
 	private final ObjectPool<Node> nodePool;
 	private final ObjectArrayPool<Object> refPool;
 	private final LongArrayPool bitPool;
@@ -232,7 +231,6 @@ public class PhTree13us<T> implements PhTree<T> {
         increaseNrEntries();
     }
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public boolean contains(long... key) {
 		Object o = getRoot();

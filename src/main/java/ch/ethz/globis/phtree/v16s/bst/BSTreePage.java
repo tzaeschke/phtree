@@ -16,16 +16,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ch.ethz.globis.phtree.v16.bst;
-
-import java.util.Arrays;
+package ch.ethz.globis.phtree.v16s.bst;
 
 import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v16.Node;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.Node.BSTStats;
-import ch.ethz.globis.phtree.v16.Node.REMOVE_OP;
-import ch.ethz.globis.phtree.v16.PhTree16;
+import ch.ethz.globis.phtree.v16s.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16s.Node.BSTStats;
+import ch.ethz.globis.phtree.v16s.Node.REMOVE_OP;
+import ch.ethz.globis.phtree.v16s.Node;
+import ch.ethz.globis.phtree.v16s.PhTree16s;
+
+import java.util.Arrays;
 
 
 public class BSTreePage {
@@ -42,11 +42,9 @@ public class BSTreePage {
 	private BSTreePage[] subPages;
 	private BSTreePage prevLeaf;
 	private BSTreePage nextLeaf;
-	private final PhTree16<?> tree;
 
 
-	BSTreePage(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor, PhTree16<?> tree) {
-	    this.tree = tree;
+	BSTreePage(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
 		init(ind, parent, isLeaf, leftPredecessor);
 	}
 	
@@ -57,15 +55,15 @@ public class BSTreePage {
 		if (isLeaf) {
 			nEntries = 0;
 			int initialPageSize = ind.maxLeafN() <= 8 ? 2 : INITIAL_PAGE_SIZE;
-			keys = tree.bstPool().arrayCreateLong(initialPageSize);
-			values = tree.bstPool().arrayCreateEntries(initialPageSize);
+			keys = BSTPool.arrayCreateLong(initialPageSize);
+			values = BSTPool.arrayCreateEntries(initialPageSize);
 			subPages = null;
 			Node.statNLeaves++;
 		} else {
 			nEntries = -1;
-			keys = tree.bstPool().arrayCreateLong(ind.maxInnerN());
+			keys = BSTPool.arrayCreateLong(ind.maxInnerN());
 			values = null;
-			subPages = tree.bstPool().arrayCreateNodes(ind.maxInnerN() + 1);
+			subPages = BSTPool.arrayCreateNodes(ind.maxInnerN() + 1);
 			Node.statNInner++;
 		}
 		
@@ -84,14 +82,12 @@ public class BSTreePage {
 		}
 	}
 
-	public static BSTreePage create(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor,
-                                    PhTree16<?> tree) {
-		return tree.bstPool().getNode(ind, parent, isLeaf, leftPredecessor, tree);
+	public static BSTreePage create(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
+		return BSTPool.getNode(ind, parent, isLeaf, leftPredecessor);
 	}
 	
-	public static BSTreePage create(Node ind, BSTreePage parent, BSTreePage firstSubpage, BSTreePage secondSubpage,
-                                    PhTree16<?> tree) {
-		BSTreePage p = create(ind, parent, false, null, tree);
+	public static BSTreePage create(Node ind, BSTreePage parent, BSTreePage firstSubpage, BSTreePage secondSubpage) {
+		BSTreePage p = create(ind, parent, false, null);
 		p.nEntries++;
 		p.subPages[0] = firstSubpage;
 		p.nEntries++;
@@ -127,7 +123,7 @@ public class BSTreePage {
         return subPages[pos]; 
 	}
 	
-	public BSTEntry findAndRemove(long key, long[] kdKey, Node node, PhTree16.UpdateInfo ui) {
+	public BSTEntry findAndRemove(long key, long[] kdKey, Node node, PhTree16s.UpdateInfo ui) {
 		//The stored value[i] is the min-values of the according page[i+1} 
         int pos = binarySearch(key);
         if (pos >= 0) {
@@ -137,7 +133,7 @@ public class BSTreePage {
             pos = -(pos+1);
         }
         //read page before that value
-        BSTreePage page = subPages[pos]; 
+        BSTreePage page = subPages[pos];
         BSTEntry result;
         if (page.isLeaf()) {
         	result = page.remove(key, kdKey, node, ui);
@@ -245,15 +241,15 @@ public class BSTreePage {
 	private void ensureSizePlusOne(Node ind) {
 		if (nEntries + 1 > keys.length) {
 			int newLen = keys.length*2 > ind.maxLeafN() ? ind.maxLeafN() : keys.length*2;
-			keys = tree.bstPool().arrayExpand(keys, newLen);
-			values = tree.bstPool().arrayExpand(values, newLen);
+			keys = BSTPool.arrayExpand(keys, newLen);
+			values = BSTPool.arrayExpand(values, newLen);
 		}
 	}
 
 	private void ensureSize(int newLen) {
 		if (newLen > keys.length) {
-			keys = tree.bstPool().arrayExpand(keys, newLen);
-			values = tree.bstPool().arrayExpand(values, newLen);
+			keys = BSTPool.arrayExpand(keys, newLen);
+			values = BSTPool.arrayExpand(values, newLen);
 		}
 	}
 
@@ -296,7 +292,7 @@ public class BSTreePage {
         boolean isPrev = false;
         
         if (parent == null) {
-    		destP = ind.bstCreatePage(null, true, this, tree);
+    		destP = ind.bstCreatePage(null, true, this);
     		isNew = true;
         } else {
 	        //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
@@ -314,7 +310,7 @@ public class BSTreePage {
 	        		destP = prev;
 	        		isPrev = true;
 	        	} else {
-	        		destP = ind.bstCreatePage(parent, true, this, tree);
+	        		destP = ind.bstCreatePage(parent, true, this);
 	        		isNew = true;
 	        	}
 	        }
@@ -444,7 +440,7 @@ public class BSTreePage {
 			return;
 		} else {
 			//treat page overflow
-			BSTreePage newInner = ind.bstCreatePage(parent, false, null, tree);
+			BSTreePage newInner = ind.bstCreatePage(parent, false, null);
 			
 			//TODO use optimized fill ratio for unique values, just like for leaves?.
 			int minInnerN = minInnerN(keys.length);
@@ -455,7 +451,7 @@ public class BSTreePage {
 
 			if (parent == null) {
 				//create a parent
-				BSTreePage newRoot = ind.bstCreatePage(null, false, null, tree);
+				BSTreePage newRoot = ind.bstCreatePage(null, false, null);
 				newRoot.subPages[0] = this;
 				newRoot.nEntries = 0;  // 0: indicates one leaf / zero keys
 				this.setParent( newRoot );
@@ -546,7 +542,7 @@ public class BSTreePage {
 	}
 	
 
-	public BSTEntry remove(long key, long[] kdKey, Node node, PhTree16.UpdateInfo ui) {
+	public BSTEntry remove(long key, long[] kdKey, Node node, PhTree16s.UpdateInfo ui) {
         int i = binarySearch(key);
         if (i < 0) {
         	//key not found
@@ -605,7 +601,7 @@ public class BSTreePage {
 		BSTreePage indexPage = getPageByPos(posToRemove);
 		
 		//remove sub page page from FSM.
-        tree.bstPool().reportFreeNode(indexPage);
+		BSTPool.reportFreeNode(indexPage);
 
 		if (nEntries > 0) { //otherwise we just delete this page
 			//remove entry
@@ -638,7 +634,7 @@ public class BSTreePage {
 					BSTreePage child = sub.getPageByPos(0);
 					replaceChildPage(child, pos);
 					Node.statNInner--;
-                    tree.bstPool().reportFreeNode(sub);
+					BSTPool.reportFreeNode(sub);
 				}
 			} else {
 				// nEntries == 0
@@ -797,7 +793,7 @@ public class BSTreePage {
 				BSTreePage p = getPageByPos(i);
 				p.clear();
 				//0-IDs are automatically ignored.
-                tree.bstPool().reportFreeNode(p);
+				BSTPool.reportFreeNode(p);
 			}
 		}
 		if (subPages != null) {

@@ -16,22 +16,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ch.ethz.globis.phtree.v16;
+package ch.ethz.globis.phtree.v16s;
 
-import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
+import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.util.BitsLong;
+import ch.ethz.globis.phtree.util.PhTreeStats;
+import ch.ethz.globis.phtree.util.StringBuilderLn;
+import ch.ethz.globis.phtree.v16s.PhTree16s.UpdateInfo;
+import ch.ethz.globis.phtree.v16s.bst.BSTIteratorAll;
+import ch.ethz.globis.phtree.v16s.bst.BSTPool;
+import ch.ethz.globis.phtree.v16s.bst.BSTreePage;
 
 import java.util.Arrays;
 import java.util.List;
 
-import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.util.PhTreeStats;
-import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.util.unsynced.LongArrayOps;
-import ch.ethz.globis.phtree.v16.PhTree16.UpdateInfo;
-import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.BSTPool;
-import ch.ethz.globis.phtree.v16.bst.BSTreePage;
+import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 
 
 /**
@@ -59,11 +59,15 @@ public class Node {
 	private BSTreePage root;
 
 	
-    Node() {
-		// For pooling only
+    private Node() {
+		// For ZooDB only
 	}
 
-	private void initNode(int infixLenClassic, int postLenClassic, int dims, PhTree16<?> tree) {
+	static Node createEmpty() {
+		return new Node();
+	}
+
+	private void initNode(int infixLenClassic, int postLenClassic, int dims) {
 		this.infixLenStored = (byte) (infixLenClassic + 1);
 		this.postLenStored = (byte) (postLenClassic + 1);
 		this.entryCnt = 0;
@@ -84,21 +88,25 @@ public class Node {
 		case 12: maxLeafN = 64; maxInnerN = 70+1; break;
 		default: maxLeafN = 100; maxInnerN = 100; break;
 		}
-		this.root = bstCreateRoot(tree);
+		this.root = bstCreateRoot();
 	}
 
-	public static Node createNode(int dims, int infixLenClassic, int postLenClassic, PhTree16<?> tree) {
-		Node n = tree.nodePool().get();
-		n.initNode(infixLenClassic, postLenClassic, dims, tree);
+	public static Node createNode(int dims, int infixLenClassic, int postLenClassic) {
+		Node n = NodePool.getNode();
+		n.initNode(infixLenClassic, postLenClassic, dims);
 		return n;
 	}
 
-	private void discardNode(PhTree16<?> tree) {
+	<T> PhEntry<T> createNodeEntry(long[] key, T value) {
+		return new PhEntry<>(key, value);
+	}
+	
+	private void discardNode() {
 		entryCnt = 0;
 		getRoot().clear();
-		tree.bstPool().reportFreeNode(root);
+		BSTPool.reportFreeNode(root);
 		root = null;
-		tree.nodePool().offer(this);
+		NodePool.offer(this);
 	}
 	
 
@@ -109,11 +117,11 @@ public class Node {
 	 * @param tree tree
 	 * @return The sub node or null.
 	 */
-	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree16<?> tree) {
+	Object doInsertIfMatching(long[] keyToMatch, Object newValueToInsert, PhTree16s<?> tree) {
 		long hcPos = posInArray(keyToMatch, getPostLen());
 
 		//ntPut will also increase the node-entry count
-		Object v = addEntry(hcPos, keyToMatch, newValueToInsert, tree);
+		Object v = addEntry(hcPos, keyToMatch, newValueToInsert);
 		//null means: Did not exist, or we had to do a split...
 		if (v == null) {
 			tree.increaseNrEntries();
@@ -130,34 +138,34 @@ public class Node {
 	 * @param tree tree
 	 * @return The sub node or null.
 	 */
-	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent, UpdateInfo insertRequired, PhTree16<?> tree) {
-		
+	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent, UpdateInfo insertRequired, PhTree16s<?> tree) {
+
 		long hcPos = posInArray(keyToMatch, getPostLen());
-		
+
 		if (getOnly) {
 			BSTEntry e = getEntry(hcPos, keyToMatch);
 			return e != null ? e.getValue() : null;
-		}			
-		Object v = removeEntry(hcPos, keyToMatch, insertRequired, tree);
+		}
+		Object v = removeEntry(hcPos, keyToMatch, insertRequired);
 		if (v != null && !(v instanceof Node)) {
 			//Found and removed entry.
 			tree.decreaseNrEntries();
 			if (getEntryCount() == 1) {
-				mergeIntoParentNt(keyToMatch, parent, tree);
+				mergeIntoParentNt(keyToMatch, parent);
 			}
 		}
 		return v;
 	}
-	
+
 	private long calcInfixMask(int subPostLen) {
 		//We use a simplified mask, because the prefix is always present
 		//long mask = ~((-1L)<<(getPostLen()-subPostLen-1));
 		return (-1L) << (subPostLen+1);
 	}
-	
+
 
     /**
-     * 
+     *
      * @param key1 key 1
      * @param val1 value 1
      * @param key2 key 2
@@ -165,20 +173,20 @@ public class Node {
      * @param mcb most conflicting bit
      * @return A new node or 'null' if there are no conflicting bits
      */
-    public Node createNode(long[] key1, Object val1, long[] key2, Object val2, int mcb, PhTree16<?> tree) {
+    public Node createNode(long[] key1, Object val1, long[] key2, Object val2, int mcb) {
         //determine length of infix
         int newLocalInfLen = getPostLen() - mcb;
         int newPostLen = mcb-1;
-        Node newNode = createNode(key1.length, newLocalInfLen, newPostLen, tree);
+        Node newNode = createNode(key1.length, newLocalInfLen, newPostLen);
 
         long posSub1 = posInArray(key1, newPostLen);
         long posSub2 = posInArray(key2, newPostLen);
         if (posSub1 < posSub2) {
-        	newNode.writeEntry(0, posSub1, key1, val1, tree);
-        	newNode.writeEntry(1, posSub2, key2, val2, tree);
+        	newNode.writeEntry(0, posSub1, key1, val1);
+        	newNode.writeEntry(1, posSub2, key2, val2);
         } else {
-        	newNode.writeEntry(0, posSub2, key2, val2, tree);
-        	newNode.writeEntry(1, posSub1, key1, val1, tree);
+        	newNode.writeEntry(0, posSub2, key2, val2);
+        	newNode.writeEntry(1, posSub1, key1, val1);
         }
         return newNode;
     }
@@ -199,22 +207,22 @@ public class Node {
 		}
     	return Long.SIZE-Long.numberOfLeadingZeros(diff & mask);
     }
-    
-    
-	private void mergeIntoParentNt(long[] key, Node parent, PhTree16<?> tree) {
+
+
+	private void mergeIntoParentNt(long[] key, Node parent) {
 		//check if merging is necessary (check children count || isRootNode)
 		if (parent == null || getEntryCount() > 2) {
 			//no merging required
 			//value exists --> remove it
 			return;
 		}
-		
+
 		//okay, at his point we have a post that matches and (since it matches) we need to remove
 		//the local node because it contains at most one other entry and it is not the root node.
 
 		//We know that there is only a leaf node with only a single entry, so...
 		BSTEntry nte = root.getFirstValue();
-		
+
 		long posInParent = PhTreeHelper.posInArray(key, parent.getPostLen());
 		if (nte.getValue() instanceof Node) {
 			long[] newPost = nte.getKdKey();
@@ -234,33 +242,33 @@ public class Node {
 		}
 
 		//TODO return old key/BSTEntry to pool
-		
-		discardNode(tree);
+
+		discardNode();
 	}
 
 
 	/**
 	 * Writes a complete entry.
 	 * This should only be used for new nodes.
-	 * 
+	 *
 	 * @param pin position in node
 	 * @param hcPos HC pos
 	 * @param newKey new key
 	 * @param value new value
 	 */
-	private void writeEntry(int pin, long hcPos, long[] newKey, Object value, PhTree16<?> tree) {
+	private void writeEntry(int pin, long hcPos, long[] newKey, Object value) {
 		if (value instanceof Node) {
 			Node node = (Node) value;
-			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;  
+			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;
 			node.setInfixLen(newSubInfixLen);
-		} 
-		addEntry(hcPos, newKey, value, tree);
+		}
+		addEntry(hcPos, newKey, value);
 	}
 
-	
+
 	private static int N_GOOD = 0;
 	private static int N = 0;
-	
+
 	private boolean checkInfix(int infixLen, long[] keyToTest, long[] rangeMin, long[] rangeMax) {
 		//first check if node-prefix allows sub-node to contain any useful values
 
@@ -269,7 +277,7 @@ public class Node {
 			//Ensure that we never enter this method if the node cannot possibly contain a match.
 			long maskClean = mask1100(getPostLen());
 			for (int dim = 0; dim < keyToTest.length; dim++) {
-				if ((keyToTest[dim] & maskClean) > rangeMax[dim] || 
+				if ((keyToTest[dim] & maskClean) > rangeMax[dim] ||
 						(keyToTest[dim] | ~maskClean) < rangeMin[dim]) {
 					if (getPostLen() < 63) {
 						System.out.println("N-CAAI: " + ++N + " / " + N_GOOD);
@@ -280,7 +288,7 @@ public class Node {
 				}
 			}
 		}
-		
+
 		if (infixLen == 0) {
 			return true;
 		}
@@ -302,7 +310,7 @@ public class Node {
 	private static long mask1100(int zeroBits) {
 		return zeroBits == 64 ? 0 : ((-1L) << zeroBits);
 	}
-	
+
 	/**
 	 * Get post-fix.
 	 * @param candidate candidate entry to check.
@@ -323,7 +331,7 @@ public class Node {
 			result.setKeyInternal(candidate.getKdKey());
 			result.setNodeInternal(sub);
 			return true;
-		} else if (LongArrayOps.checkRange(candidate.getKdKey(), rangeMin, rangeMax)) {
+		} else if (BitsLong.checkRange(candidate.getKdKey(), rangeMin, rangeMax)) {
 			result.setKeyInternal(candidate.getKdKey());
 			result.setValueInternal((T) value);
 			return true;
@@ -354,7 +362,7 @@ public class Node {
 	int getInfixLen() {
 		return infixLenStored() - 1;
 	}
-	
+
 	private int infixLenStored() {
 		return infixLenStored;
 	}
@@ -371,35 +379,35 @@ public class Node {
 		return postLenStored;
 	}
 
-    
+
     // ************************************
     // ************************************
     // BSTree
     // ************************************
     // ************************************
-	
+
     public static int statNLeaves = 0;
 	public static int statNInner = 0;
-	
-	private BSTreePage bstCreateRoot(PhTree16<?> tree) {
+
+	private BSTreePage bstCreateRoot() {
 
 		//bootstrap index
-		return bstCreatePage(null, true, null, tree);
+		return bstCreatePage(null, true, null);
 	}
 
 
-	public final BSTEntry bstGetOrCreate(long key, PhTree16<?> tree) {
+	public final BSTEntry bstGetOrCreate(long key) {
 		BSTreePage page = getRoot();
 		if (page.isLeaf()) {
 			BSTEntry e = page.getOrCreate(key, null, -1, this);
 			if (e.getKdKey() == null && e.getValue() instanceof BSTreePage) {
     			BSTreePage newPage = (BSTreePage) e.getValue();
-				root = BSTreePage.create(this, null, page, newPage, tree);
+				root = BSTreePage.create(this, null, page, newPage);
 				e.setValue(null);
 			}
 			return e;
-		} 
-		
+		}
+
 		Object o = page;
 		while (o instanceof BSTreePage && !((BSTreePage)o).isLeaf()) {
 			o = ((BSTreePage)o).getOrCreate(key, this);
@@ -408,7 +416,7 @@ public class Node {
 	}
 
 
-	public BSTEntry bstRemove(long key, long[] kdKey, PhTree16.UpdateInfo ui, PhTree16<?> tree) {
+	public BSTEntry bstRemove(long key, long[] kdKey, UpdateInfo ui) {
 		final BSTreePage rootPage = getRoot();
 		if (rootPage.isLeaf()) {
 			return rootPage.remove(key, kdKey, this, ui);
@@ -417,7 +425,7 @@ public class Node {
 		BSTEntry result = rootPage.findAndRemove(key, kdKey, this, ui);
 		if (rootPage.getNKeys() == 0) { 
 			root = rootPage.getFirstSubPage();
-			tree.bstPool().reportFreeNode(rootPage);
+			BSTPool.reportFreeNode(rootPage);
 		}
 		return result;
 	}
@@ -434,8 +442,8 @@ public class Node {
 		return page.getValueFromLeaf(key);
 	}
 
-	public BSTreePage bstCreatePage(BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor, PhTree16<?> tree) {
-		return BSTreePage.create(this, parent, isLeaf, leftPredecessor, tree);
+	public BSTreePage bstCreatePage(BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
+		return BSTreePage.create(this, parent, isLeaf, leftPredecessor);
 	}
 
 	public BSTreePage getRoot() {
@@ -521,12 +529,12 @@ public class Node {
 	 * @param value value
 	 * @return see above
 	 */
-	Object addEntry(long hcPos, long[] kdKey, Object value, PhTree16<?> tree) {
+	Object addEntry(long hcPos, long[] kdKey, Object value) {
 		//Uses bstGetOrCreate() -> 
 		//- get or create entry
 		//- if value==null -> new entry, just set key,value
 		//- if not null: decide to replacePos (exact match) or replaceWithSub 
-		BSTEntry be = bstGetOrCreate(hcPos, tree);
+		BSTEntry be = bstGetOrCreate(hcPos);
 		if (be.getKdKey() == null) {
 			//new!
 			be.set(hcPos, kdKey, value);
@@ -534,11 +542,11 @@ public class Node {
 		} 
 		
 		//exists!!
-		return handleCollision(be, kdKey, value, tree);
+		return handleCollision(be, kdKey, value);
 	}
 
 	
-	private Object handleCollision(BSTEntry existingE, long[] kdKey, Object value, PhTree16<?> tree) {
+	private Object handleCollision(BSTEntry existingE, long[] kdKey, Object value) {
 		//We have two entries in the same location (local hcPos).
 		//Now we need to compare the kdKeys.
 		//If they are identical, we either replace the VALUE or return the SUB-NODE
@@ -550,13 +558,13 @@ public class Node {
 			Node subNode = (Node) localVal;
 			if (subNode.getInfixLen() > 0) {
 				long mask = calcInfixMask(subNode.getPostLen());
-				return insertSplit(existingE, kdKey, value, mask, tree);
+				return insertSplit(existingE, kdKey, value, mask);
 			}
 			//No infix conflict, just traverse subnode
 			return localVal;
 		} else {
 			if (getPostLen() > 0) {
-				return insertSplit(existingE, kdKey, value, -1L, tree);
+				return insertSplit(existingE, kdKey, value, -1L);
 			}
 			//perfect match -> replace value
 			existingE.set(existingE.getKey(), kdKey, value);
@@ -565,7 +573,7 @@ public class Node {
 	}
 	
 
-	private Object insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, long mask, PhTree16<?> tree) {
+	private Object insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, long mask) {
 		if (mask == 0) {
 			//There won't be any split, no need to check.
 			return currentEntry.getValue();
@@ -582,10 +590,10 @@ public class Node {
 			return currentValue;
 		}
 		
-		Node newNode = createNode(newKey, newValue, localKdKey, currentValue, maxConflictingBits, tree);
+		Node newNode = createNode(newKey, newValue, localKdKey, currentValue, maxConflictingBits);
 
 		//replace value
-		currentEntry.set(currentEntry.getKey(), tree.longPool().arrayClone(localKdKey), newNode);
+		currentEntry.set(currentEntry.getKey(), BitsLong.arrayClone(localKdKey), newNode);
 		//entry did not exist
         return null;
 	}
@@ -611,9 +619,9 @@ public class Node {
 	 * @param ui UpdateInfo
 	 * @return See contract.
 	 */
-	private Object removeEntry(long hcPos, long[] key, UpdateInfo ui, PhTree16<?> tree) {
+	private Object removeEntry(long hcPos, long[] key, UpdateInfo ui) {
 		//Only remove value-entries, node-entries are simply returned without removing them
-		BSTEntry prev = bstRemove(hcPos, key, ui, tree);
+		BSTEntry prev = bstRemove(hcPos, key, ui);
 		//return values: 
 		// - null -> not found / remove failed
 		// - Node -> recurse node

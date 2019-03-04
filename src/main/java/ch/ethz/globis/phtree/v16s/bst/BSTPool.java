@@ -4,25 +4,20 @@
  * This software is the proprietary information of Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16.bst;
+package ch.ethz.globis.phtree.v16s.bst;
+
+import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.v16s.Node.BSTEntry;
+import ch.ethz.globis.phtree.v16s.Node;
 
 import java.util.Arrays;
 
-import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.v16.Node;
-import ch.ethz.globis.phtree.v16.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16.PhTree16;
-
 public class BSTPool {
 
-    private final BSTArrayPool POOL_ENTRY = new BSTArrayPool();
-    private final KeyArrayPool POOL_KEY = new KeyArrayPool();
-    private final NodeArrayPool POOL_NODES = new NodeArrayPool();
-    private final NodePool POOL_NODE = new NodePool();
-
-    public static BSTPool create(){
-    	return new BSTPool();
-	}
+    private static final BSTArrayPool POOL_ENTRY = new BSTArrayPool();
+    private static final KeyArrayPool POOL_KEY = new KeyArrayPool();
+    private static final NodeArrayPool POOL_NODES = new NodeArrayPool();
+    private static final NodePool POOL_NODE = new NodePool();
 
     private BSTPool() {
     	// empty
@@ -46,13 +41,15 @@ public class BSTPool {
     		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
     			return new BSTEntry[size];
     		}
-			int ps = poolSize[size];
-			if (ps > 0) {
-				poolSize[size]--;
-				BSTEntry[] ret = pool[size][ps-1];
-				pool[size][ps-1] = null;
-				return ret;
-			}
+    		synchronized (this) {
+	    		int ps = poolSize[size]; 
+	    		if (ps > 0) {
+	    			poolSize[size]--;
+	    			BSTEntry[] ret = pool[size][ps-1];
+	    			pool[size][ps-1] = null;
+	    			return ret;
+	    		}
+    		}
     		return new BSTEntry[size];
     	}
     	
@@ -61,12 +58,14 @@ public class BSTPool {
     		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
     			return;
     		}
-			int ps = poolSize[size];
-			if (ps < maxArrayCount) {
-				Arrays.fill(a, null);
-				pool[size][ps] = a;
-				poolSize[size]++;
-			}
+    		synchronized (this) {
+    			int ps = poolSize[size]; 
+    			if (ps < maxArrayCount) {
+	    			Arrays.fill(a, null);
+    				pool[size][ps] = a;
+    				poolSize[size]++;
+    			}
+    		}
     	}
     }
 
@@ -75,7 +74,7 @@ public class BSTPool {
      * @param newSize size
      * @return New array.
      */
-    public BSTEntry[] arrayCreateEntries(int newSize) {
+    public static BSTEntry[] arrayCreateEntries(int newSize) {
     	return POOL_ENTRY.getArray(newSize);
 	}
 
@@ -85,7 +84,7 @@ public class BSTPool {
      * @param newSize size
      * @return New array larger array.
      */
-    public BSTEntry[] arrayExpand(BSTEntry[] oldA, int newSize) {
+    public static BSTEntry[] arrayExpand(BSTEntry[] oldA, int newSize) {
     	BSTEntry[] newA = POOL_ENTRY.getArray(newSize);
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
     	POOL_ENTRY.offer(oldA);
@@ -97,7 +96,7 @@ public class BSTPool {
      * Discards oldA.
      * @param oldA old array
      */
-    public void arrayDiscard(BSTEntry[] oldA) {
+    public static void arrayDiscard(BSTEntry[] oldA) {
     	if (oldA != null) {
     		POOL_ENTRY.offer(oldA);
     	}
@@ -122,13 +121,15 @@ public class BSTPool {
     		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
     			return new long[size];
     		}
-			int ps = poolSize[size];
-			if (ps > 0) {
-				poolSize[size]--;
-				long[] ret = pool[size][ps-1];
-				pool[size][ps-1] = null;
-				return ret;
-			}
+    		synchronized (this) {
+	    		int ps = poolSize[size]; 
+	    		if (ps > 0) {
+	    			poolSize[size]--;
+	    			long[] ret = pool[size][ps-1];
+	    			pool[size][ps-1] = null;
+	    			return ret;
+	    		}
+    		}
     		return new long[size];
     	}
     	
@@ -137,12 +138,14 @@ public class BSTPool {
     		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
     			return;
     		}
-			int ps = poolSize[size];
-			if (ps < maxArrayCount) {
-				Arrays.fill(a, 0L);
-				pool[size][ps] = a;
-				poolSize[size]++;
-			}
+    		synchronized (this) {
+    			int ps = poolSize[size]; 
+    			if (ps < maxArrayCount) {
+	    			Arrays.fill(a, 0L);
+    				pool[size][ps] = a;
+    				poolSize[size]++;
+    			}
+    		}
     	}
     }
 
@@ -151,7 +154,7 @@ public class BSTPool {
      * @param newSize size
      * @return New array.
      */
-    public long[] arrayCreateLong(int newSize) {
+    public static long[] arrayCreateLong(int newSize) {
     	return POOL_KEY.getArray(newSize);
 	}
 
@@ -162,7 +165,7 @@ public class BSTPool {
      * @param newSize size
      * @return New array larger array.
      */
-    public long[] arrayExpand(long[] oldA, int newSize) {
+    public static long[] arrayExpand(long[] oldA, int newSize) {
     	long[] newA = POOL_KEY.getArray(newSize);
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
     	POOL_KEY.offer(oldA);
@@ -174,7 +177,7 @@ public class BSTPool {
      * Discards oldA.
      * @param oldA old array
      */
-    public void arrayDiscard(long[] oldA) {
+    public static void arrayDiscard(long[] oldA) {
     	if (oldA != null) {
     		POOL_KEY.offer(oldA);
     	}
@@ -191,7 +194,7 @@ public class BSTPool {
 			this.pool = new BSTreePage[maxArraySize+1][maxArrayCount][];
 			this.poolSize = new byte[maxArraySize+1];
 		}
-    	
+
     	BSTreePage[] getArray(int size) {
     		if (size == 0) {
     			return EMPTY_REF_ARRAY;
@@ -199,27 +202,31 @@ public class BSTPool {
     		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
     			return new BSTreePage[size];
     		}
-			int ps = poolSize[size];
-			if (ps > 0) {
-				poolSize[size]--;
-				BSTreePage[] ret = pool[size][ps-1];
-				pool[size][ps-1] = null;
-				return ret;
-			}
+    		synchronized (this) {
+	    		int ps = poolSize[size];
+	    		if (ps > 0) {
+	    			poolSize[size]--;
+	    			BSTreePage[] ret = pool[size][ps-1];
+	    			pool[size][ps-1] = null;
+	    			return ret;
+	    		}
+    		}
     		return new BSTreePage[size];
     	}
-    	
+
     	void offer(BSTreePage[] a) {
     		int size = a.length;
     		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
     			return;
     		}
-			int ps = poolSize[size];
-			if (ps < maxArrayCount) {
-				Arrays.fill(a, null);
-				pool[size][ps] = a;
-				poolSize[size]++;
-			}
+    		synchronized (this) {
+    			int ps = poolSize[size];
+    			if (ps < maxArrayCount) {
+	    			Arrays.fill(a, null);
+    				pool[size][ps] = a;
+    				poolSize[size]++;
+    			}
+    		}
     	}
     }
 
@@ -228,7 +235,7 @@ public class BSTPool {
      * @param newSize size
      * @return New array.
      */
-    public BSTreePage[] arrayCreateNodes(int newSize) {
+    public static BSTreePage[] arrayCreateNodes(int newSize) {
     	return POOL_NODES.getArray(newSize);
 	}
 
@@ -238,25 +245,25 @@ public class BSTPool {
      * @param newSize size
      * @return New array larger array.
      */
-    public BSTreePage[] arrayExpand(BSTreePage[] oldA, int newSize) {
+    public static BSTreePage[] arrayExpand(BSTreePage[] oldA, int newSize) {
     	BSTreePage[] newA = POOL_NODES.getArray(newSize);
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
     	POOL_NODES.offer(oldA);
     	return newA;
 	}
 
-	
+
     /**
      * Discards oldA.
      * @param oldA old array
      */
-    public void arrayDiscard(BSTreePage[] oldA) {
+    public static void arrayDiscard(BSTreePage[] oldA) {
     	if (oldA != null) {
     		POOL_NODES.offer(oldA);
     	}
     }
-    
-	
+
+
     private static class NodePool {
     	private final int maxArrayCount = 100;
     	private final BSTreePage[] pool;
@@ -264,31 +271,35 @@ public class BSTPool {
     	NodePool() {
 			this.pool = new BSTreePage[maxArrayCount];
 		}
-    	
+
     	BSTreePage get() {
-			int ps = poolSize;
-			if (ps > 0) {
-				poolSize--;
-				BSTreePage ret = pool[ps-1];
-				pool[ps-1] = null;
-				return ret;
-			}
+    		synchronized (this) {
+	    		int ps = poolSize;
+	    		if (ps > 0) {
+	    			poolSize--;
+	    			BSTreePage ret = pool[ps-1];
+	    			pool[ps-1] = null;
+	    			return ret;
+	    		}
+    		}
     		return null;
     	}
-    	
+
     	void offer(BSTreePage a) {
     		if (!PhTreeHelper.ARRAY_POOLING) {
     			return;
     		}
-			int ps = poolSize;
-			if (ps < maxArrayCount) {
-				pool[ps] = a;
-				poolSize++;
-			}
+    		synchronized (this) {
+    			int ps = poolSize;
+    			if (ps < maxArrayCount) {
+    				pool[ps] = a;
+    				poolSize++;
+    			}
+    		}
     	}
     }
 
-	public void reportFreeNode(BSTreePage p) {
+	public static void reportFreeNode(BSTreePage p) {
 		POOL_KEY.offer(p.getKeys());
 		if (p.isLeaf()) {
 			p.updateNeighborsRemove();
@@ -300,14 +311,13 @@ public class BSTPool {
 		POOL_NODE.offer(p);
 	}
 
-	public BSTreePage getNode(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor,
-							  PhTree16<?> tree) {
+	public static BSTreePage getNode(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
 		BSTreePage p = POOL_NODE.get();
 		if (p != null) {
 			p.init(ind, parent, isLeaf, leftPredecessor);
 			return p;
 		}
-		return new BSTreePage(ind, parent, isLeaf, leftPredecessor, tree);
+		return new BSTreePage(ind, parent, isLeaf, leftPredecessor);
 	}
 	
 
