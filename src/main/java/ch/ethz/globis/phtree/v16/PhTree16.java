@@ -1,10 +1,21 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich
- * and Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v16;
 
@@ -107,7 +118,8 @@ public class PhTree16<T> implements PhTree<T> {
 
 	private Node root = null;
 
-    private final ObjectPool<Node> nodePool;
+	private final ObjectPool<Node> nodePool;
+	private final ObjectPool<UpdateInfo> uiPool;
     private final LongArrayPool bitPool;
     private final BSTPool bstPool;
 
@@ -117,7 +129,8 @@ public class PhTree16<T> implements PhTree<T> {
 
 	public PhTree16(int dim) {
 		dims = dim;
-        this.nodePool = ObjectPool.create(Node::new);
+		this.nodePool = ObjectPool.create(Node::new);
+		this.uiPool = ObjectPool.create(UpdateInfo::new);
         this.bitPool = LongArrayPool.create();
         this.bstPool = BSTPool.create();
 		debugCheck();
@@ -239,7 +252,6 @@ public class PhTree16<T> implements PhTree<T> {
         increaseNrEntries();
     }
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public boolean contains(long... key) {
 		Object o = getRoot();
@@ -283,10 +295,11 @@ public class PhTree16<T> implements PhTree<T> {
 
 	//TODO create pool?
 	public static class UpdateInfo {
-		final long[] newKey;
+		long[] newKey;
 		int insertRequired = NO_INSERT_REQUIRED;
-		UpdateInfo(long[] newKey) {
+		UpdateInfo init(long[] newKey) {
 			this.newKey = newKey;
+			return this;
 		}
 	}
 	
@@ -298,7 +311,7 @@ public class PhTree16<T> implements PhTree<T> {
 		
 		Object o = getRoot();
 		Node parentNode = null;
-		final UpdateInfo ui = new UpdateInfo(newKey);
+		final UpdateInfo ui = uiPool.get().init(newKey);
 		
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
@@ -329,7 +342,7 @@ public class PhTree16<T> implements PhTree<T> {
 				}
 			}
 		}		
-		
+		uiPool.offer(ui);
 		return (T) value;
 	}
 
@@ -555,4 +568,3 @@ public class PhTree16<T> implements PhTree<T> {
         return bstPool;
     }
 }
-

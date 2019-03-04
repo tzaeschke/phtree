@@ -30,7 +30,6 @@ import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.util.unsynced.LongArrayOps;
 import ch.ethz.globis.phtree.v16.PhTree16.UpdateInfo;
 import ch.ethz.globis.phtree.v16.bst.BSTIteratorAll;
-import ch.ethz.globis.phtree.v16.bst.BSTPool;
 import ch.ethz.globis.phtree.v16.bst.BSTreePage;
 
 
@@ -590,11 +589,9 @@ public class Node {
         return null;
 	}
 	
-	private Object replaceEntry(long hcPos, long[] kdKey, Object value) {
+	private void replaceEntry(long hcPos, long[] kdKey, Object value) {
 		BSTEntry be = bstGet(hcPos);
-		Object prev = be.getValue();
 		be.set(hcPos, kdKey, value);
-		return prev;
 	}
 
 	/**
@@ -652,7 +649,7 @@ public class Node {
 	}
 	
 	
-	BSTEntry getEntry(long hcPos, long[] keyToMatch) {
+	private BSTEntry getEntry(long hcPos, long[] keyToMatch) {
 		BSTEntry be = bstGet(hcPos);
 		if (be == null) {
 			return null;

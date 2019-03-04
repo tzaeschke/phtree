@@ -474,12 +474,11 @@ public class BSTreePage {
 				newHome = newInner;
 			}
 			newHome.addSubPage(newP, minKey, NO_POS, ind);
-			return;
 		}
 	}
 	
 	
-	long getMinKey() {
+	private long getMinKey() {
 		if (isLeaf) {
 			return keys[0];
 		}
