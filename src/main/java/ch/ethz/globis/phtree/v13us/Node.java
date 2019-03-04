@@ -106,7 +106,7 @@ public class Node {
 	}
 
 	static Node createNode(int dims, int infixLenClassic, int postLenClassic, PhTree13us<?> tree) {
-		Node n = tree.nodePool().getNode();
+		Node n = tree.nodePool().get();
 		n.initNode(infixLenClassic, postLenClassic, dims, tree);
 		return n;
 	}

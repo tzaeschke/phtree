@@ -26,66 +26,55 @@ import java.util.Arrays;
 public class ObjectArrayPool<T> {
 
 	private static final Object[] EMPTY_REF_ARRAY = {};
-    private final ArrayPool POOL =
-    		new ArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
-    				PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
 
-    private ObjectArrayPool() {
-    	// empty
-    }
-    
-    private static class ArrayPool {
-    	private final int maxArraySize;
-    	private final int maxArrayCount;
-    	Object[][][] pool;
-    	int[] poolSize;
-    	ArrayPool(int maxArraySize, int maxArrayCount) {
-			this.maxArraySize = maxArraySize;
-			this.maxArrayCount = maxArrayCount;
-			this.pool = new Object[maxArraySize+1][maxArrayCount][];
-			this.poolSize = new int[maxArraySize+1];
-		}
-    	
-    	Object[] getArray(int size) {
-    		if (size == 0) {
-    			return EMPTY_REF_ARRAY;
-    		}
-    		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
-    			return new Object[size];
-    		}
-    		synchronized (this) {
-	    		int ps = poolSize[size];
-	    		if (ps > 0) {
-	    			poolSize[size]--;
-	    			Object[] ret = pool[size][ps-1];
-	    			pool[size][ps-1] = null;
-	    			return ret;
-	    		}
-    		}
-    		return new Object[size];
-    	}
-    	
-    	void offer(Object[] a) {
-    		int size = a.length;
-    		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
-    			return;
-    		}
-    		synchronized (this) {
-    			int ps = poolSize[size]; 
-    			if (ps < maxArrayCount) {
-	    			Arrays.fill(a, null);
-    				pool[size][ps] = a;
-    				poolSize[size]++;
-    			}
-    		}
-    	}
-    }
+	private final int maxArraySize;
+	private final int maxArrayCount;
+	private Object[][][] pool;
+	private int[] poolSize;
 
-    public static <T> ObjectArrayPool<T> create() {
-    	return new ObjectArrayPool<>();
+	public static <T> ObjectArrayPool<T> create() {
+		return new ObjectArrayPool<>(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
+				PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
 	}
 
-    /**
+	private ObjectArrayPool(int maxArraySize, int maxArrayCount) {
+		this.maxArraySize = maxArraySize;
+		this.maxArrayCount = maxArrayCount;
+		this.pool = new Object[maxArraySize+1][maxArrayCount][];
+		this.poolSize = new int[maxArraySize+1];
+	}
+
+	private Object[] getArray(int size) {
+		if (size == 0) {
+			return EMPTY_REF_ARRAY;
+		}
+		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
+			return new Object[size];
+		}
+		int ps = poolSize[size];
+		if (ps > 0) {
+			poolSize[size]--;
+			Object[] ret = pool[size][ps-1];
+			pool[size][ps-1] = null;
+			return ret;
+		}
+		return new Object[size];
+	}
+
+	private void offer(Object[] a) {
+		int size = a.length;
+		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
+			return;
+		}
+		int ps = poolSize[size];
+		if (ps < maxArrayCount) {
+			Arrays.fill(a, null);
+			pool[size][ps] = a;
+			poolSize[size]++;
+		}
+	}
+
+	/**
      * Calculate array size for given number of bits.
      * This takes into account JVM memory management, which allocates multiples of 8 bytes.
      * @param nObjects size of the array
@@ -110,7 +99,7 @@ public class ObjectArrayPool<T> {
     public T[] arrayExpand(T[] oldA, int newSize) {
     	T[] newA = arrayCreate(newSize);
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
-    	POOL.offer(oldA);
+    	offer(oldA);
     	return newA;
     }
     
@@ -122,9 +111,9 @@ public class ObjectArrayPool<T> {
      */
 	@SuppressWarnings("unchecked")
 	public T[] arrayExpandPrecise(T[] oldA, int newSize) {
-		T[] newA = (T[]) POOL.getArray(newSize);
+		T[] newA = (T[]) getArray(newSize);
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
-    	POOL.offer(oldA);
+    	offer(oldA);
     	return newA;
 	}
 
@@ -135,21 +124,7 @@ public class ObjectArrayPool<T> {
      */
     @SuppressWarnings("unchecked")
 	public T[] arrayCreate(int size) {
-    	return (T[]) POOL.getArray(calcArraySize(size));
-    }
-    
-    /**
-     * Ensure capacity of an array. Expands the array if required.
-     * @param oldA old array
-     * @param requiredSize size
-     * @return Same array or expanded array.
-     */
-    @Deprecated
-    public T[] arrayEnsureSize(T[] oldA, int requiredSize) {
-    	if (isCapacitySufficient(oldA, requiredSize)) {
-    		return oldA;
-    	}
-    	return arrayExpand(oldA, requiredSize);
+    	return (T[]) getArray(calcArraySize(size));
     }
     
     /**
@@ -160,7 +135,7 @@ public class ObjectArrayPool<T> {
      */
     public T[] arrayReplace(T[] oldA, T[] newA) {
     	if (oldA != null) {
-    		POOL.offer(oldA);
+    		offer(oldA);
     	}
     	return newA;
     }
@@ -180,25 +155,6 @@ public class ObjectArrayPool<T> {
     	return a.length >= requiredSize;
     }
     
-    @Deprecated
-    @SuppressWarnings("unchecked")
-	public T[] arrayTrim(T[] oldA, int requiredSize) {
-    	int reqSize = calcArraySize(requiredSize);
-    	if (oldA.length == reqSize) {
-    		return oldA;
-    	}
-    	T[] newA = (T[]) POOL.getArray(reqSize);
-     	System.arraycopy(oldA, 0, newA, 0, reqSize);
-     	POOL.offer(oldA);
-    	return newA;
-    }
-
-    @Deprecated
-	public void insertAtPos(T[] values, int pos, T value) {
-		copyRight(values, pos, values, pos+1, values.length-pos-1);
-		values[pos] = value;
-	}
-	
 	/**
 	 * Inserts an empty field at position 'pos'. If the required size is larger than the current
 	 * size, the array is copied to a new array. The new array is returned and the old array is
@@ -218,13 +174,6 @@ public class ObjectArrayPool<T> {
 		return dst;
 	}
 	
-	@Deprecated
-	public void removeAtPos(T[] values, int pos) {
-		if (pos < values.length-1) {
-			copyLeft(values, pos+1, values, pos, values.length-pos-1);
-		}
-	}
-	
 	/**
 	 * Removes a field at position 'pos'. If the required size is smaller than the current
 	 * size, the array is copied to a new array. The new array is returned and the old array is
@@ -239,7 +188,7 @@ public class ObjectArrayPool<T> {
     	int reqSize = calcArraySize(requiredSize);
     	T[] dst = values;
 		if (reqSize < values.length) {
-			dst = (T[]) POOL.getArray(reqSize);
+			dst = (T[]) getArray(reqSize);
 			copyLeft(values, 0, dst, 0, pos);
 		}
 		copyLeft(values, pos+1, dst, pos, requiredSize-pos);
@@ -288,7 +237,7 @@ public class ObjectArrayPool<T> {
 	@SuppressWarnings("unchecked")
 	public T[] read(ObjectInput in) throws IOException {
 		int size = in.readInt();
-		T[] ret = (T[]) POOL.getArray(size);
+		T[] ret = (T[]) getArray(size);
 		try {
 			for (int i = 0; i < size; i++) {
 				ret[i] = (T) in.readObject();

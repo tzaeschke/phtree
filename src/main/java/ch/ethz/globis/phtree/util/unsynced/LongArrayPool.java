@@ -26,93 +26,80 @@ public class LongArrayPool {
     private static final int UNIT_3 = 6;  			//EXP: 2^EXP = BITS
 	private static final int UNIT_BITS = (1<<UNIT_3);
 
-    static int statACreate = 0;
-    static int statAExpand = 0;
-    static int statATrim = 0;
+    private final int maxArraySize;
+    private final int maxArrayCount;
+    private long[][][] pool;
+    private int[] poolSize;
+    private int[] poolStatsNew;
 
-    //private static final ArrayPool POOL = new ArrayPool(100, 100);
-    public final ArrayPool POOL =
-    		new ArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE, 
-    				PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
-    
-    public static class ArrayPool {
-    	private final int maxArraySize;
-    	private final int maxArrayCount;
-    	long[][][] pool;
-    	int[] poolSize;
-    	int[] poolStatsNew;
-    	ArrayPool(int maxArraySize, int maxArrayCount) {
-			this.maxArraySize = maxArraySize;
-			this.maxArrayCount = maxArrayCount;
-			this.pool = new long[maxArraySize+1][maxArrayCount][];
-			this.poolSize = new int[maxArraySize+1];
-			if (DEBUG) {
-				poolStatsNew = new int[10 * maxArraySize + 1];
-			}
-		}
-    	
-    	long[] getArray(int size) {
-    		if (size == 0) {
-    			return EMPTY_LONG_ARRAY;
-    		}
-    		if (PhTreeHelper.ARRAY_POOLING) {
-	    		if (size > maxArraySize) {
-	    			return new long[size];
-	    		}
-	    		synchronized (this) {
-	    			int ps = poolSize[size]; 
-	    			if (ps > 0) {
-	    				poolSize[size]--;
-	    				long[] ret = pool[size][ps-1];
-	    				Arrays.fill(ret, 0);
-	    				return ret;
-	    			}
-	    		}
-    		}
-    		if (DEBUG) {
-				poolStatsNew[size]++;
-			}
-    		return new long[size];
-    	}
-    	
-    	void offer(long[] a) {
-    		if (PhTreeHelper.ARRAY_POOLING) {
-    			int size = a.length;
-    			if (size == 0 || size > maxArraySize) {
-    				return;
-    			}
-        		synchronized (this) {
-        			int ps = poolSize[size]; 
-        			if (ps < maxArrayCount) {
-        				pool[size][ps] = a;
-        				poolSize[size]++;
-        			}
-        		}
-    		}
-    	}
-    	
-    	public String print() {
-    		String r = "";
-    		int total = 0;
-    		for (int i = 0; i < poolSize.length; i++) {
-    			r += "" + i + ":" + poolSize[i] + " ";
-    			total += i*poolSize[i];
-    		}
-    		if (DEBUG) {
-				r += System.lineSeparator();
-				r += "Total size: " + total;
-				r += System.lineSeparator();
-				for (int i = 0; i < poolSize.length; i++) {
-					r += "" + i + ":" + poolStatsNew[i] + " ";
-				}
-			}
-    		return r;
-    	}
-    }
-    
     public static LongArrayPool create() {
-		return new LongArrayPool();
-	}
+        return new LongArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
+                PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
+    }
+
+    private LongArrayPool(int maxArraySize, int maxArrayCount) {
+        this.maxArraySize = maxArraySize;
+        this.maxArrayCount = maxArrayCount;
+        this.pool = new long[maxArraySize+1][maxArrayCount][];
+        this.poolSize = new int[maxArraySize+1];
+        if (DEBUG) {
+            poolStatsNew = new int[10 * maxArraySize + 1];
+        }
+    }
+
+    private long[] getArray(int size) {
+        if (size == 0) {
+            return EMPTY_LONG_ARRAY;
+        }
+        if (PhTreeHelper.ARRAY_POOLING) {
+            if (size > maxArraySize) {
+                return new long[size];
+            }
+            int ps = poolSize[size];
+            if (ps > 0) {
+                poolSize[size]--;
+                long[] ret = pool[size][ps-1];
+                Arrays.fill(ret, 0);
+                return ret;
+            }
+        }
+        if (DEBUG) {
+            poolStatsNew[size]++;
+        }
+        return new long[size];
+    }
+
+    private void offer(long[] a) {
+        if (PhTreeHelper.ARRAY_POOLING) {
+            int size = a.length;
+            if (size == 0 || size > maxArraySize) {
+                return;
+            }
+            int ps = poolSize[size];
+            if (ps < maxArrayCount) {
+                pool[size][ps] = a;
+                poolSize[size]++;
+            }
+        }
+    }
+
+    public String print() {
+        String r = "";
+        int total = 0;
+        for (int i = 0; i < poolSize.length; i++) {
+            r += "" + i + ":" + poolSize[i] + " ";
+            total += i*poolSize[i];
+        }
+        if (DEBUG) {
+            r += System.lineSeparator();
+            r += "Total size: " + total;
+            r += System.lineSeparator();
+            for (int i = 0; i < poolSize.length; i++) {
+                r += "" + i + ":" + poolStatsNew[i] + " ";
+            }
+        }
+        return r;
+    }
 
     /**
      * Calculate array size for given number of bits.
@@ -139,18 +126,16 @@ public class LongArrayPool {
      * @return New array larger array.
      */
     public long[] arrayExpand(long[] oldA, int newSizeBits) {
-    	long[] newA = POOL.getArray(calcArraySize(newSizeBits));//new long[calcArraySize(newSizeBits)];
+    	long[] newA = getArray(calcArraySize(newSizeBits));//new long[calcArraySize(newSizeBits)];
     	if (newSizeBits > 0) {
     		System.arraycopy(oldA, 0, newA, 0, oldA.length);
     	}
-    	POOL.offer(oldA);
-    	statAExpand++;
+    	offer(oldA);
     	return newA;
     }
     
     public long[] arrayCreate(int nBits) {
-    	long[] newA = POOL.getArray(calcArraySize(nBits));//new long[calcArraySize(nBits)];
-    	statACreate++;
+    	long[] newA = getArray(calcArraySize(nBits));//new long[calcArraySize(nBits)];
     	return newA;
     }
     
@@ -161,14 +146,13 @@ public class LongArrayPool {
      * @return new array
      */
     public long[] arrayReplace(long[] oldA, long[] newA) {
-    	POOL.offer(oldA);
+    	offer(oldA);
     	return newA;
     }
     
     public long[] arrayClone(long[] oldA) {
-    	long[] newA = POOL.getArray(oldA.length);
+    	long[] newA = getArray(oldA.length);
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
-    	statACreate++;
     	return newA;
     }
     
@@ -197,10 +181,9 @@ public class LongArrayPool {
     	if (reqSize == 0) {
     		return EMPTY_LONG_ARRAY;
     	}
-    	long[] newA = POOL.getArray(reqSize);//new long[reqSize];
+    	long[] newA = getArray(reqSize);//new long[reqSize];
     	System.arraycopy(oldA, 0, newA, 0, reqSize);
-    	POOL.offer(oldA);
-    	statATrim++;
+    	offer(oldA);
     	return newA;
     }
 

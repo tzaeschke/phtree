@@ -17,42 +17,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ch.ethz.globis.phtree.v13us;
+package ch.ethz.globis.phtree.util.unsynced;
 
 import ch.ethz.globis.phtree.PhTreeHelper;
+
+import java.util.function.Supplier;
 
 /**
  * Reference pooling and management for Node instances.
  * 
  * @author ztilmann
  */
-public class NodePool {
-	
-	private final Node[] POOL = new Node[PhTreeHelper.MAX_OBJECT_POOL_SIZE];
+public class ObjectPool<T> {
+
+	/**
+	 * Size of object pools, currently only used for node objects.
+	 * To disable pooling, set to '0'.
+	 */
+	public static int DEFAULT_POOL_SIZE = PhTreeHelper.MAX_OBJECT_POOL_SIZE;
+
+	private final T[] pool;
 	private int poolSize;
-	/** Nodes currently used outside the pool. */
-	private int activeNodes = 0;
+	private final Supplier<T> constructor;
 
-	private NodePool() {
-		// empty
+	@SuppressWarnings("unchecked")
+	private ObjectPool(Supplier<T> constructor) {
+		this.constructor = constructor;
+		this.pool = (T[]) new Object[DEFAULT_POOL_SIZE];
 	}
 
-	public static NodePool create() {
-		return new NodePool();
+	public static <T> ObjectPool<T> create(Supplier<T> constructor) {
+		return new ObjectPool<>(constructor);
 	}
 
-	Node get() {
-		activeNodes++;
-		if (poolSize == 0) {
-			return Node.createEmpty();
-		}
-		return POOL[--poolSize];
+	public T get() {
+		return poolSize == 0 ? constructor.get(): pool[--poolSize];
 	}
 
-	void offer(Node node) {
-		activeNodes--;
-		if (poolSize < POOL.length) {
-			POOL[poolSize++] = node;
+	public void offer(T node) {
+		if (poolSize < pool.length) {
+			pool[poolSize++] = node;
 		}
 	}
 }

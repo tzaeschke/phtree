@@ -38,6 +38,7 @@ import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.*;
 import ch.ethz.globis.phtree.util.unsynced.LongArrayPool;
 import ch.ethz.globis.phtree.util.unsynced.ObjectArrayPool;
+import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -113,7 +114,8 @@ public class PhTree13us<T> implements PhTree<T> {
 
 	private Node root = null;
 
-	private final NodePool nodePool;
+	//private final NodePool nodePool = NodePool.create();
+	private final ObjectPool<Node> nodePool;
 	private final ObjectArrayPool<Object> refPool;
 	private final LongArrayPool bitPool;
 
@@ -123,7 +125,7 @@ public class PhTree13us<T> implements PhTree<T> {
 
 	public PhTree13us(int dim) {
 		this.dims = dim;
-		this.nodePool = NodePool.create();
+		this.nodePool = ObjectPool.create(Node::createEmpty);
 		this.refPool = ObjectArrayPool.create();
 		this.bitPool = LongArrayPool.create();
 		debugCheck();
@@ -548,7 +550,7 @@ public class PhTree13us<T> implements PhTree<T> {
 		//return (r <= v) ? -1 : r;
 	}
 
-	NodePool nodePool() {
+	ObjectPool<Node> nodePool() {
 		return nodePool;
 	}
 
