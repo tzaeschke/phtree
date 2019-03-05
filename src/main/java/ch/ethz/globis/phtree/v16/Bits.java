@@ -1,5 +1,4 @@
 /*
- * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
  * Copyright 2019 Improbable. All rights reserved.
  *

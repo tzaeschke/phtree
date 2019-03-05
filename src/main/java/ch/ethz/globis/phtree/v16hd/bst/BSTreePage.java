@@ -43,9 +43,11 @@ public class BSTreePage {
 	private BSTreePage[] subPages;
 	private BSTreePage prevLeaf;
 	private BSTreePage nextLeaf;
+	private final PhTree16HD<?> tree;
 
 
-	BSTreePage(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
+	BSTreePage(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor, PhTree16HD<?> tree) {
+	    this.tree = tree;
 		init(ind, parent, isLeaf, leftPredecessor);
 	}
 	
@@ -56,15 +58,15 @@ public class BSTreePage {
 		if (isLeaf) {
 			nEntries = 0;
 			int initialPageSize = ind.maxLeafN() <= 8 ? 2 : INITIAL_PAGE_SIZE;
-			keys = BSTPool.arrayCreateLong(initialPageSize);
-			values = BSTPool.arrayCreateEntries(initialPageSize);
+			keys = tree.bstPool().arrayCreateLong(initialPageSize);
+			values = tree.bstPool().arrayCreateEntries(initialPageSize);
 			subPages = null;
 			Node.statNLeaves++;
 		} else {
 			nEntries = -1;
-			keys = BSTPool.arrayCreateLong(ind.maxInnerN());
+			keys = tree.bstPool().arrayCreateLong(ind.maxInnerN());
 			values = null;
-			subPages = BSTPool.arrayCreateNodes(ind.maxInnerN() + 1);
+			subPages = tree.bstPool().arrayCreateNodes(ind.maxInnerN() + 1);
 			Node.statNInner++;
 		}
 		this.isLeaf = isLeaf;
@@ -82,12 +84,14 @@ public class BSTreePage {
 		}
 	}
 
-	public static BSTreePage create(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor) {
-		return BSTPool.getNode(ind, parent, isLeaf, leftPredecessor);
+	public static BSTreePage create(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor,
+                                    PhTree16HD<?> tree) {
+		return tree.bstPool().getNode(ind, parent, isLeaf, leftPredecessor, tree);
 	}
 	
-	public static BSTreePage create(Node ind, BSTreePage parent, BSTreePage firstSubpage, BSTreePage secondSubpage) {
-		BSTreePage p = create(ind, parent, false, null);
+	public static BSTreePage create(Node ind, BSTreePage parent, BSTreePage firstSubpage, BSTreePage secondSubpage,
+                                    PhTree16HD<?> tree) {
+		BSTreePage p = create(ind, parent, false, null, tree);
 		p.nEntries++;
 		p.subPages[0] = firstSubpage;
 		p.nEntries++;
@@ -102,11 +106,11 @@ public class BSTreePage {
 		return keys.length;
 	}
 	
-	private final int minLeafN(int maxLeafN) { 
+	private int minLeafN(int maxLeafN) {
 		return maxLeafN >> 1; 
 	}
 	
-	private final int minInnerN(int maxInnerN) { 
+	private int minInnerN(int maxInnerN) {
 		return maxInnerN >> 1; 
 	}  
 	
@@ -134,7 +138,7 @@ public class BSTreePage {
         }
         //read page before that value
         BSTreePage page = subPages[pos]; 
-        BSTEntry result = null;
+        BSTEntry result;
         if (page.isLeaf()) {
         	result = page.remove(key, kdKey, node, ui);
             checkUnderflowSubpageLeaf(pos, node);
@@ -187,11 +191,11 @@ public class BSTreePage {
 	 *
 	 * @param key search key
 	 */
-	int binarySearch(long[] key) {
+	private int binarySearch(long[] key) {
 		return BitsHD.binarySearch(keys, 0, nEntries, key);
 	}
 
-	private final void putUnchecked(int pos, long[] key, BSTEntry value, Node ind) {
+	private void putUnchecked(int pos, long[] key, BSTEntry value, Node ind) {
         //okay so we add it locally
         shiftArrayForInsertion(pos, ind);
         keys[pos] = key;
@@ -212,15 +216,15 @@ public class BSTreePage {
 	private void ensureSizePlusOne(Node ind) {
 		if (nEntries + 1 > keys.length) {
 			int newLen = keys.length*2 > ind.maxLeafN() ? ind.maxLeafN() : keys.length*2;
-			keys = BSTPool.arrayExpand(keys, newLen);
-			values = BSTPool.arrayExpand(values, newLen);
+			keys = tree.bstPool().arrayExpand(keys, newLen);
+			values = tree.bstPool().arrayExpand(values, newLen);
 		}
 	}
 
 	private void ensureSize(int newLen) {
 		if (newLen > keys.length) {
-			keys = BSTPool.arrayExpand(keys, newLen);
-			values = BSTPool.arrayExpand(values, newLen);
+			keys = tree.bstPool().arrayExpand(keys, newLen);
+			values = tree.bstPool().arrayExpand(values, newLen);
 		}
 	}
 
@@ -263,7 +267,7 @@ public class BSTreePage {
         boolean isPrev = false;
         
         if (parent == null) {
-    		destP = ind.bstCreatePage(null, true, this);
+    		destP = ind.bstCreatePage(null, true, this, tree);
     		isNew = true;
         } else {
 	        //use ind.maxLeafN -1 to avoid pretty much pointless copying (and possible endless 
@@ -281,7 +285,7 @@ public class BSTreePage {
 	        		destP = prev;
 	        		isPrev = true;
 	        	} else {
-	        		destP = ind.bstCreatePage(parent, true, this);
+	        		destP = ind.bstCreatePage(parent, true, this, tree);
 	        		isNew = true;
 	        	}
 	        }
@@ -408,10 +412,9 @@ public class BSTreePage {
 				newP.setParent( this );
 				nEntries++;
 			}
-			return;
 		} else {
 			//treat page overflow
-			BSTreePage newInner = ind.bstCreatePage(parent, false, null);
+			BSTreePage newInner = ind.bstCreatePage(parent, false, null, tree);
 			
 			//TODO use optimized fill ratio for unique values, just like for leaves?.
 			int minInnerN = minInnerN(keys.length);
@@ -422,7 +425,7 @@ public class BSTreePage {
 
 			if (parent == null) {
 				//create a parent
-				BSTreePage newRoot = ind.bstCreatePage(null, false, null);
+				BSTreePage newRoot = ind.bstCreatePage(null, false, null, tree);
 				newRoot.subPages[0] = this;
 				newRoot.nEntries = 0;  // 0: indicates one leaf / zero keys
 				this.setParent( newRoot );
@@ -441,12 +444,10 @@ public class BSTreePage {
 				newHome = newInner;
 			}
 			newHome.addSubPage(newP, minKey, NO_POS, ind);
-			return;
 		}
 	}
 	
-	
-	long[] getMinKey() {
+	private long[] getMinKey() {
 		if (isLeaf) {
 			return keys[0];
 		}
@@ -572,7 +573,7 @@ public class BSTreePage {
 		BSTreePage indexPage = getPageByPos(posToRemove);
 		
 		//remove sub page page from FSM.
-		BSTPool.reportFreeNode(indexPage);
+        tree.bstPool().reportFreeNode(indexPage);
 
 		if (nEntries > 0) { //otherwise we just delete this page
 			//remove entry
@@ -605,7 +606,7 @@ public class BSTreePage {
 					BSTreePage child = sub.getPageByPos(0);
 					replaceChildPage(child, pos);
 					Node.statNInner--;
-					BSTPool.reportFreeNode(sub);
+                    tree.bstPool().reportFreeNode(sub);
 				}
 			} else {
 				// nEntries == 0
@@ -676,7 +677,7 @@ public class BSTreePage {
 	 * Returns only INNER pages.
 	 * TODO for now this ignores leafPages on a previous inner node. It returns only leaf pages
 	 * from the current node.
-	 * @param currentSubPos
+	 * @param currentSubPos pos in subnode
 	 * @return The previous leaf page or null, if the given page is the first page.
 	 */
 	private BSTreePage getPrevInnerPage(int currentSubPos) {
@@ -695,7 +696,7 @@ public class BSTreePage {
 
 	/**
 	 * Returns only LEAF pages.
-	 * @param currentSubPos
+	 * @param currentSubPos pos in subnode
 	 * @return The previous leaf page or null, if the given page is the first page.
 	 */
 	private BSTreePage getPrevLeafPage(int currentSubPos) {
@@ -708,7 +709,7 @@ public class BSTreePage {
 
 	/**
 	 * Returns only LEAF pages.
-	 * @param currentSubPos
+	 * @param currentSubPos pos in subnode
 	 * @return The previous next page or null, if the given page is the first page.
 	 */
 	private BSTreePage getNextLeafPage(int currentSubPos) {
@@ -764,7 +765,7 @@ public class BSTreePage {
 				BSTreePage p = getPageByPos(i);
 				p.clear();
 				//0-IDs are automatically ignored.
-				BSTPool.reportFreeNode(p);
+                tree.bstPool().reportFreeNode(p);
 			}
 		}
 		if (subPages != null) {

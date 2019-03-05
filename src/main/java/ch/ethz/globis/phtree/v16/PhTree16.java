@@ -293,7 +293,6 @@ public class PhTree16<T> implements PhTree<T> {
 		return (T) o;
 	}
 
-	//TODO create pool?
 	public static class UpdateInfo {
 		long[] newKey;
 		int insertRequired = NO_INSERT_REQUIRED;

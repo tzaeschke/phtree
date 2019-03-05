@@ -47,7 +47,7 @@ public class LongArrayPool {
         }
     }
 
-    private long[] getArray(int size) {
+    public long[] getArray(int size) {
         if (size == 0) {
             return EMPTY_LONG_ARRAY;
         }
@@ -69,7 +69,7 @@ public class LongArrayPool {
         return new long[size];
     }
 
-    private void offer(long[] a) {
+    public void offer(long[] a) {
         if (PhTreeHelper.ARRAY_POOLING) {
             int size = a.length;
             if (size == 0 || size > maxArraySize) {
@@ -81,24 +81,6 @@ public class LongArrayPool {
                 poolSize[size]++;
             }
         }
-    }
-
-    public String print() {
-        String r = "";
-        int total = 0;
-        for (int i = 0; i < poolSize.length; i++) {
-            r += "" + i + ":" + poolSize[i] + " ";
-            total += i*poolSize[i];
-        }
-        if (DEBUG) {
-            r += System.lineSeparator();
-            r += "Total size: " + total;
-            r += System.lineSeparator();
-            for (int i = 0; i < poolSize.length; i++) {
-                r += "" + i + ":" + poolStatsNew[i] + " ";
-            }
-        }
-        return r;
     }
 
     /**
@@ -135,8 +117,7 @@ public class LongArrayPool {
     }
     
     public long[] arrayCreate(int nBits) {
-    	long[] newA = getArray(calcArraySize(nBits));//new long[calcArraySize(nBits)];
-    	return newA;
+    	return getArray(calcArraySize(nBits));
     }
     
     /**

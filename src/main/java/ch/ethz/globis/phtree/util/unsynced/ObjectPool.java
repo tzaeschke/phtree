@@ -42,16 +42,23 @@ public class ObjectPool<T> {
 
 	@SuppressWarnings("unchecked")
 	private ObjectPool(Supplier<T> constructor) {
-		this.constructor = constructor;
+		this.constructor = constructor != null ? constructor : () -> null;
 		this.pool = (T[]) new Object[DEFAULT_POOL_SIZE];
 	}
 
+	/**
+	 *
+	 * @param constructor Construction method. If this is 'null', the pool will never create objects
+	 *                    but only return objects that were previously offered.
+	 * @param <T> object type
+	 * @return New pool.
+	 */
 	public static <T> ObjectPool<T> create(Supplier<T> constructor) {
 		return new ObjectPool<>(constructor);
 	}
 
 	public T get() {
-		return poolSize == 0 ? constructor.get(): pool[--poolSize];
+		return poolSize > 0 ? pool[--poolSize] : constructor.get();
 	}
 
 	public void offer(T node) {

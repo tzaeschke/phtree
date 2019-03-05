@@ -1,24 +1,36 @@
 /*
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v16.bst;
 
-import java.util.Arrays;
-
-import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.util.unsynced.LongArrayPool;
+import ch.ethz.globis.phtree.util.unsynced.ObjectArrayPool;
+import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
 import ch.ethz.globis.phtree.v16.Node;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16.PhTree16;
 
 public class BSTPool {
 
-    private final BSTArrayPool POOL_ENTRY = new BSTArrayPool();
-    private final KeyArrayPool POOL_KEY = new KeyArrayPool();
-    private final NodeArrayPool POOL_NODES = new NodeArrayPool();
-    private final NodePool POOL_NODE = new NodePool();
+    private final ObjectArrayPool<BSTEntry> POOL_ENTRY = ObjectArrayPool.create();
+    private final LongArrayPool POOL_KEY = LongArrayPool.create();
+	private final ObjectArrayPool<BSTreePage> POOL_NODES = ObjectArrayPool.create();
+    private final ObjectPool<BSTreePage> POOL_NODE = ObjectPool.create(null);
 
     public static BSTPool create(){
     	return new BSTPool();
@@ -28,48 +40,6 @@ public class BSTPool {
     	// empty
     }
     
-    private static class BSTArrayPool {
-    	private static final BSTEntry[] EMPTY_REF_ARRAY = {};
-    	private final int maxArraySize = 100;
-    	private final int maxArrayCount = 100;
-    	private final BSTEntry[][][] pool;
-    	private byte[] poolSize;
-    	BSTArrayPool() {
-			this.pool = new BSTEntry[maxArraySize+1][maxArrayCount][];
-			this.poolSize = new byte[maxArraySize+1];
-		}
-    	
-    	BSTEntry[] getArray(int size) {
-    		if (size == 0) {
-    			return EMPTY_REF_ARRAY;
-    		}
-    		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
-    			return new BSTEntry[size];
-    		}
-			int ps = poolSize[size];
-			if (ps > 0) {
-				poolSize[size]--;
-				BSTEntry[] ret = pool[size][ps-1];
-				pool[size][ps-1] = null;
-				return ret;
-			}
-    		return new BSTEntry[size];
-    	}
-    	
-    	void offer(BSTEntry[] a) {
-    		int size = a.length;
-    		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
-    			return;
-    		}
-			int ps = poolSize[size];
-			if (ps < maxArrayCount) {
-				Arrays.fill(a, null);
-				pool[size][ps] = a;
-				poolSize[size]++;
-			}
-    	}
-    }
-
     /**
      * Create an array.
      * @param newSize size
@@ -94,59 +64,6 @@ public class BSTPool {
 
 	
     /**
-     * Discards oldA.
-     * @param oldA old array
-     */
-    public void arrayDiscard(BSTEntry[] oldA) {
-    	if (oldA != null) {
-    		POOL_ENTRY.offer(oldA);
-    	}
-    }
-    
-	
-    private static class KeyArrayPool {
-    	private static final long[] EMPTY_REF_ARRAY = {};
-    	private final int maxArraySize = 100;
-    	private final int maxArrayCount = 100;
-    	private final long[][][] pool;
-    	private byte[] poolSize;
-    	KeyArrayPool() {
-			this.pool = new long[maxArraySize+1][maxArrayCount][];
-			this.poolSize = new byte[maxArraySize+1];
-		}
-    	
-    	long[] getArray(int size) {
-    		if (size == 0) {
-    			return EMPTY_REF_ARRAY;
-    		}
-    		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
-    			return new long[size];
-    		}
-			int ps = poolSize[size];
-			if (ps > 0) {
-				poolSize[size]--;
-				long[] ret = pool[size][ps-1];
-				pool[size][ps-1] = null;
-				return ret;
-			}
-    		return new long[size];
-    	}
-    	
-    	void offer(long[] a) {
-    		int size = a.length;
-    		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
-    			return;
-    		}
-			int ps = poolSize[size];
-			if (ps < maxArrayCount) {
-				Arrays.fill(a, 0L);
-				pool[size][ps] = a;
-				poolSize[size]++;
-			}
-    	}
-    }
-
-    /**
      * Create a new array.
      * @param newSize size
      * @return New array.
@@ -170,60 +87,7 @@ public class BSTPool {
 	}
 
 	
-    /**
-     * Discards oldA.
-     * @param oldA old array
-     */
-    public void arrayDiscard(long[] oldA) {
-    	if (oldA != null) {
-    		POOL_KEY.offer(oldA);
-    	}
-    }
-    
-	
-    private static class NodeArrayPool {
-    	private static final BSTreePage[] EMPTY_REF_ARRAY = {};
-    	private final int maxArraySize = 100;
-    	private final int maxArrayCount = 100;
-    	private final BSTreePage[][][] pool;
-    	private byte[] poolSize;
-    	NodeArrayPool() {
-			this.pool = new BSTreePage[maxArraySize+1][maxArrayCount][];
-			this.poolSize = new byte[maxArraySize+1];
-		}
-    	
-    	BSTreePage[] getArray(int size) {
-    		if (size == 0) {
-    			return EMPTY_REF_ARRAY;
-    		}
-    		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
-    			return new BSTreePage[size];
-    		}
-			int ps = poolSize[size];
-			if (ps > 0) {
-				poolSize[size]--;
-				BSTreePage[] ret = pool[size][ps-1];
-				pool[size][ps-1] = null;
-				return ret;
-			}
-    		return new BSTreePage[size];
-    	}
-    	
-    	void offer(BSTreePage[] a) {
-    		int size = a.length;
-    		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
-    			return;
-    		}
-			int ps = poolSize[size];
-			if (ps < maxArrayCount) {
-				Arrays.fill(a, null);
-				pool[size][ps] = a;
-				poolSize[size]++;
-			}
-    	}
-    }
-
-    /**
+	/**
      * Create an array.
      * @param newSize size
      * @return New array.
@@ -246,48 +110,6 @@ public class BSTPool {
 	}
 
 	
-    /**
-     * Discards oldA.
-     * @param oldA old array
-     */
-    public void arrayDiscard(BSTreePage[] oldA) {
-    	if (oldA != null) {
-    		POOL_NODES.offer(oldA);
-    	}
-    }
-    
-	
-    private static class NodePool {
-    	private final int maxArrayCount = 100;
-    	private final BSTreePage[] pool;
-    	private byte poolSize;
-    	NodePool() {
-			this.pool = new BSTreePage[maxArrayCount];
-		}
-    	
-    	BSTreePage get() {
-			int ps = poolSize;
-			if (ps > 0) {
-				poolSize--;
-				BSTreePage ret = pool[ps-1];
-				pool[ps-1] = null;
-				return ret;
-			}
-    		return null;
-    	}
-    	
-    	void offer(BSTreePage a) {
-    		if (!PhTreeHelper.ARRAY_POOLING) {
-    			return;
-    		}
-			int ps = poolSize;
-			if (ps < maxArrayCount) {
-				pool[ps] = a;
-				poolSize++;
-			}
-    	}
-    }
-
 	public void reportFreeNode(BSTreePage p) {
 		POOL_KEY.offer(p.getKeys());
 		if (p.isLeaf()) {
@@ -309,6 +131,5 @@ public class BSTPool {
 		}
 		return new BSTreePage(ind, parent, isLeaf, leftPredecessor, tree);
 	}
-	
 
 }
