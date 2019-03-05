@@ -33,6 +33,11 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 
 # News
 
+### 2019-03-05
+
+Released version 2.1.0 of the PH-Tree. 
+- Avoid 'synchronized' object pooling. Object pooling in V13, v16 and v16HD have been modified to be non-`synchronized`, instead each instance of the PhTree has its own pool. A a result, running several PhTree instances in parallel will slightly increase memory usage (due to several pools allocated), butt will completely avoid contention caused by `synchronized` pools. A `synchronized` version of V13 is still available as `v13SynchedPool`.
+
 ### 2018-12-04
 
 Released version 2.0.2 of the PH-Tree. This release contains a minor fix and documentation updates.
