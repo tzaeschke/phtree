@@ -17,37 +17,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ch.ethz.globis.phtree.v13us;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
-import static ch.ethz.globis.phtree.PhTreeHelper.align8;
-import static ch.ethz.globis.phtree.PhTreeHelper.debugCheck;
-import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
+import ch.ethz.globis.phtree.*;
+import ch.ethz.globis.phtree.util.*;
+import ch.ethz.globis.phtree.v13SynchedPool.nt.NodeTreeV13;
+import ch.ethz.globis.phtree.v13SynchedPool.nt.NtNode;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import ch.ethz.globis.phtree.PhDistance;
-import ch.ethz.globis.phtree.PhDistanceL;
-import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.PhFilterDistance;
-import ch.ethz.globis.phtree.PhRangeQuery;
-import ch.ethz.globis.phtree.PhTree;
-import ch.ethz.globis.phtree.PhTreeConfig;
-import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.util.*;
-import ch.ethz.globis.phtree.util.unsynced.LongArrayPool;
-import ch.ethz.globis.phtree.util.unsynced.ObjectArrayPool;
-import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
+import static ch.ethz.globis.phtree.PhTreeHelper.*;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
  *
- *
  * Version 13:
- * Version 13us: Based on Version 11. Some optimizations, for example store HC-Pos in postFix.
- * 				Version 13 has 'synchronized' object pools and NT nodes for high dim.
- * 			    Version 13us has local unsynchronized pools. It also has the NT tree removed.
+ * Version 13SP: Based on Version 11. Some optimizations, for example store HC-Pos in postFix.
+ * 				Version 13SP has 'synchronized' object pools and NT nodes for high dim.
+ * 			    Version 13 has local unsynchronized pools. It also has the NT tree removed.
  * 
  * Version 12: This was an attempt at a persistent version.
  * 
@@ -91,7 +79,7 @@ import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
  * @param <T> The value type of the tree 
  *
  */
-public class PhTree13us<T> implements PhTree<T> {
+public class PhTree13SP<T> implements PhTree<T> {
 
 	//Enable HC incrementer / iteration
 	public static final boolean HCI_ENABLED = true; 
@@ -114,25 +102,24 @@ public class PhTree13us<T> implements PhTree<T> {
 
 	private Node root = null;
 
-	private final ObjectPool<Node> nodePool;
-	private final ObjectArrayPool<Object> refPool;
-	private final LongArrayPool bitPool;
-
 	Node getRoot() {
 		return root;
 	}
 
-	public PhTree13us(int dim) {
+    void changeRoot(Node newRoot) {
+        this.root = newRoot;
+    }
+
+	public PhTree13SP(int dim) {
 		this.dims = dim;
-		this.nodePool = ObjectPool.create(Node::createEmpty);
-		this.refPool = ObjectArrayPool.create();
-		this.bitPool = LongArrayPool.create();
 		debugCheck();
 	}
 
-	public PhTree13us(PhTreeConfig cnf) {
+	public PhTree13SP(PhTreeConfig cnf) {
 		this(cnf.getDimActual());
-		if (cnf.getConcurrencyType() != PhTreeConfig.CONCURRENCY_NONE) {
+		switch (cnf.getConcurrencyType()) {
+		case PhTreeConfig.CONCURRENCY_NONE: break;
+		default:
 			throw new UnsupportedOperationException("type= " + cnf.getConcurrencyType());
 		}
 	}
@@ -160,19 +147,38 @@ public class PhTree13us<T> implements PhTree<T> {
 		if (node.isAHC()) {
 			stats.nAHC++;
 		}
+		if (node.isNT()) {
+			stats.nNT++;
+		}
 		stats.infixHist[node.getInfixLen()]++;
 		stats.nodeDepthHist[currentDepth]++;
 		int size = node.getEntryCount();
 		stats.nodeSizeLogHist[32-Integer.numberOfLeadingZeros(size)]++;
-		
+
 		currentDepth += node.getInfixLen();
 		stats.q_totalDepth += currentDepth;
 
-		for (Object o: node.values()) {
-			if (o instanceof Node) {
-				getStats(currentDepth + 1, (Node) o, stats);
-			} else if (o != null) {
-				stats.q_nPostFixN[currentDepth]++;
+		if (node.values() != null) {
+			for (Object o: node.values()) {
+				if (o instanceof Node) {
+					getStats(currentDepth + 1, (Node) o, stats);
+				} else if (o != null) {
+					stats.q_nPostFixN[currentDepth]++;
+				}
+			}
+		} else {
+			List<Object> entries = new ArrayList<>();
+			NodeTreeV13.getStats(node.ind(), stats, dims, entries);
+			for (Object child: entries) {
+				if (child instanceof Node) {
+					getStats(currentDepth + 1, (Node) child, stats);
+				} else if (child != null) {
+					stats.q_nPostFixN[currentDepth]++;
+				}
+			}
+			if (entries.size() != node.ntGetSize()) {
+				System.err.println("WARNING: entry count mismatch: a-found/ec=" +
+						entries.size() + "/" + node.getEntryCount());
 			}
 		}
 
@@ -198,11 +204,11 @@ public class PhTree13us<T> implements PhTree<T> {
 		int baS = node.calcArraySizeTotalBits(node.getEntryCount(), dims);
 		baS = Bits.calcArraySize(baS);
 		if (baS < node.ba().length) {
-			System.err.println("Array too large: " + node.ba().length + " - " + baS + " = " + 
+			System.err.println("Array too large: " + node.ba().length + " - " + baS + " = " +
 					(node.ba().length - baS));
 		}
 		stats.nTotalChildren += nChildren;
-		
+
 		return stats;
 	}
 
@@ -225,12 +231,13 @@ public class PhTree13us<T> implements PhTree<T> {
     }
 
     private void insertRoot(long[] key, Object value) {
-        root = Node.createNode(dims, 0, DEPTH_64-1, this);
+        root = Node.createNode(dims, 0, DEPTH_64-1);
         long pos = posInArray(key, root.getPostLen());
-        root.addPostPIN(pos, -1, key, value, this);
+        root.addPostPIN(pos, -1, key, value);
         increaseNrEntries();
     }
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public boolean contains(long... key) {
 		Object o = getRoot();
@@ -238,7 +245,7 @@ public class PhTree13us<T> implements PhTree<T> {
 			Node currentNode = (Node) o;
 			o = currentNode.doIfMatching(key, true, null, null, null, this);
 		}
-		return o != null;
+		return (T) o != null;
 	}
 
 
@@ -277,7 +284,7 @@ public class PhTree13us<T> implements PhTree<T> {
 	public T update(long[] oldKey, long[] newKey) {
 		Node[] stack = new Node[64];
 		int stackSize = 0;
-		
+
 		Object o = getRoot();
 		Node parentNode = null;
 		final int[] insertRequired = new int[]{NO_INSERT_REQUIRED};
@@ -287,7 +294,7 @@ public class PhTree13us<T> implements PhTree<T> {
 			o = currentNode.doIfMatching(oldKey, false, parentNode, newKey, insertRequired, this);
 			parentNode = currentNode;
 		}
-		
+
 		Object value = o == PhTreeHelper.NULL ? null : o;
 
 		//traverse the tree from bottom to top
@@ -309,18 +316,19 @@ public class PhTree13us<T> implements PhTree<T> {
 					break;
 				}
 			}
-		}		
-		
+		}
+
 		return (T) value;
 	}
 
 	@Override
 	public String toString() {
-		return this.getClass().getSimpleName() + 
-				" AHC/LHC=" + Node.AHC_LHC_BIAS +  
-				" AHC-on=" + AHC_ENABLED +  
-				" HCI-on=" + HCI_ENABLED +  
-				" NtLimit=NT_DISABLED" +
+		return this.getClass().getSimpleName() +
+				" AHC/LHC=" + Node.AHC_LHC_BIAS +
+				" AHC-on=" + AHC_ENABLED +
+				" HCI-on=" + HCI_ENABLED +
+				" NtLimit=" + Node.NT_THRESHOLD +
+				" NtMaxDim=" + NtNode.MAX_DIM +
 				" DEBUG=" + PhTreeHelper.DEBUG;
 	}
 
@@ -359,13 +367,13 @@ public class PhTree13us<T> implements PhTree<T> {
 		return sb.toString();
 	}
 
-	private void toStringTree(StringBuilderLn sb, int currentDepth, Node node, long[] key, 
-			boolean printValue) {
+	private void toStringTree(StringBuilderLn sb, int currentDepth, Node node, long[] key,
+                              boolean printValue) {
 		String ind = "*";
 		for (int i = 0; i < currentDepth; i++) {
 			ind += "-";
 		}
-		sb.append( ind + "il=" + node.getInfixLen() + " pl=" + (node.getPostLen()) + 
+		sb.append( ind + "il=" + node.getInfixLen() + " pl=" + (node.getPostLen()) +
 				" ec=" + node.getEntryCount() + " inf=[");
 
 		//for a leaf node, the existence of a sub just indicates that the value exists.
@@ -404,12 +412,12 @@ public class PhTree13us<T> implements PhTree<T> {
 
 	@Override
 	public PhExtent<T> queryExtent() {
-		return new PhIteratorFullNoGC<>(this, null).reset();
+		return new PhIteratorFullNoGC<T>(this, null).reset();
 	}
 
 
 	/**
-	 * Performs a rectangular window query. The parameters are the min and max keys which 
+	 * Performs a rectangular window query. The parameters are the min and max keys which
 	 * contain the minimum respectively the maximum keys in every dimension.
 	 * @param min Minimum values
 	 * @param max Maximum values
@@ -418,7 +426,7 @@ public class PhTree13us<T> implements PhTree<T> {
 	@Override
 	public PhQuery<T> query(long[] min, long[] max) {
 		if (min.length != dims || max.length != dims) {
-			throw new IllegalArgumentException("Invalid number of arguments: " + min.length +  
+			throw new IllegalArgumentException("Invalid number of arguments: " + min.length +
 					" / " + max.length + "  DIM=" + dims);
 		}
 		PhQuery<T> q = new PhIteratorNoGC<>(this, null);
@@ -427,7 +435,7 @@ public class PhTree13us<T> implements PhTree<T> {
 	}
 
 	/**
-	 * Performs a rectangular window query. The parameters are the min and max keys which 
+	 * Performs a rectangular window query. The parameters are the min and max keys which
 	 * contain the minimum respectively the maximum keys in every dimension.
 	 * @param min Minimum values
 	 * @param max Maximum values
@@ -437,33 +445,33 @@ public class PhTree13us<T> implements PhTree<T> {
 	public List<PhEntry<T>> queryAll(long[] min, long[] max) {
 		return queryAll(min, max, Integer.MAX_VALUE, null, PhMapper.PVENTRY());
 	}
-	
+
 	/**
-	 * Performs a rectangular window query. The parameters are the min and max keys which 
+	 * Performs a rectangular window query. The parameters are the min and max keys which
 	 * contain the minimum respectively the maximum keys in every dimension.
 	 * @param min Minimum values
 	 * @param max Maximum values
 	 * @return Result list.
 	 */
 	@Override
-	public <R> List<R> queryAll(long[] min, long[] max, int maxResults, 
+	public <R> List<R> queryAll(long[] min, long[] max, int maxResults,
 			PhFilter filter, PhMapper<T, R> mapper) {
 		if (min.length != dims || max.length != dims) {
-			throw new IllegalArgumentException("Invalid number of arguments: " + min.length +  
+			throw new IllegalArgumentException("Invalid number of arguments: " + min.length +
 					" / " + max.length + "  DIM=" + dims);
 		}
-		
+
 		if (getRoot() == null) {
 			return new ArrayList<>();
 		}
-		
+
 //		if (mapper == null) {
 //			mapper = (PhMapper<T, R>) PhMapper.PVENTRY();
 //		}
-		
+
 		PhResultList<T, R> list = new PhResultList.MappingResultList<>(null, mapper,
-				() -> new PhEntry<>(new long[dims], null));
-		
+				() -> new PhEntry<T>(new long[dims], null));
+
 		NodeIteratorListReuse<T, R> it = new NodeIteratorListReuse<>(dims, list);
 		return it.resetAndRun(getRoot(), min, max, maxResults);
 	}
@@ -475,7 +483,7 @@ public class PhTree13us<T> implements PhTree<T> {
 
 	@Override
 	public int getBitDepth() {
-		return PhTree13us.DEPTH_64;
+		return PhTree13SP.DEPTH_64;
 	}
 
 	/**
@@ -546,18 +554,6 @@ public class PhTree13us<T> implements PhTree<T> {
 		//latter can happen if there is only one possible value (all filter bits are set).
 		//The <= is also owed to the bug tested in testBugDecrease()
 		//return (r <= v) ? -1 : r;
-	}
-
-	ObjectPool<Node> nodePool() {
-		return nodePool;
-	}
-
-	ObjectArrayPool<Object> objPool() {
-		return refPool;
-	}
-
-	LongArrayPool longPool() {
-		return bitPool;
 	}
 }
 

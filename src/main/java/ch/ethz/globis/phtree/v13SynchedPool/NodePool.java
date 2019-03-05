@@ -17,18 +17,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ch.ethz.globis.phtree.v13us;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
-import ch.ethz.globis.phtree.util.unsynced.LongArrayOps;
-
+import ch.ethz.globis.phtree.PhTreeHelper;
 
 /**
- * Bit-stream manipulation functions.
+ * Reference pooling and management for Node instances.
  * 
  * @author ztilmann
- *
  */
-public class Bits extends LongArrayOps {
+public class NodePool {
 
+	private static final Node[] POOL =
+			new Node[PhTreeHelper.MAX_OBJECT_POOL_SIZE];
+	private static int poolSize;
+	/** Nodes currently used outside the pool. */
+	private static int activeNodes = 0;
 
+	private NodePool() {
+		// empty
+	}
+
+	static synchronized Node getNode() {
+		activeNodes++;
+		if (poolSize == 0) {
+			return Node.createEmpty();
+		}
+		return POOL[--poolSize];
+	}
+
+	static synchronized void offer(Node node) {
+		activeNodes--;
+		if (poolSize < POOL.length) {
+			POOL[poolSize++] = node;
+		}
+	}
+
+	public static int getActiveNodes() {
+		return activeNodes;
+	}
 }

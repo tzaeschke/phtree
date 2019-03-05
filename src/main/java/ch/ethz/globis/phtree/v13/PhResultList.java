@@ -55,7 +55,7 @@ public abstract class PhResultList<T, R> implements List<R> {
 	 * This method should be used to get PhEntry instances that can be offered to
 	 * {@link #phOffer(PhEntry)}.
 	 * 
-	 * Every temp entry must be returned via {@link #phReturnTemp(NodeEntry)} or 
+	 * Every temp entry must be returned via {@link #phReturnTemp(PhEntry)} or
 	 * {@link #phOffer(PhEntry)} before the next temp entry is available.
 	 * This ensures that a temp entry is only used in one place at a time.
 	 * 
@@ -65,7 +65,7 @@ public abstract class PhResultList<T, R> implements List<R> {
 	
 	/**
 	 * Return a temporary entry.
-	 * @param entry
+	 * @param entry entry
 	 * @see PhResultList#phGetTempEntry()
 	 */
 	abstract void phReturnTemp(PhEntry<T> entry);
@@ -76,7 +76,7 @@ public abstract class PhResultList<T, R> implements List<R> {
 	 * This method checks the offered entry and adds it only if it passes the filter
 	 * of this List.
 	 *  
-	 * @param e
+	 * @param e entry
 	 */
 	abstract void phOffer(PhEntry<T> e);
 	

@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13.nt;
+package ch.ethz.globis.phtree.v13SynchedPool.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 
@@ -47,14 +47,6 @@ public class NtNodeIteratorMask<T> {
 		//
 	}
 	
-	/**
-	 * 
-	 * @param node
-	 * @param globalMinMask The minimum value that any found value should have. If the found value is
-	 *  lower, the search continues.
-	 * @param globalMaxMask
-	 * @param prefix
-	 */
 	private void reinit(NtNode<T> node, long prefix) {
 		this.prefix = prefix;
 		next = START;
@@ -76,7 +68,7 @@ public class NtNodeIteratorMask<T> {
 
 		if (NtNode.MAX_DIM > 3) {
 			//LHC, NI, ...
-			long maxHcAddr = ~((-1L)<<NtNode.MAX_DIM);
+			long maxHcAddr = ~((-1L)<< NtNode.MAX_DIM);
 			int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
 			//nPossibleMatch = (2^k-x)
 			long nPossibleMatch = 1L << (NtNode.MAX_DIM - nSetFilterBits);
@@ -125,7 +117,7 @@ public class NtNodeIteratorMask<T> {
 		
 		if (v instanceof NtNode) {
 			NtNode<T> sub = (NtNode<T>) v;
-			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
+			long mask = (-1L) << ((sub.getPostLen()+1)* NtNode.MAX_DIM);
 			if (((prefix | globalMinMask) & globalMaxMask & mask) != (prefix & mask)) {
 				return false;
 			}
@@ -221,13 +213,6 @@ public class NtNodeIteratorMask<T> {
 		return node;
 	}
 
-	/**
-	 * 
-	 * @param globalMinMask
-	 * @param globalMaxMask
-	 * @param prefix
-	 * @param postLen
-	 */
 	private void calcLimits(long globalMinMask, long globalMaxMask) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.

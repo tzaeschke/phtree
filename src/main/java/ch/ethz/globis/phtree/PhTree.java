@@ -24,7 +24,7 @@ import java.util.List;
 import ch.ethz.globis.phtree.util.PhIteratorBase;
 import ch.ethz.globis.phtree.util.PhMapper;
 import ch.ethz.globis.phtree.util.PhTreeStats;
-import ch.ethz.globis.phtree.v13us.PhTree13us;
+import ch.ethz.globis.phtree.v13.PhTree13;
 import ch.ethz.globis.phtree.v16.PhTree16;
 import ch.ethz.globis.phtree.v16hd.PhTree16HD;
 
@@ -49,12 +49,12 @@ public interface PhTree<T> {
 	/**
 	 * @return The number of entries in the tree
 	 */
-	public int size();
+	int size();
 
 	/**
 	 * @return PH-Tree statistics
 	 */
-	public PhTreeStats getStats();
+	PhTreeStats getStats();
 
 
 	/**
@@ -64,21 +64,21 @@ public interface PhTree<T> {
 	 * @param value the value to insert
 	 * @return the previously associated value or {@code null} if the key was found
 	 */
-	public abstract T put(long[] key, T value);
+	T put(long[] key, T value);
 
 	/**
 	 * Checks whether a give key exists in the tree.
 	 * @param key the key to check
 	 * @return true if the key exists, otherwise false
 	 */
-	public abstract boolean contains(long ... key);
+	boolean contains(long ... key);
 
 	/**
 	 * Get an entry associated with a k dimensional key.
 	 * @param key the key to look up
 	 * @return the associated value or {@code null} if the key was found
 	 */
-	public abstract T get(long ... key);
+	T get(long ... key);
 
 
 	/**
@@ -86,22 +86,22 @@ public interface PhTree<T> {
 	 * @param key the key to remove
 	 * @return the associated value or {@code null} if the key was found
 	 */
-	public abstract T remove(long... key);
+	T remove(long... key);
 
 	/**
 	 * @return A string with a list of all entries in the tree.
 	 */
-	public abstract String toStringPlain();
+	String toStringPlain();
 
 	/**
 	 * @return A string tree view of all entries in the tree.
 	 */
-	public abstract String toStringTree();
+	String toStringTree();
 
 	/**
 	 * @return an iterator over all entries in the tree
 	 */
-	public abstract PhExtent<T> queryExtent();
+	PhExtent<T> queryExtent();
 
 
 	/**
@@ -111,19 +111,19 @@ public interface PhTree<T> {
 	 * @param max Maximum values
 	 * @return Result iterator.
 	 */
-	public abstract PhQuery<T> query(long[] min, long[] max);
+	PhQuery<T> query(long[] min, long[] max);
 
 	/**
 	 * 
 	 * @return the number of dimensions of the tree
 	 */
-	public abstract int getDim();
+	int getDim();
 
 	/**
 	 * 
 	 * @return The bit depths for the tree. The latest versions will always return 64. 
 	 */
-	public abstract int getBitDepth();
+	int getBitDepth();
 
 	/**
 	 * Locate nearest neighbours for a given point in space.
@@ -132,7 +132,7 @@ public interface PhTree<T> {
 	 * @param key the center point
 	 * @return The query iterator.
 	 */
-	public abstract PhKnnQuery<T> nearestNeighbour(int nMin, long... key);
+	PhKnnQuery<T> nearestNeighbour(int nMin, long... key);
 
 	/**
 	 * Locate nearest neighbours for a given point in space.
@@ -143,7 +143,7 @@ public interface PhTree<T> {
 	 * @param key the center point
 	 * @return The query iterator.
 	 */
-	public abstract PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist, PhFilter dims, 
+	PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist, PhFilter dims,
 			long... key);
 
 	/**
@@ -152,7 +152,7 @@ public interface PhTree<T> {
 	 * @param center Center point
 	 * @return All entries with at most distance `dist` from `center`.
 	 */
-	public PhRangeQuery<T> rangeQuery(double dist, long... center);
+	PhRangeQuery<T> rangeQuery(double dist, long... center);
 
 	/**
 	 * Find all entries within a given distance from a center point.
@@ -161,7 +161,7 @@ public interface PhTree<T> {
 	 * @param center Center point
 	 * @return All entries with at most distance `dist` from `center`.
 	 */
-	public abstract PhRangeQuery<T> rangeQuery(double dist, PhDistance optionalDist, long... center);
+	PhRangeQuery<T> rangeQuery(double dist, PhDistance optionalDist, long... center);
 
 	/**
 	 * Update the key of an entry. Update may fail if the old key does not exist, or if the new
@@ -171,7 +171,7 @@ public interface PhTree<T> {
 	 * @return the value (can be {@code null}) associated with the updated key if the key could be 
 	 * updated, otherwise {@code null}.
 	 */
-	public T update(long[] oldKey, long[] newKey);
+	T update(long[] oldKey, long[] newKey);
 
 	/**
 	 * Same as {@link #query(long[], long[])}, except that it returns a list
@@ -180,7 +180,7 @@ public interface PhTree<T> {
 	 * @param max the maximum values
 	 * @return List of query results
 	 */
-	public List<PhEntry<T>> queryAll(long[] min, long[] max);
+	List<PhEntry<T>> queryAll(long[] min, long[] max);
 
 	/**
 	 * Same as {@link #query(long[], long[])}, except that it returns a list
@@ -193,7 +193,7 @@ public interface PhTree<T> {
 	 * @return List of query results
 	 * @param <R> the type of the iterator value
 	 */
-	public <R> List<R> queryAll(long[] min, long[] max, int maxResults, 
+	<R> List<R> queryAll(long[] min, long[] max, int maxResults,
 			PhFilter filter, PhMapper<T, R> mapper);
 
 	/**
@@ -203,13 +203,13 @@ public interface PhTree<T> {
 	 * @return PhTree
 	 * @param <T> the type of the values
 	 */
-	public static <T> PhTree<T> create(int dim) {
+	static <T> PhTree<T> create(int dim) {
 		if (dim > 60) {
 			return new PhTree16HD<>(dim);
 		} else if (dim >= 8) {
 			return new PhTree16<>(dim);
 		}
-		return new PhTree13us<>(dim);
+		return new PhTree13<>(dim);
 	}
 
 	/**
@@ -219,13 +219,13 @@ public interface PhTree<T> {
 	 * @return PhTree
 	 * @param <T> the type of the values
 	 */
-	public static <T> PhTree<T> create(PhTreeConfig cfg) {
+	static <T> PhTree<T> create(PhTreeConfig cfg) {
 		if (cfg.getDim() > 60) {
 			return new PhTree16HD<>(cfg);
-		} else if (cfg.getDim() >=8) {
+		} else if (cfg.getDim() >= 8) {
 			return new PhTree16<>(cfg);
 		}
-		return new PhTree13us<>(cfg);
+		return new PhTree13<>(cfg);
 	}
 
 	/**
@@ -233,7 +233,7 @@ public interface PhTree<T> {
 	 * 
 	 * @param <T> the type of the iterator value
 	 */
-	public static interface PhIterator<T> extends PhIteratorBase<T, PhEntry<T>> {
+	interface PhIterator<T> extends PhIteratorBase<T, PhEntry<T>> {
 
 		/**
 		 * @return the key of the next entry
@@ -258,7 +258,7 @@ public interface PhTree<T> {
 	 * 
 	 * @param <T> the type of the iterator value
 	 */
-	public static interface PhExtent<T> extends PhIterator<T> {
+	interface PhExtent<T> extends PhIterator<T> {
 
 		/**
 		 * Reset the extent iterator.
@@ -272,7 +272,7 @@ public interface PhTree<T> {
 	 * 
 	 * @param <T> the type of the iterator value
 	 */
-	public static interface PhQuery<T> extends PhIterator<T> {
+	interface PhQuery<T> extends PhIterator<T> {
 
 		/**
 		 * Reset the query with the new 'min' and 'max' boundaries.
@@ -287,7 +287,7 @@ public interface PhTree<T> {
 	 * 
 	 * @param <T> the type of the iterator value
 	 */
-	public static interface PhKnnQuery<T> extends PhIteratorBase<T, PhEntryDist<T>> {
+	interface PhKnnQuery<T> extends PhIteratorBase<T, PhEntryDist<T>> {
 
 		/**
 		 * @return the next key

@@ -27,9 +27,9 @@ import ch.ethz.globis.phtree.v16.PhTree16;
 
 public class BSTPool {
 
-    private final ObjectArrayPool<BSTEntry> POOL_ENTRY = ObjectArrayPool.create();
+    private final ObjectArrayPool<BSTEntry> POOL_ENTRY = ObjectArrayPool.create(n -> new BSTEntry[n]);
     private final LongArrayPool POOL_KEY = LongArrayPool.create();
-	private final ObjectArrayPool<BSTreePage> POOL_NODES = ObjectArrayPool.create();
+	private final ObjectArrayPool<BSTreePage> POOL_NODES = ObjectArrayPool.create(n -> new BSTreePage[n]);
     private final ObjectPool<BSTreePage> POOL_NODE = ObjectPool.create(null);
 
     public static BSTPool create(){

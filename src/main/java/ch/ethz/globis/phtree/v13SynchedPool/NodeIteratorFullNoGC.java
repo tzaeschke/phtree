@@ -1,27 +1,17 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
- * Copyright 2019 Improbable. All rights reserved.
  *
- * This file is part of the PH-Tree project.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This software is the proprietary information of ETH Zurich
+ * and Tilmann Zäschke.
+ * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13us;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
+import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-
+import ch.ethz.globis.phtree.v13SynchedPool.nt.NtIteratorMinMax;
 
 
 /**
@@ -38,9 +28,11 @@ public class NodeIteratorFullNoGC<T> {
 	
 	private final int dims;
 	private boolean isHC;
+	private boolean isNI;
 	private long next = -1;
 	private Node node;
 	private int currentOffsetKey;
+	private NtIteratorMinMax<Object> ntIterator;
 	private int nMaxEntries;
 	private int nEntriesFound = 0;
 	private int postEntryLenLHC;
@@ -50,7 +42,7 @@ public class NodeIteratorFullNoGC<T> {
 
 
 	/**
-	 * 
+	 *
 	 * @param dims dimensions
 	 * @param valTemplate A null indicates that no values are to be extracted.
 	 */
@@ -59,29 +51,32 @@ public class NodeIteratorFullNoGC<T> {
 		this.maxPos = (1L << dims) -1;
 		this.valTemplate = valTemplate;
 	}
-	
-	/**
-	 * 
-	 * @param node node
-	 * @param checker result verifier, can be null.
-	 */
+
 	private void reinit(Node node, PhFilter checker) {
 		next = -1;
 		nEntriesFound = 0;
 		this.checker = checker;
-	
+
 		this.node = node;
 		this.isHC = node.isAHC();
+		this.isNI = node.isNT();
 		nMaxEntries = node.getEntryCount();
-		
-		
+
+
 		//Position of the current entry
-		currentOffsetKey = node.getBitPosIndex();
-		postEntryLenLHC = Node.IK_WIDTH(dims)+dims*node.postLenStored();
+		if (isNI) {
+			if (ntIterator == null) {
+				ntIterator = new NtIteratorMinMax<>(dims);
+			}
+			ntIterator.reset(node.ind(), 0, Long.MAX_VALUE);
+		} else {
+			currentOffsetKey = node.getBitPosIndex();
+			postEntryLenLHC = Node.IK_WIDTH(dims)+dims*node.postLenStored();
+		}
 	}
 
 	/**
-	 * Advances the cursor. 
+	 * Advances the cursor.
 	 * @return TRUE iff a matching element was found.
 	 */
 	boolean increment(PhEntry<T> result) {
@@ -90,7 +85,7 @@ public class NodeIteratorFullNoGC<T> {
 	}
 
 	/**
-	 * 
+	 *
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	@SuppressWarnings("unchecked")
@@ -100,7 +95,7 @@ public class NodeIteratorFullNoGC<T> {
 		if (v == null) {
 			return false;
 		}
-		
+
 		if (v instanceof Node) {
 			result.setNodeInternal(v);
 		} else {
@@ -111,7 +106,7 @@ public class NodeIteratorFullNoGC<T> {
 			result.setValueInternal((T) v );
 		}
 		next = hcPos;
-		
+
 		return true;
 	}
 
@@ -137,16 +132,21 @@ public class NodeIteratorFullNoGC<T> {
 
 
 	private void getNext(PhEntry<T> result) {
+		if (isNI) {
+			niFindNext(result);
+			return;
+		}
+
 		if (isHC) {
 			getNextAHC(result);
 		} else {
 			getNextLHC(result);
 		}
 	}
-	
+
 	private void getNextAHC(PhEntry<T> result) {
 		//while loop until 1 is found.
-		long currentPos = next; 
+		long currentPos = next;
 		do {
 			currentPos++;  //pos w/o bit-offset
 			if (currentPos > maxPos) {
@@ -155,7 +155,7 @@ public class NodeIteratorFullNoGC<T> {
 			}
 		} while (!readValue((int) currentPos, currentPos, result));
 	}
-	
+
 	private void getNextLHC(PhEntry<T> result) {
 		long currentPos;
 		do {
@@ -169,6 +169,17 @@ public class NodeIteratorFullNoGC<T> {
 		} while (!readValue(nEntriesFound-1, currentPos, result));
 	}
 	
+	private void niFindNext(PhEntry<T> result) {
+		while (ntIterator.hasNext()) {
+			NtEntry<Object> e = ntIterator.nextEntryReuse();
+			if (readValue(e.key(), e.getKdKey(), e.value(), result)) {
+				next = e.key();
+				return;
+			}
+		}
+		next = FINISHED;
+	}
+
 	void init(Node node, PhFilter checker) {
 		reinit(node, checker);
 	}

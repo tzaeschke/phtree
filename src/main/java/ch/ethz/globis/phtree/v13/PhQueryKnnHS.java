@@ -150,7 +150,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	private static <T> PhEntryDist<T> createEntry(ArrayList<PhEntryDist<T>> pool, 
 			long[] key, T val, double dist) {
 		if (pool.isEmpty()) {
-			return new PhEntryDist<T>(key, val, dist);
+			return new PhEntryDist<>(key, val, dist);
 		}
 		PhEntryDist<T> e = pool.remove(pool.size() - 1);
 		e.setKeyInternal(key);
@@ -191,7 +191,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 		private PhEntryDist<T> free;
 		private final ArrayList<PhEntryDist<T>> pool; 
 		
-		public KnnResultList(int dims, ArrayList<PhEntryDist<T>> pool) {
+		KnnResultList(int dims, ArrayList<PhEntryDist<T>> pool) {
 			this.list = new ArrayList<>();
 			this.pool = pool;
 			this.free = createEntry(pool, new long[dims], null, 0);

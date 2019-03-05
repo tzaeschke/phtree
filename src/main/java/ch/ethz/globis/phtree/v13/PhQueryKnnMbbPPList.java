@@ -230,8 +230,8 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	 * 
 	 * When looking for nMin > 1, one could search for queries with at least nMin results...
 	 * 
-	 * @param val
-	 * @param nMin
+	 * @param val value
+	 * @param nMin min N
 	 */
 	private void nearestNeighbourBinarySearch(long[] val, int nMin) {
 		//special case with minDist = 0
@@ -264,7 +264,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		}
 	}
 
-	private final boolean findNeighbours(double maxDist, int nMin, long[] val) {
+	private boolean findNeighbours(double maxDist, int nMin, long[] val) {
 		results.maxDistance = maxDist;
 		checker.set(val, distance, maxDist);
 		distance.toMBB(maxDist, val, mbbMin, mbbMax);

@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13.nt;
+package ch.ethz.globis.phtree.v13SynchedPool.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 
@@ -42,20 +42,20 @@ public class NtNodeIteratorAll<T> {
 	public NtNodeIteratorAll() {
 		this.localMax = ~((-1L) << NtNode.MAX_DIM);
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param node
 	 * @param prefix
 	 */
 	private void reinit(NtNode<T> node, long prefix) {
-		this.node = node; 
+		this.node = node;
 		this.prefix = prefix;
 		next = START;
 		nextSubNode = null;
 		currentOffsetKey = 0;
 		nFound = 0;
-	
+
 		this.node = node;
 		this.isHC = node.isAHC();
 		nMaxEntry = node.getEntryCount();
@@ -68,7 +68,7 @@ public class NtNodeIteratorAll<T> {
 	}
 
 	/**
-	 * Advances the cursor. 
+	 * Advances the cursor.
 	 * @return TRUE iff a matching element was found.
 	 */
 	boolean increment(NtEntry<T> result) {
@@ -82,8 +82,8 @@ public class NtNodeIteratorAll<T> {
 
 	/**
 	 * Return whether the next value returned by next() is a sub-node or not.
-	 * 
-	 * @return True if the current value (returned by next()) is a sub-node, 
+	 *
+	 * @return True if the current value (returned by next()) is a sub-node,
 	 * otherwise false
 	 */
 	boolean isNextSub() {
@@ -91,19 +91,19 @@ public class NtNodeIteratorAll<T> {
 	}
 
 	/**
-	 * 
+	 *
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	@SuppressWarnings("unchecked")
 	private boolean readValue(int pin, long pos, NtEntry<T> result) {
 		Object v = node.getValueByPIN(pin);
-		
+
 		if (v == null) {
 			return false;
 		}
-		
+
 		prefix = node.localReadAndApplyReadPostfixAndHc(pin, pos, prefix);
-		
+
 		if (v instanceof NtNode) {
 			NtNode<T> sub = (NtNode<T>) v;
 			nextSubNode = sub;
@@ -123,9 +123,9 @@ public class NtNodeIteratorAll<T> {
 			getNextLHC(result);
 		}
 	}
-	
+
 	private void getNextAHC(NtEntry<T> result) {
-		long currentPos = next == START ? 0 : next+1; 
+		long currentPos = next == START ? 0 : next+1;
 		while (currentPos <= localMax) {
 			if (readValue((int)currentPos, currentPos, result)) {
 				next = currentPos;
@@ -135,10 +135,10 @@ public class NtNodeIteratorAll<T> {
 		}
 		next = FINISHED;
 	}
-	
+
 	private void getNextLHC(NtEntry<T> result) {
 		while (++nFound <= nMaxEntry) {
-			long currentPos = 
+			long currentPos =
 					Bits.readArray(node.ba, currentOffsetKey, NtNode.IK_WIDTH(NtNode.MAX_DIM));
 			currentOffsetKey += postEntryLenLHC;
 			//check HC-pos
@@ -154,7 +154,7 @@ public class NtNodeIteratorAll<T> {
 		}
 		next = FINISHED;
 	}
-	
+
 
 	public NtNode<T> getCurrentSubNode() {
 		return nextSubNode;

@@ -6,14 +6,14 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13us;
-
-import java.util.NoSuchElementException;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
 import ch.ethz.globis.phtree.PhTreeHelper;
+
+import java.util.NoSuchElementException;
 
 /**
  * This PhIterator uses a loop instead of recursion in findNextElement();. 
@@ -34,8 +34,8 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 		private int size = 0;
 		
 		@SuppressWarnings("unchecked")
-		PhIteratorStack() {
-			stack = new NodeIteratorNoGC[PhTree13us.DEPTH_64];
+		public PhIteratorStack() {
+			stack = new NodeIteratorNoGC[PhTree13SP.DEPTH_64];
 		}
 
 		public boolean isEmpty() {
@@ -67,13 +67,13 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 	private long[] rangeMin;
 	private long[] rangeMax;
 	private PhFilter checker;
-	private final PhTree13us<T> pht;
+	private final PhTree13SP<T> pht;
 	
 	private PhEntry<T> resultFree;
 	private PhEntry<T> resultToReturn;
 	private boolean isFinished = false;
 	
-	public PhIteratorNoGC(PhTree13us<T> pht, PhFilter checker) {
+	public PhIteratorNoGC(PhTree13SP<T> pht, PhFilter checker) {
 		this.dims = pht.getDim();
 		this.checker = checker;
 		this.stack = new PhIteratorStack();
@@ -107,6 +107,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 			while (p.increment(result)) {
 				if (result.hasNodeInternal()) {
 					p = stack.prepareAndPush((Node) result.getNodeInternal());
+					continue;
 				} else {
 					resultFree = resultToReturn;
 					resultToReturn = result;

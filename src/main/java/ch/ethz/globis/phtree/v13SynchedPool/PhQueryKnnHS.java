@@ -6,18 +6,14 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13us;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.PriorityQueue;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
+
+import java.util.*;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -32,23 +28,23 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	private static final PhDEComp COMP = new PhDEComp();
 	
 	private final int dims;
-	private PhTree13us<T> pht;
+	private PhTree13SP<T> pht;
 	private PhDistance distance;
 	private long[] center;
-	private final ArrayList<PhEntryDist<T>> results = new ArrayList<>(); 
-	private final ArrayList<PhEntryDist<T>> pool = new ArrayList<>(); 
+	private final ArrayList<PhEntryDist<T>> results = new ArrayList<>();
+	private final ArrayList<PhEntryDist<T>> pool = new ArrayList<>();
 	private final PriorityQueue<PhEntryDist<T>> queue = new PriorityQueue<>(COMP);
 	private final NodeIteratorFullToList<T> iterNode;
 	private Iterator<PhEntryDist<T>> iterResult;
 	private final KnnResultList<T> candidateBuffer;
-	
+
 
 
 	/**
 	 * Create a new kNN/NNS search instance.
 	 * @param pht the parent tree
 	 */
-	public PhQueryKnnHS(PhTree13us<T> pht) {
+	public PhQueryKnnHS(PhTree13SP<T> pht) {
 		this.dims = pht.getDim();
 		this.pht = pht;
 		//this.iterNode = new NodeIteratorFullNoGC<>(dims, new long[dims]);
@@ -69,7 +65,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	@Override
 	public PhEntryDist<T> nextEntry() {
 		return iterResult.next();
-	} 
+	}
 
 	@Override
 	public PhEntryDist<T> nextEntryReuse() {
@@ -91,30 +87,30 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	public PhKnnQuery<T> reset(int nMin, PhDistance dist, long... center) {
 		this.distance = dist == null ? this.distance : dist;
 		this.center = center;
-		
+
 		//TODO pool entries??/
 		this.queue.clear();
 		this.results.clear();
-		
-		
+
+
 		if (nMin <= 0 || pht.size() == 0) {
 			iterResult = Collections.<PhEntryDist<T>>emptyList().iterator();
 			return this;
 		}
-		
+
 		//Initialize queue
 		//d=0 (lies in Node!!!)
 		PhEntryDist<T> rootE = createEntry(pool, new long[dims], null, 0);
 		rootE.setNodeInternal(pht.getRoot());
 		this.queue.add(rootE);
-		
+
 		search(nMin);
 		iterResult = results.iterator();
-		
+
 		return this;
 	}
 
-	
+
 	private void search(int k) {
 		while (!queue.isEmpty()) {
 			PhEntryDist<T> candidate = queue.poll();
@@ -150,7 +146,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	private static <T> PhEntryDist<T> createEntry(ArrayList<PhEntryDist<T>> pool, 
 			long[] key, T val, double dist) {
 		if (pool.isEmpty()) {
-			return new PhEntryDist<>(key, val, dist);
+			return new PhEntryDist<T>(key, val, dist);
 		}
 		PhEntryDist<T> e = pool.remove(pool.size() - 1);
 		e.setKeyInternal(key);
@@ -191,7 +187,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 		private PhEntryDist<T> free;
 		private final ArrayList<PhEntryDist<T>> pool; 
 		
-		KnnResultList(int dims, ArrayList<PhEntryDist<T>> pool) {
+		public KnnResultList(int dims, ArrayList<PhEntryDist<T>> pool) {
 			this.list = new ArrayList<>();
 			this.pool = pool;
 			this.free = createEntry(pool, new long[dims], null, 0);

@@ -1,17 +1,26 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich
- * and Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v13;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.v13.nt.NtIteratorMask;
 
 
 
@@ -29,11 +38,9 @@ public class NodeIteratorNoGC<T> {
 	
 	private final int dims;
 	private boolean isHC;
-	private boolean isNI;
 	private long next;
 	private Node node;
 	private int currentOffsetKey;
-	private NtIteratorMask<Object> niIterator;
 	private int nMaxEntry;
 	private int nFound = 0;
 	private int postEntryLenLHC;
@@ -58,12 +65,10 @@ public class NodeIteratorNoGC<T> {
 	
 	/**
 	 * 
-	 * @param node
+	 * @param node node
 	 * @param rangeMin The minimum value that any found value should have. If the found value is
 	 *  lower, the search continues.
-	 * @param rangeMax
-	 * @param lower The minimum HC-Pos that a value should have.
-	 * @param upper
+	 * @param rangeMax see rangeMin
 	 * @param checker result verifier, can be null.
 	 */
 	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker) {
@@ -76,7 +81,6 @@ public class NodeIteratorNoGC<T> {
 	
 		this.node = node;
 		this.isHC = node.isAHC();
-		this.isNI = node.isNT();
 		nMaxEntry = node.getEntryCount();
 		if (!isHC) {
 			//Position of the current entry
@@ -91,13 +95,6 @@ public class NodeIteratorNoGC<T> {
 		if (dims > 6) {
 			initHCI();
 		}
-		
-		if (isNI && !useNiHcIncrementer) {
-			if (niIterator == null) {
-				niIterator = new NtIteratorMask<>(dims);
-			}
-			niIterator.reset(node.ind(), maskLower, maskUpper);
-		}
 	}
 
 	private void initHCI() {
@@ -106,18 +103,7 @@ public class NodeIteratorNoGC<T> {
 		int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
 		//nPossibleMatch = (2^k-x)
 		long nPossibleMatch = 1L << (dims - nSetFilterBits);
-		if (isNI) {
-			int nChild = node.ntGetSize();
-			int logNChild = Long.SIZE - Long.numberOfLeadingZeros(nChild);
-			//the following will overflow for k=60
-			boolean useHcIncrementer = (nChild > nPossibleMatch*(double)logNChild*2);
-			//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
-			if (useHcIncrementer && PhTree13.HCI_ENABLED && dims < 50) {
-				useNiHcIncrementer = true;
-			} else {
-				useNiHcIncrementer = false;
-			}
-		} else if (PhTree13.HCI_ENABLED){
+		if (PhTree13.HCI_ENABLED){
 			if (isHC) {
 				//nPossibleMatch < 2^k?
 				//PAPER
@@ -167,25 +153,6 @@ public class NodeIteratorNoGC<T> {
 		return true;
 	}
 
-	private boolean readValue(long pos, Object value, PhEntry<T> result) {
-		if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
-			return false;
-		}
-		
-		//subnode ?
-		if (value instanceof Node) {
-			Node sub = (Node) value;
-			//skip this for postLen>=63
-			if (checker != null && sub.getPostLen() < (PhTree13.DEPTH_64-1) &&
-					!checker.isValid(sub.getPostLen()+1, valTemplate)) {
-				return false;
-			}
-			return true;
-		}
-		
-		return checker == null || checker.isValid(result.getKey());
-	}
-
 	private boolean getNextHCI(PhEntry<T> result) {
 		//Ideally we would switch between b-serch-HCI and incr-search depending on the expected
 		//distance to the next value.
@@ -210,10 +177,6 @@ public class NodeIteratorNoGC<T> {
 	}
 
 	private boolean getNext(PhEntry<T> result) {
-		if (isNI) {
-			return niFindNext(result);
-		}
-
 		if (useHcIncrementer) {
 			return getNextHCI(result);
 		} else if (isHC) {
@@ -260,57 +223,6 @@ public class NodeIteratorNoGC<T> {
 	}
 	
 
-	private boolean niFindNext(PhEntry<T> result) {
-		return useNiHcIncrementer ? niFindNextHCI(result) : niFindNextIter(result);
-	}
-	
-	private boolean niFindNextIter(PhEntry<T> result) {
-		while (niIterator.hasNext()) {
-			NtEntry<Object> e = niIterator.nextEntryReuse();
-			System.arraycopy(e.getKdKey(), 0, result.getKey(), 0, dims);
-			if (readValue(e.key(), e.value(), result)) {
-				next = e.getKey(); //This is required for kNN-adjusting of iterators
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	private boolean niFindNextHCI(PhEntry<T> result) {
-		//HCI
-		//repeat until we found a value inside the given range
-		long currentPos = next; 
-		do {
-			if (currentPos != START && currentPos >= maskUpper) {
-				break;
-			}
-
-			if (currentPos == START) {
-				//starting position
-				currentPos = maskLower;
-			} else {
-				currentPos = PhTree13.inc(currentPos, maskLower, maskUpper);
-				if (currentPos <= maskLower) {
-					break;
-				}
-			}
-
-			Object v = node.ntGetEntry(currentPos, result.getKey(), valTemplate);
-			if (v == null) {
-				continue;
-			}
-
-			next = currentPos;
-
-			//read and check post-fix
-			if (readValue(currentPos, v, result)) {
-				return true;
-			}
-		} while (true);
-		return false;
-	}
-
-
 	private boolean checkHcPos(long pos) {
 		return ((pos | maskLower) & maskUpper) == pos;
 	}
@@ -321,10 +233,8 @@ public class NodeIteratorNoGC<T> {
 
 	/**
 	 * 
-	 * @param rangeMin
-	 * @param rangeMax
-	 * @param valTemplate
-	 * @param postLen
+	 * @param rangeMin min
+	 * @param rangeMax max
 	 */
 	private void calcLimits(long[] rangeMin, long[] rangeMax) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
@@ -401,12 +311,6 @@ public class NodeIteratorNoGC<T> {
 			if (isHC) {
 				currentOffsetKey = node.getBitPosIndex();
 				next = START;
-			} else if (isNI) {
-				if (!useNiHcIncrementer) {
-					niIterator.adjustMinMax(maskLower, maskUpper);
-				} else {
-					next = START;
-				}
 			} else {
 				//LHC
 				if (this.next + PhTree13.LHC_BINARY_SEARCH_THRESHOLD < this.maskLower) {

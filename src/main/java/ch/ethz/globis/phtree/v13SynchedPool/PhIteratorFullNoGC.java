@@ -6,13 +6,13 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13us;
-
-import java.util.NoSuchElementException;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
+
+import java.util.NoSuchElementException;
 
 /**
  * This PhIterator uses a loop instead of recursion in findNextElement();. 
@@ -31,10 +31,10 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	private class PhIteratorStack {
 		private final NodeIteratorFullNoGC<T>[] stack;
 		private int size = 0;
-		
+
 		@SuppressWarnings("unchecked")
-		PhIteratorStack() {
-			stack = new NodeIteratorFullNoGC[PhTree13us.DEPTH_64];
+		public PhIteratorStack() {
+			stack = new NodeIteratorFullNoGC[PhTree13SP.DEPTH_64];
 		}
 
 		public boolean isEmpty() {
@@ -47,7 +47,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 				ni = new NodeIteratorFullNoGC<>(dims, valTemplate);
 				stack[size-1] = ni;
 			}
-			
+
 			ni.init(node, checker);
 			return ni;
 		}
@@ -65,13 +65,13 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	private final PhIteratorStack stack;
 	private final long[] valTemplate;
 	private PhFilter checker;
-	private final PhTree13us<T> pht;
+	private final PhTree13SP<T> pht;
 	
 	private PhEntry<T> resultFree;
 	private PhEntry<T> resultToReturn;
 	private boolean isFinished = false;
 	
-	public PhIteratorFullNoGC(PhTree13us<T> pht, PhFilter checker) {
+	public PhIteratorFullNoGC(PhTree13SP<T> pht, PhFilter checker) {
 		this.dims = pht.getDim();
 		this.checker = checker;
 		this.stack = new PhIteratorStack();
@@ -82,7 +82,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	}	
 		
 	@Override
-	public PhIteratorFullNoGC<T> reset() {	
+	public PhIteratorFullNoGC<T> reset() {
 		this.stack.size = 0;
 		this.isFinished = false;
 		
@@ -104,6 +104,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 			while (p.increment(result)) {
 				if (result.hasNodeInternal()) {
 					p = stack.prepareAndPush((Node) result.getNodeInternal());
+					continue;
 				} else {
 					resultFree = resultToReturn;
 					resultToReturn = result;

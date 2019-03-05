@@ -20,7 +20,6 @@ package ch.ethz.globis.phtree.v16hd;
 
 import java.util.Arrays;
 
-import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
 
 /**
@@ -147,47 +146,6 @@ public class BitsHD {
 		return true;
 	}
 	   
-	@Deprecated
-    public static long[] readArrayHD(long[] ba, int offsetBit, int entryLen) {
-    	if (entryLen == 0) {
-    		//TODO return [0]?
-    		return null;
-    	}
-    	
-    	long[] ret = PhTreeHelperHD.newHDPos(entryLen);
-    	int subEntryLen = mod65x(entryLen);
-    	for (int i = 0; i < ret.length; i++) {
-    		ret[i] = BitsLong.readArray(ba, offsetBit, subEntryLen);
-    		//TODO make/use read64()/write64 functions?
-    		offsetBit += subEntryLen;  
-    		subEntryLen = 64;
-    	}
-    	return ret;
-    }
-
-
-	@Deprecated
-    public static void readArrayHD(long[] ba, int offsetBit, int entryLen, long[] out) {
-    	if (entryLen == 0) {
-    		return;
-    	}
-
-    	int iStart = out.length - BitsHD.div64(entryLen-1) - 1;
-       	int subEntryLen = mod65x(entryLen);
-       	
-       	//first read a partial chunk
-       	long mask = subEntryLen == 64 ? 0 : (-1L) << subEntryLen;
-		out[iStart] = (out[iStart] & mask) | (BitsLong.readArray(ba, offsetBit, subEntryLen) & ~mask);
-		offsetBit += subEntryLen;  
-		
-    	for (int i = iStart+1; i < out.length; i++) {
-    		out[i] = BitsLong.readArray(ba, offsetBit, 64);
-    		//TODO make/use read64()/write64 functions?
-    		offsetBit += 64;  
-    	}
-    }
-
-
     /**
      * 
      * @param ba byte array

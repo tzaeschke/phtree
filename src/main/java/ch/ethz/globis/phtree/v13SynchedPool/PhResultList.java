@@ -6,18 +6,13 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13us;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.util.PhMapper;
+
+import java.util.*;
 
 /**
  * Immutable result list.
@@ -120,9 +115,11 @@ public abstract class PhResultList<T, R> implements List<R> {
 	@Override
 	public boolean containsAll(Collection<?> c) {
 		for (Object o: c) {
-			return contains(o);
+			if (!contains(o)) {
+				return false;
+			}
 		}
-		return false;
+		return true;
 	}
 
 	@Override
@@ -248,10 +245,10 @@ public abstract class PhResultList<T, R> implements List<R> {
 		private PhEntry<T> free;
 		private final PhFilter filter;
 		private final PhMapper<T, R> mapper;
-		private final PhEntryFactory<T> factory;
+		private final PhResultList.PhEntryFactory<T> factory;
 		
 		public MappingResultList(PhFilter filter, PhMapper<T, R> mapper,
-				PhEntryFactory<T> factory) {
+				PhResultList.PhEntryFactory<T> factory) {
 			this.list = new ArrayList<>();
 			this.free = factory.create();
 			this.filter = filter;
