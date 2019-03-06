@@ -337,10 +337,10 @@ public class Node {
      * @param key2 key 2
      * @param val2 value 2
      * @param mcb most conflicting bit
+	 * @param tree tree
      * @return A new node or 'null' if there are no conflicting bits
      */
-    public Node createNode(long[] key1, Object val1, long[] key2, Object val2, int mcb,
-                           PhTree13<?> tree) {
+    public Node createNode(long[] key1, Object val1, long[] key2, Object val2, int mcb, PhTree13<?> tree) {
         //determine length of infix
         int newLocalInfLen = getPostLen() - mcb;
         int newPostLen = mcb-1;
