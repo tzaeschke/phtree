@@ -33,8 +33,11 @@ public class LongArrayPool {
     private int[] poolStatsNew;
 
     public static LongArrayPool create() {
-        return new LongArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
-                PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
+		if (PhTreeHelper.ARRAY_POOLING) {
+	        return new LongArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
+	                PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
+		} 
+		return new LongArrayPool(0, 0);
     }
 
     private LongArrayPool(int maxArraySize, int maxArrayCount) {
@@ -51,17 +54,15 @@ public class LongArrayPool {
         if (size == 0) {
             return EMPTY_LONG_ARRAY;
         }
-        if (PhTreeHelper.ARRAY_POOLING) {
-            if (size > maxArraySize) {
-                return new long[size];
-            }
-            int ps = poolSize[size];
-            if (ps > 0) {
-                poolSize[size]--;
-                long[] ret = pool[size][ps-1];
-                Arrays.fill(ret, 0);
-                return ret;
-            }
+        if (size > maxArraySize) {
+        	return new long[size];
+        }
+        int ps = poolSize[size];
+        if (ps > 0) {
+        	poolSize[size]--;
+        	long[] ret = pool[size][ps-1];
+        	Arrays.fill(ret, 0);
+        	return ret;
         }
         if (DEBUG) {
             poolStatsNew[size]++;
@@ -70,17 +71,15 @@ public class LongArrayPool {
     }
 
     public void offer(long[] a) {
-        if (PhTreeHelper.ARRAY_POOLING) {
-            int size = a.length;
-            if (size == 0 || size > maxArraySize) {
-                return;
-            }
-            int ps = poolSize[size];
-            if (ps < maxArrayCount) {
-                pool[size][ps] = a;
-                poolSize[size]++;
-            }
-        }
+    	int size = a.length;
+    	if (size == 0 || size > maxArraySize) {
+    		return;
+    	}
+    	int ps = poolSize[size];
+    	if (ps < maxArrayCount) {
+    		pool[size][ps] = a;
+    		poolSize[size]++;
+    	}
     }
 
     /**

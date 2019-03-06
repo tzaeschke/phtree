@@ -49,8 +49,8 @@ public class ObjectArrayPool<T> {
 	@SuppressWarnings("unchecked")
 	private ObjectArrayPool(int maxArraySize, int maxArrayCount, IntFunction<T[]> constructor) {
 		this.constructor = constructor;
-		this.maxArraySize = maxArraySize;
-		this.maxArrayCount = maxArrayCount;
+		this.maxArraySize = PhTreeHelper.ARRAY_POOLING ? maxArraySize : 0;
+		this.maxArrayCount = PhTreeHelper.ARRAY_POOLING ? maxArrayCount : 0;
 		this.pool = (T[][][]) new Object[maxArraySize+1][maxArrayCount][];
 		this.poolSize = new int[maxArraySize+1];
 	}
@@ -59,7 +59,7 @@ public class ObjectArrayPool<T> {
 		if (size == 0) {
 			return EMPTY_REF_ARRAY;
 		}
-		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
+		if (size > maxArraySize) {
 			return constructor.apply(size);
 		}
 		int ps = poolSize[size];
@@ -74,7 +74,7 @@ public class ObjectArrayPool<T> {
 
 	public void offer(T[] a) {
 		int size = a.length;
-		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
+		if (size == 0 || size > maxArraySize) {
 			return;
 		}
 		int ps = poolSize[size];

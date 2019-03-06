@@ -43,7 +43,8 @@ public class ObjectPool<T> {
 	@SuppressWarnings("unchecked")
 	private ObjectPool(Supplier<T> constructor) {
 		this.constructor = constructor != null ? constructor : () -> null;
-		this.pool = (T[]) new Object[DEFAULT_POOL_SIZE];
+		int size = PhTreeHelper.ARRAY_POOLING ? DEFAULT_POOL_SIZE : 0;
+		this.pool = (T[]) new Object[size];
 	}
 
 	/**
