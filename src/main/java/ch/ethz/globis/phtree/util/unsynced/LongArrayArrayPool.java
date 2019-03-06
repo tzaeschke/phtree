@@ -31,7 +31,7 @@ public class LongArrayArrayPool {
 		if (PhTreeHelper.ARRAY_POOLING) {
 			return new LongArrayArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
 				PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
-		} 
+		}
 		return new LongArrayArrayPool(0, 0);
 	}
 
@@ -109,7 +109,7 @@ public class LongArrayArrayPool {
 	public long[][] arrayCreate(int size) {
     	return getArray(calcArraySize(size));
     }
-    
+
     /**
      * Discards oldA and returns newA.
      * @param oldA old array

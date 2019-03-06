@@ -25,7 +25,7 @@ import java.util.function.Supplier;
 
 /**
  * Reference pooling and management for Node instances.
- * 
+ *
  * @author ztilmann
  */
 public class ObjectPool<T> {

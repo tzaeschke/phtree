@@ -39,7 +39,7 @@ public class BSTPool {
     private BSTPool() {
     	// empty
     }
-    
+
     /**
      * Create an array.
      * @param newSize size
@@ -62,7 +62,7 @@ public class BSTPool {
     	return newA;
 	}
 
-	
+
     /**
      * Create a new array.
      * @param newSize size

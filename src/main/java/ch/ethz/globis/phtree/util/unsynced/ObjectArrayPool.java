@@ -113,7 +113,7 @@ public class ObjectArrayPool<T> {
     	offer(oldA);
     	return newA;
     }
-    
+
     /**
      * Resize an array to exactly the given size.
      * @param oldA old array
@@ -135,7 +135,7 @@ public class ObjectArrayPool<T> {
 	public T[] arrayCreate(int size) {
     	return getArray(calcArraySize(size));
     }
-    
+
     /**
      * Discards oldA and returns newA.
      * @param oldA old array
@@ -170,7 +170,7 @@ public class ObjectArrayPool<T> {
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
     	return newA;
     }
-    
+
 	/**
 	 * Inserts an empty field at position 'pos'. If the required size is larger than the current
 	 * size, the array is copied to a new array. The new array is returned and the old array is
@@ -189,7 +189,7 @@ public class ObjectArrayPool<T> {
 		copyRight(values, pos, dst, pos+1, requiredSize-1-pos);
 		return dst;
 	}
-	
+
 	/**
 	 * Removes a field at position 'pos'. If the required size is smaller than the current
 	 * size, the array is copied to a new array. The new array is returned and the old array is
@@ -215,17 +215,17 @@ public class ObjectArrayPool<T> {
 			System.arraycopy(src, srcPos, dst, dstPos, len);
 		} else {
 			for (int i = 0; i < len; i++) {
-				dst[dstPos+i] = src[srcPos+i]; 
+				dst[dstPos+i] = src[srcPos+i];
 			}
 		}
 	}
-	
+
 	private void copyRight(T[] src, int srcPos, T[] dst, int dstPos, int len) {
 		if (len >= 7) {
 			System.arraycopy(src, srcPos, dst, dstPos, len);
 		} else {
 			for (int i = len-1; i >= 0; i--) {
-				dst[dstPos+i] = src[srcPos+i]; 
+				dst[dstPos+i] = src[srcPos+i];
 			}
 		}
 	}
