@@ -6,13 +6,13 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13.nt;
-
-import java.util.NoSuchElementException;
+package ch.ethz.globis.phtree.v13SynchedPool.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
+
+import java.util.NoSuchElementException;
 
 
 /**
@@ -28,69 +28,72 @@ import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
  *
  * @param <T> value type
  */
-public final class NtIteratorMask<T> implements PhIterator64<T> {
+public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 
 	private class PhIteratorStack {
-		private final NtNodeIteratorMask<T>[] stack;
+		private final NtNodeIteratorMinMax<T>[] stack;
 		private int size = 0;
-		
+
 		@SuppressWarnings("unchecked")
 		public PhIteratorStack(int depth) {
-			stack = new NtNodeIteratorMask[depth];
+			stack = new NtNodeIteratorMinMax[depth];
 		}
 
 		public boolean isEmpty() {
 			return size == 0;
 		}
 
-		public NtNodeIteratorMask<T> prepareAndPush(NtNode<T> node, long currentPrefix) {
-			NtNodeIteratorMask<T> ni = stack[size++];
+		public NtNodeIteratorMinMax<T> prepareAndPush(NtNode<T> node, long currentPrefix) {
+			NtNodeIteratorMinMax<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NtNodeIteratorMask<>();
+				ni = new NtNodeIteratorMinMax<>();
 				stack[size-1] = ni;
 			}
-			ni.init(minMask, maxMask, currentPrefix, node);
+			ni.init(min, max, currentPrefix, node, isRootNegative && size==1);
 			return ni;
 		}
 
-		public NtNodeIteratorMask<T> peek() {
+		public NtNodeIteratorMinMax<T> peek() {
 			return stack[size-1];
 		}
 
-		public NtNodeIteratorMask<T> pop() {
+		public NtNodeIteratorMinMax<T> pop() {
 			return stack[--size];
 		}
 	}
 
 	private final PhIteratorStack stack;
-	private long minMask;
-	private long maxMask;
-	
+	private long min;
+	private long max;
+	private final boolean isRootNegative;
+
 	private final NtEntry<T> resultBuf1;
 	private final NtEntry<T> resultBuf2;
 	private boolean isFreeBuf1;
 	boolean isFinished = false;
-	
-	public NtIteratorMask(int keyBitWidth) {
+
+	public NtIteratorMinMax(int keyBitWidth) {
 		this.stack = new PhIteratorStack(NtNode.calcTreeHeight(keyBitWidth));
+		this.isRootNegative = keyBitWidth == 64;
 		this.resultBuf1 = new NtEntry<>(0, new long[keyBitWidth], null);
 		this.resultBuf2 = new NtEntry<>(0, new long[keyBitWidth], null);
-	}	
-		
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
-	public void reset(MaxKTreeI tree, long minMask, long maxMask) {
-		reset((NtNode<T>)tree.getRoot(), minMask, maxMask);
+	public void reset(MaxKTreeI tree, long min, long max) {
+		reset((NtNode<T>)tree.getRoot(), min, max);
 	}
-	
+
+	@SuppressWarnings("unchecked")
 	@Override
 	public void reset(MaxKTreeI tree) {
-		throw new UnsupportedOperationException();
+		reset((NtNode<T>)tree.getRoot(), Long.MIN_VALUE, Long.MAX_VALUE);
 	}
 	
-	public NtIteratorMask<T> reset(NtNode<T> root, long minMask, long maxMask) {	
-		this.minMask = minMask;
-		this.maxMask = maxMask;
+	public PhIterator64<T> reset(NtNode<T> root, long min, long max) {
+		this.min = min;
+		this.max = max;
 		this.stack.size = 0;
 		this.isFinished = false;
 		
@@ -108,7 +111,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 	private void findNextElement() {
 		NtEntry<T> result = isFreeBuf1 ? resultBuf1 : resultBuf2; 
 		while (!stack.isEmpty()) {
-			NtNodeIteratorMask<T> p = stack.peek();
+			NtNodeIteratorMinMax<T> p = stack.peek();
 			while (p.increment(result)) {
 				if (p.isNextSub()) {
 					p = stack.prepareAndPush(p.getCurrentSubNode(), p.getPrefix());
@@ -179,46 +182,6 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
-	}
-
-	/**
-	 * This method should be called after changing the min/max values.
-	 * The method ensures that, at least for shrinking MBB, the iterator
-	 * is 'popped' in case it iterates over a node that does not intersect
-	 * with the new MBBs.  
-	 * 
-	 * @param newGlobalMinMask global min mask 
-	 * @param newGlobalMaxMask global max mask
-	 */
-	public void adjustMinMax(long newGlobalMinMask, long newGlobalMaxMask) {
-		while (stack.size > 1 && !stack.peek().verifyMinMax(newGlobalMinMask, newGlobalMaxMask)) {
-			stack.pop();
-		}
-		
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-		//TODO
-//		if (checker != null) {
-//			while (!stack.isEmpty() && 
-//					!checker.isValid(stack.peek().valTemplate, stack.peek().postLen)) {
-//				stack.pop();
-//			}
-//		}
-
-		while (!stack.isEmpty() 
-				&& !stack.peek().adjustMinMax(newGlobalMinMask, newGlobalMaxMask)) {
-			stack.pop();
-		}
 	}
 	
 }

@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13.nt;
+package ch.ethz.globis.phtree.v13SynchedPool.nt;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 
@@ -44,15 +44,7 @@ public class NtNodeIteratorMinMax<T> {
 	public NtNodeIteratorMinMax() {
 		//
 	}
-	
-	/**
-	 * 
-	 * @param node
-	 * @param globalMinMask The minimum value that any found value should have. If the found value is
-	 *  lower, the search continues.
-	 * @param globalMaxMask
-	 * @param prefix
-	 */
+
 	private void reinit(NtNode<T> node, long prefix, long globalMin, long globalMax) {
 		this.prefix = prefix;
 		this.globalMin = globalMin;
@@ -61,7 +53,7 @@ public class NtNodeIteratorMinMax<T> {
 		nextSubNode = null;
 		currentOffsetKey = 0;
 		nFound = 0;
-	
+
 		this.node = node;
 		this.isHC = node.isAHC();
 		nMaxEntry = node.getEntryCount();
@@ -74,7 +66,7 @@ public class NtNodeIteratorMinMax<T> {
 	}
 
 	/**
-	 * Advances the cursor. 
+	 * Advances the cursor.
 	 * @return TRUE iff a matching element was found.
 	 */
 	boolean increment(NtEntry<T> result) {
@@ -88,8 +80,8 @@ public class NtNodeIteratorMinMax<T> {
 
 	/**
 	 * Return whether the next value returned by next() is a sub-node or not.
-	 * 
-	 * @return True if the current value (returned by next()) is a sub-node, 
+	 *
+	 * @return True if the current value (returned by next()) is a sub-node,
 	 * otherwise false
 	 */
 	boolean isNextSub() {
@@ -97,22 +89,22 @@ public class NtNodeIteratorMinMax<T> {
 	}
 
 	/**
-	 * 
+	 *
 	 * @return False if the value does not match the range, otherwise true.
 	 */
 	@SuppressWarnings("unchecked")
 	private boolean readValue(int pin, long pos, NtEntry<T> result) {
 		Object v = node.getValueByPIN(pin);
-		
+
 		if (v == null) {
 			return false;
 		}
-		
+
 		prefix = node.localReadAndApplyReadPostfixAndHc(pin, pos, prefix);
-		
+
 		if (v instanceof NtNode) {
 			NtNode<T> sub = (NtNode<T>) v;
-			long mask = (-1L) << ((sub.getPostLen()+1)*NtNode.MAX_DIM);
+			long mask = (-1L) << ((sub.getPostLen()+1)* NtNode.MAX_DIM);
 			if (prefix < (globalMin & mask) || (prefix & mask) > globalMax) {
 				return false;
 			}
@@ -136,9 +128,9 @@ public class NtNodeIteratorMinMax<T> {
 			getNextLHC(result);
 		}
 	}
-	
+
 	private void getNextAHC(NtEntry<T> result) {
-		long currentPos = next == START ? localMin : next+1; 
+		long currentPos = next == START ? localMin : next+1;
 		while (currentPos <= localMax) {
 			if (readValue((int)currentPos, currentPos, result)) {
 				next = currentPos;
@@ -148,10 +140,10 @@ public class NtNodeIteratorMinMax<T> {
 		}
 		next = FINISHED;
 	}
-	
+
 	private void getNextLHC(NtEntry<T> result) {
 		while (++nFound <= nMaxEntry) {
-			long currentPos = 
+			long currentPos =
 					Bits.readArray(node.ba, currentOffsetKey, NtNode.IK_WIDTH(NtNode.MAX_DIM));
 			currentOffsetKey += postEntryLenLHC;
 			//check HC-pos
@@ -167,7 +159,7 @@ public class NtNodeIteratorMinMax<T> {
 		}
 		next = FINISHED;
 	}
-	
+
 
 	public NtNode<T> getCurrentSubNode() {
 		return nextSubNode;
@@ -178,19 +170,19 @@ public class NtNodeIteratorMinMax<T> {
 	}
 
 	/**
-	 * 
-	 * @param globalMin
-	 * @param globalMax
-	 * @param prefix
-	 * @param postLen
+	 *
+	 * @param globalMin min
+	 * @param globalMax max
+	 * @param prefix prefix
+	 * @param isNegativeRoot is negative root
 	 * @return 'false' if the new upper limit is smaller than the current HC-pos.
 	 */
 	boolean calcLimits(long globalMin, long globalMax, long prefix, boolean isNegativeRoot) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.
-		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does 
+		//For the lower limit, a '1' indicates that the 'lower' half of this dimension does
 		//not need to be queried.
-		//For the upper limit, a '0' indicates that the 'higher' half does not need to be 
+		//For the upper limit, a '0' indicates that the 'higher' half does not need to be
 		//queried.
 		//
 		//              ||  lowerLimit=0 || lowerLimit=1 || upperLimit = 0 || upperLimit = 1
@@ -232,7 +224,7 @@ public class NtNodeIteratorMinMax<T> {
 		return true;
 	}
 	
-	void init(long globalMin, long globalMax, long valTemplate, NtNode<T> node, 
+	void init(long globalMin, long globalMax, long valTemplate, NtNode<T> node,
 			boolean isNegativeRoot) {
 		this.node = node; //for calcLimits
 		calcLimits(globalMin, globalMax, valTemplate, isNegativeRoot);

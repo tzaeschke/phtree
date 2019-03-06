@@ -24,6 +24,7 @@ public abstract class PhTreeHelper {
 
     /**
      * Size of object pools, currently only used for node objects.
+	 * To disable pooling, set to '0'.
      */
 	public static int MAX_OBJECT_POOL_SIZE = 100;
     

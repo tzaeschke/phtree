@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13.nt;
+package ch.ethz.globis.phtree.v13SynchedPool.nt;
 
 import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.RefsLong;
@@ -140,8 +140,8 @@ public class NtNode<T> {
 	 * tree. As a downside, it requires additional effort to have 2^MAX_DIM
 	 * children in the root node if the dimension is not a multiple of MAX_DIM.
 	 * 
-	 * @param hcPos
-	 * @param postLen
+	 * @param hcPos HC-pos
+	 * @param postLen postlen
 	 * @return The local hcPos / z-value.
 	 */
 	static long pos2LocalPos(long hcPos, int postLen) {
@@ -389,7 +389,7 @@ public class NtNode<T> {
 		int postLenTotal = dims*postLen; 
 		for (int i = 0; i < oldEntryCount; i++) {
 			int entryPosLHC = posOfIndex + i*(IK_WIDTH(dims)+postLenTotal);
-			int p2 = (int)Bits.readArray(ba, entryPosLHC, IK_WIDTH(dims));
+			int p2 = (int) Bits.readArray(ba, entryPosLHC, IK_WIDTH(dims));
 			Bits.copyBitsLeft(ba, entryPosLHC+IK_WIDTH(dims),
 					bia2, posOfData + postLenTotal*p2, 
 					postLenTotal);
@@ -445,12 +445,6 @@ public class NtNode<T> {
 	}
 	
 	
-	/**
-	 * 
-	 * @param hcPos
-	 * @param pin position in node: ==hcPos for AHC or pos in array for LHC
-	 * @param key
-	 */
 	void addEntryPIN(long hcPos, int negPin, long key, long[] kdKey, Object value, int dims) {
 		final int bufEntryCnt = getEntryCount();
 		final int kdDims = kdKey.length;
@@ -620,8 +614,8 @@ public class NtNode<T> {
 	
 	/**
 	 * 
-	 * @param pos
-	 * @param dims
+	 * @param hcPos HC pos
+	 * @param dims dims
 	 * @return The position of the entry, for example as in the value[]. 
 	 */
 	int getPosition(long hcPos, final int dims) {
@@ -632,7 +626,7 @@ public class NtNode<T> {
 			return (values[posInt] != null) ? posInt : -(posInt)-1;
 		} else {
 			//linearized cube
-			return Bits.binarySearch(ba, offsInd, getEntryCount(), hcPos, IK_WIDTH(dims), 
+			return Bits.binarySearch(ba, offsInd, getEntryCount(), hcPos, IK_WIDTH(dims),
 					dims * postLen);
 		}
 	}

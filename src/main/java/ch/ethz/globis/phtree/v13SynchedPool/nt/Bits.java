@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13.nt;
+package ch.ethz.globis.phtree.v13SynchedPool.nt;
 
 import ch.ethz.globis.phtree.util.BitsLong;
 
