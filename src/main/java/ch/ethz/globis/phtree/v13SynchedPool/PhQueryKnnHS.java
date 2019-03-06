@@ -1,34 +1,19 @@
 /*
+ * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
- * Copyright 2019 Improbable. All rights reserved.
  *
- * This file is part of the PH-Tree project.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This software is the proprietary information of ETH Zurich
+ * and Tilmann Zäschke.
+ * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16hd;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.PriorityQueue;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhDistance;
+import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
-import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
-import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorAll;
+
+import java.util.*;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -43,23 +28,28 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	private static final PhDEComp COMP = new PhDEComp();
 	
 	private final int dims;
-	private PhTree16HD<T> pht;
+	private PhTree13SP<T> pht;
 	private PhDistance distance;
 	private long[] center;
-	private final ArrayList<PhEntryDist<T>> results = new ArrayList<>(); 
-	private final ArrayList<PhEntryDist<Object>> pool = new ArrayList<>(); 
-	private final PriorityQueue<PhEntryDist<Object>> queue = new PriorityQueue<>(COMP);
-	private final BSTIteratorAll iterNode = new BSTIteratorAll();
+	private final ArrayList<PhEntryDist<T>> results = new ArrayList<>();
+	private final ArrayList<PhEntryDist<T>> pool = new ArrayList<>();
+	private final PriorityQueue<PhEntryDist<T>> queue = new PriorityQueue<>(COMP);
+	private final NodeIteratorFullToList<T> iterNode;
 	private Iterator<PhEntryDist<T>> iterResult;
+	private final KnnResultList<T> candidateBuffer;
+
 
 
 	/**
 	 * Create a new kNN/NNS search instance.
 	 * @param pht the parent tree
 	 */
-	public PhQueryKnnHS(PhTree16HD<T> pht) {
+	public PhQueryKnnHS(PhTree13SP<T> pht) {
 		this.dims = pht.getDim();
 		this.pht = pht;
+		//this.iterNode = new NodeIteratorFullNoGC<>(dims, new long[dims]);
+		this.candidateBuffer = new KnnResultList<>(dims, pool);
+		this.iterNode = new NodeIteratorFullToList<>(dims);
 	}
 
 	@Override
@@ -75,7 +65,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	@Override
 	public PhEntryDist<T> nextEntry() {
 		return iterResult.next();
-	} 
+	}
 
 	@Override
 	public PhEntryDist<T> nextEntryReuse() {
@@ -97,54 +87,55 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	public PhKnnQuery<T> reset(int nMin, PhDistance dist, long... center) {
 		this.distance = dist == null ? this.distance : dist;
 		this.center = center;
-		
+
 		//TODO pool entries??/
 		this.queue.clear();
 		this.results.clear();
-		
-		
+
+
 		if (nMin <= 0 || pht.size() == 0) {
 			iterResult = Collections.<PhEntryDist<T>>emptyList().iterator();
 			return this;
 		}
-		
+
 		//Initialize queue
-		//use d=0 (lies in Node!!!)
-		PhEntryDist<Object> rootE = createEntry(new long[dims], pht.getRoot(), 0);
+		//d=0 (lies in Node!!!)
+		PhEntryDist<T> rootE = createEntry(pool, new long[dims], null, 0);
+		rootE.setNodeInternal(pht.getRoot());
 		this.queue.add(rootE);
-		
+
 		search(nMin);
 		iterResult = results.iterator();
-		
+
 		return this;
 	}
 
-	
-	@SuppressWarnings("unchecked")
+
 	private void search(int k) {
 		while (!queue.isEmpty()) {
-			PhEntryDist<Object> candidate = queue.poll();
-			Object o = candidate.getValue();
-			if (!(o instanceof Node)) {
+			PhEntryDist<T> candidate = queue.poll();
+			if (!candidate.hasNodeInternal()) {
 				//data entry
-				results.add((PhEntryDist<T>) candidate);
+				results.add(candidate);
 				if (results.size() >= k) {
 					return;
 				}
 			} else {
 				//inner node
-				Node node = (Node)o;
-				iterNode.reset(node.getRoot());
-				while (iterNode.hasNextEntry()) {
-					BSTEntry e2 = iterNode.nextEntry();
-					if (e2.getValue() instanceof Node) {
-						Node sub = (Node) e2.getValue();
-						double d = distToNode(e2.getKdKey(), sub.getPostLen() + 1);
-						queue.add(createEntry(e2.getKdKey(), e2.getValue(), d));
+				Node node = (Node) candidate.getNodeInternal();
+				candidateBuffer.clear();
+				iterNode.init(node, candidateBuffer, candidate.getKey());
+				for (int i = 0; i < candidateBuffer.size(); i++) {
+					PhEntryDist<T> e2 = candidateBuffer.get(i);
+					if (e2.hasNodeInternal()) {
+						Node sub = (Node) e2.getNodeInternal();
+						double d = distToNode(e2.getKey(), sub.getPostLen() + 1);
+						e2.setDist(d);
 					} else {
-						double d = distance.dist(center, e2.getKdKey());
-						queue.add(createEntry(e2.getKdKey(), e2.getValue(), d));
+						double d = distance.dist(center, e2.getKey());
+						e2.setDist(d);
 					}
+					queue.add(e2);
 				}
 				pool.add(candidate);
 			}				
@@ -152,11 +143,12 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	}
 	
 	
-	private PhEntryDist<Object> createEntry(long[] key, Object val, double dist) {
+	private static <T> PhEntryDist<T> createEntry(ArrayList<PhEntryDist<T>> pool, 
+			long[] key, T val, double dist) {
 		if (pool.isEmpty()) {
-			return new PhEntryDist<>(key, val, dist);
+			return new PhEntryDist<T>(key, val, dist);
 		}
-		PhEntryDist<Object> e = pool.remove(pool.size() - 1);
+		PhEntryDist<T> e = pool.remove(pool.size() - 1);
 		e.setKeyInternal(key);
 		e.set(val, dist);
 		return e;
@@ -188,4 +180,60 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 	    }
 	}
 
+	
+	static class KnnResultList<T> extends PhResultList<T, PhEntryDist<T>> {
+
+		private final ArrayList<PhEntryDist<T>> list;
+		private PhEntryDist<T> free;
+		private final ArrayList<PhEntryDist<T>> pool; 
+		
+		public KnnResultList(int dims, ArrayList<PhEntryDist<T>> pool) {
+			this.list = new ArrayList<>();
+			this.pool = pool;
+			this.free = createEntry(pool, new long[dims], null, 0);
+		}
+		
+		@Override
+		public int size() {
+			return list.size();
+		}
+
+		@Override
+		public void clear() {
+			list.clear();
+		}
+
+		@Override
+		public PhEntryDist<T> get(int index) {
+			return list.get(index);
+		}
+
+		@Override
+		PhEntryDist<T> phGetTempEntry() {
+			PhEntryDist<T> ret = free;
+			free = null;
+			return ret;
+		}
+
+		@Override
+		void phReturnTemp(PhEntry<T> entry) {
+			if (free == null) {
+				free = (PhEntryDist<T>) entry;
+			}
+		}
+
+		@Override
+		void phOffer(PhEntry<T> e) {
+			list.add((PhEntryDist<T>) e);
+			free = createEntry(pool, new long[e.getKey().length], null, 0);
+		}
+
+		@Override
+		boolean phIsPrefixValid(long[] prefix, int bitsToIgnore) {
+			return true;
+		}
+	}
+	
+
+	
 }

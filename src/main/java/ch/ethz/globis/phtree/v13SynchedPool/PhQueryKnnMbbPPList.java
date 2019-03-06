@@ -6,10 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
-
-import java.util.Arrays;
-import java.util.NoSuchElementException;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntry;
@@ -17,6 +14,9 @@ import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
+
+import java.util.Arrays;
+import java.util.NoSuchElementException;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -55,7 +55,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 
 	private final int dims;
 	private int nMin;
-	private PhTree13<T> pht;
+	private PhTree13SP<T> pht;
 	private PhDistance distance;
 	private int currentPos = -1;
 	private final long[] mbbMin;
@@ -71,7 +71,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	 * Create a new kNN/NNS search instance.
 	 * @param pht the parent tree
 	 */
-	public PhQueryKnnMbbPPList(PhTree13<T> pht) {
+	public PhQueryKnnMbbPPList(PhTree13SP<T> pht) {
 		this.dims = pht.getDim();
 		this.mbbMin = new long[dims];
 		this.mbbMax = new long[dims];
@@ -230,8 +230,8 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 	 * 
 	 * When looking for nMin > 1, one could search for queries with at least nMin results...
 	 * 
-	 * @param val value
-	 * @param nMin min N
+	 * @param val
+	 * @param nMin
 	 */
 	private void nearestNeighbourBinarySearch(long[] val, int nMin) {
 		//special case with minDist = 0
@@ -264,7 +264,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 		}
 	}
 
-	private boolean findNeighbours(double maxDist, int nMin, long[] val) {
+	private final boolean findNeighbours(double maxDist, int nMin, long[] val) {
 		results.maxDistance = maxDist;
 		checker.set(val, distance, maxDist);
 		distance.toMBB(maxDist, val, mbbMin, mbbMax);

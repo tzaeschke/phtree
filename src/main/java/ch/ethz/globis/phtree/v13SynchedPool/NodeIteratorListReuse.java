@@ -1,27 +1,18 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
- * Copyright 2019 Improbable. All rights reserved.
  *
- * This file is part of the PH-Tree project.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This software is the proprietary information of ETH Zurich
+ * and Tilmann Zäschke.
+ * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
+package ch.ethz.globis.phtree.v13SynchedPool;
+
+import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
+import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.v13SynchedPool.nt.NtIteratorMask;
 
 import java.util.List;
-
-import ch.ethz.globis.phtree.PhEntry;
 
 /**
  * A NodeIterator that returns a list instead of an Iterator AND reuses the NodeIterator.
@@ -67,10 +58,11 @@ public class NodeIteratorListReuse<T, R> {
 	private long[] rangeMax;
 
 	private final PhIteratorStack pool;
-	
+
 	private final class NodeIterator {
-	
+
 		private Node node;
+		private NtIteratorMask<Object> niIterator;
 		private int nMaxEntry;
 		private int nEntryFound = 0;
 		private long maskLower;
@@ -78,43 +70,62 @@ public class NodeIteratorListReuse<T, R> {
 		private boolean useHcIncrementer;
 
 		/**
-		 * 
+		 *
 		 * @param node node
 		 * @param lower The minimum HC-Pos that a value should have.
 		 * @param upper see 'lower'
 		 */
 		void reinitAndRun(Node node, long lower, long upper) {
 			this.node = node;
+			boolean isNI = node.isNT();
 			nMaxEntry = node.getEntryCount();
 			this.nEntryFound = 0;
 			this.maskLower = lower;
 			this.maskUpper = upper;
 
 			useHcIncrementer = false;
+			if (isNI) {
+				if (niIterator == null) {
+					niIterator = node.ntIteratorWithMask(dims, maskLower, maskUpper);
+				} else {
+					niIterator.reset(node.ind(), maskLower, maskUpper);
+				}
+			}
+
 			if (dims > 6) {
-				initHCI();
+				initHCI(isNI);
 			}
 
 			getAll();
 		}
 
-		private void initHCI() {
+		private void initHCI(boolean isNI) {
 			//LHC, NI, ...
 			long maxHcAddr = ~((-1L)<<dims);
 			int nSetFilterBits = Long.bitCount(maskLower | ((~maskUpper) & maxHcAddr));
 			//nPossibleMatch = (2^k-x)
 			long nPossibleMatch = 1L << (dims - nSetFilterBits);
-			if (PhTree13.HCI_ENABLED){
+			if (isNI) {
+				int nChild = node.ntGetSize();
+				int logNChild = Long.SIZE - Long.numberOfLeadingZeros(nChild);
+				//the following will overflow for k=60
+				//DIM < 60 as safeguard against overflow of (nPossibleMatch*logNChild)
+				useHcIncrementer = PhTree13SP.HCI_ENABLED && dims < 50
+						&& (nChild > nPossibleMatch*(double)logNChild*2);
+				if (!useHcIncrementer) {
+					niIterator.reset(node.ind(), maskLower, maskUpper);
+				}
+			} else if (PhTree13SP.HCI_ENABLED){
 				if (node.isAHC()) {
 					//nPossibleMatch < 2^k?
 					useHcIncrementer = nPossibleMatch < maxHcAddr;
 				} else {
 					int logNPost = Long.SIZE - Long.numberOfLeadingZeros(nMaxEntry) + 1;
-					useHcIncrementer = (nMaxEntry > nPossibleMatch*(double)logNPost); 
+					useHcIncrementer = (nMaxEntry > nPossibleMatch*(double)logNPost);
 				}
 			}
 		}
-		
+
 		private void checkAndAddResult(PhEntry<T> e) {
 			results.phOffer(e);
 		}
@@ -145,6 +156,14 @@ public class NodeIteratorListReuse<T, R> {
 			checkAndAddResult(resultBuffer);
 		}
 
+		private void readValue(long pos, Object value, PhEntry<T> result) {
+			if (!node.checkAndGetEntryNt(pos, value, result, valTemplate, rangeMin, rangeMax)) {
+				return;
+			}
+
+			checkAndAddResult(result);
+		}
+
 		private void getAllHCI() {
 			//Ideally we would switch between b-serch-HCI and incr-search depending on the expected
 			//distance to the next value.
@@ -154,8 +173,8 @@ public class NodeIteratorListReuse<T, R> {
 				if (pin >= 0) {
 					readValue(pin, currentPos);
 				}
-				
-				currentPos = PhTree13.inc(currentPos, maskLower, maskUpper);
+
+				currentPos = PhTree13SP.inc(currentPos, maskLower, maskUpper);
 				if (currentPos <= maskLower) {
 					break;
 				}
@@ -164,6 +183,11 @@ public class NodeIteratorListReuse<T, R> {
 
 
 		private void getAll() {
+			if (node.isNT()) {
+				niAllNext();
+				return;
+			}
+
 			if (useHcIncrementer) {
 				getAllHCI();
 			} else if (node.isAHC()) {
@@ -175,7 +199,7 @@ public class NodeIteratorListReuse<T, R> {
 
 		private void getAllAHC() {
 			//Position of the current entry
-			long currentPos = maskLower; 
+			long currentPos = maskLower;
 			while (results.size() < maxResults) {
 				//check HC-pos
 				if (checkHcPos(currentPos)) {
@@ -213,11 +237,67 @@ public class NodeIteratorListReuse<T, R> {
 			}
 		}
 
+
+		private void niAllNext() {
+			//iterator?
+			if (useHcIncrementer) {
+				niAllNextHCI();
+			} else {
+				niAllNextIterator();
+			}
+		}
+
+		private void niAllNextIterator() {
+			//ITERATOR is used for DIM>6 or if results are dense
+			while (niIterator.hasNext() && results.size() < maxResults) {
+				NtEntry<Object> e = niIterator.nextEntryReuse();
+				Object v = e.value();
+				if (v instanceof Node) {
+					Node nextSubNode = (Node) v;
+					if (node.checkAndApplyInfixNt(nextSubNode.getInfixLen(), e.getKdKey(),
+							valTemplate, rangeMin, rangeMax)) {
+						checkAndRunSubnode(nextSubNode, null);
+					}
+				} else {
+					PhEntry<T> resultBuffer = results.phGetTempEntry();
+					System.arraycopy(e.getKdKey(), 0, resultBuffer.getKey(), 0, dims);
+					readValue(e.key(), v, resultBuffer);
+				}
+			}
+		}
+
+		private void niAllNextHCI() {
+			//HCI is used for DIM <=6 or if results are sparse
+			//repeat until we found a value inside the given range
+			long currentPos = maskLower;
+			while (results.size() < maxResults) {
+				PhEntry<T> resultBuffer = results.phGetTempEntry();
+				Object v = node.ntGetEntry(currentPos, resultBuffer.getKey(), valTemplate);
+				//sub-node?
+				if (v instanceof Node) {
+					Node sub = (Node) v;
+					if (node.checkAndApplyInfixNt(sub.getInfixLen(), resultBuffer.getKey(),
+							valTemplate, rangeMin, rangeMax)) {
+						checkAndRunSubnode(sub, resultBuffer);
+					}
+				} else if (v != null) {
+					//read and check post-fix
+					readValue(currentPos, v, resultBuffer);
+				}
+
+				currentPos = PhTree13SP.inc(currentPos, maskLower, maskUpper);
+				if (currentPos <= maskLower) {
+					break;
+				}
+			}
+		}
+
+
 		private boolean checkHcPos(long pos) {
 			return ((pos | maskLower) & maskUpper) == pos;
 		}
 	}
-	
+
 	NodeIteratorListReuse(int dims, PhResultList<T, R> results) {
 		this.dims = dims;
 		this.valTemplate = new long[dims];

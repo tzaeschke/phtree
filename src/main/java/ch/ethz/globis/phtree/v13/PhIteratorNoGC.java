@@ -34,7 +34,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 		private int size = 0;
 		
 		@SuppressWarnings("unchecked")
-		public PhIteratorStack() {
+		PhIteratorStack() {
 			stack = new NodeIteratorNoGC[PhTree13.DEPTH_64];
 		}
 
@@ -107,7 +107,6 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 			while (p.increment(result)) {
 				if (result.hasNodeInternal()) {
 					p = stack.prepareAndPush((Node) result.getNodeInternal());
-					continue;
 				} else {
 					resultFree = resultToReturn;
 					resultToReturn = result;

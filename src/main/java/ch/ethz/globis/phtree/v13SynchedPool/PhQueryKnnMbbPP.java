@@ -6,11 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.NoSuchElementException;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhEntry;
@@ -18,6 +14,10 @@ import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.NoSuchElementException;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
@@ -56,7 +56,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 
 	private final int dims;
 	private int nMin;
-	private PhTree13<T> pht;
+	private PhTree13SP<T> pht;
 	private PhDistance distance;
 	private final ArrayList<PhEntryDist<T>> entries = new ArrayList<>();
 	private int resultSize = 0;
@@ -66,7 +66,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	private final PhIteratorNoGC<T> iter;
 	private final PhFilterDistance checker;
 
-	public PhQueryKnnMbbPP(PhTree13<T> pht) {
+	public PhQueryKnnMbbPP(PhTree13SP<T> pht) {
 		this.dims = pht.getDim();
 		this.mbbMin = new long[dims];
 		this.mbbMax = new long[dims];
@@ -88,7 +88,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	@Override
 	public PhEntryDist<T> nextEntry() {
 		return new PhEntryDist<>(nextEntryReuse());
-	} 
+	}
 
 	@Override
 	public PhEntryDist<T> nextEntryReuse() {
@@ -155,7 +155,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 		for (int i = 0; i < dims; i++) {
 			ret[i] = key[i] & mask;
 		}
-		
+
 		NodeIteratorFullNoGC<T> ni = new NodeIteratorFullNoGC<>(dims, ret);
 		//This allows writing the result directly into 'ret'
 		PhEntry<T> result = new PhEntry<>(ret, null);
@@ -190,13 +190,13 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	 * 
 	 * When looking for nMin > 1, one could search for queries with at least nMin results...
 	 * 
-	 * @param val value
-	 * @param nMin min N
+	 * @param val
+	 * @param nMin
 	 */
 	private void nearestNeighbourBinarySearch(long[] val, int nMin) {
 		//special case with minDist = 0
 		if (nMin == 1 && pht.contains(val)) {
-			addEntry(new PhEntry<>(val, pht.get(val)), val);
+			addEntry(new PhEntry<T>(val, pht.get(val)), val);
 			return;
 		}
 
@@ -222,7 +222,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 		}
 	}
 
-	private boolean findNeighbours(double maxDist, int nMin, long[] val) {
+	private final boolean findNeighbours(double maxDist, int nMin, long[] val) {
 		//Epsilon for calculating the distance depends on DIM, the magnitude of the values and
 		//the precision of the Double mantissa.
 		final double EPS = dims * maxDist / (double)(1L << 51);//2^(53-2));

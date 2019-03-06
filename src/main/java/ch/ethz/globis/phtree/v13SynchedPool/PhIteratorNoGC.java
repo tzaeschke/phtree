@@ -6,13 +6,14 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13;
-
-import java.util.NoSuchElementException;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
-import ch.ethz.globis.phtree.PhTree.PhExtent;
+import ch.ethz.globis.phtree.PhTree.PhQuery;
+import ch.ethz.globis.phtree.PhTreeHelper;
+
+import java.util.NoSuchElementException;
 
 /**
  * This PhIterator uses a loop instead of recursion in findNextElement();. 
@@ -26,37 +27,36 @@ import ch.ethz.globis.phtree.PhTree.PhExtent;
  *
  * @param <T> value type
  */
-public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
+public final class PhIteratorNoGC<T> implements PhQuery<T> {
 
 	private class PhIteratorStack {
-		private final NodeIteratorFullNoGC<T>[] stack;
+		private final NodeIteratorNoGC<T>[] stack;
 		private int size = 0;
 		
 		@SuppressWarnings("unchecked")
-		PhIteratorStack() {
-			stack = new NodeIteratorFullNoGC[PhTree13.DEPTH_64];
+		public PhIteratorStack() {
+			stack = new NodeIteratorNoGC[PhTree13SP.DEPTH_64];
 		}
 
 		public boolean isEmpty() {
 			return size == 0;
 		}
 
-		public NodeIteratorFullNoGC<T> prepareAndPush(Node node) {
-			NodeIteratorFullNoGC<T> ni = stack[size++];
+		public NodeIteratorNoGC<T> prepareAndPush(Node node) {
+			NodeIteratorNoGC<T> ni = stack[size++];
 			if (ni == null)  {
-				ni = new NodeIteratorFullNoGC<>(dims, valTemplate);
+				ni = new NodeIteratorNoGC<>(dims, valTemplate);
 				stack[size-1] = ni;
 			}
-			
-			ni.init(node, checker);
+			ni.init(rangeMin, rangeMax, node, checker);
 			return ni;
 		}
 
-		public NodeIteratorFullNoGC<T> peek() {
+		public NodeIteratorNoGC<T> peek() {
 			return stack[size-1];
 		}
 
-		public NodeIteratorFullNoGC<T> pop() {
+		public NodeIteratorNoGC<T> pop() {
 			return stack[--size];
 		}
 	}
@@ -64,14 +64,16 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	private final int dims;
 	private final PhIteratorStack stack;
 	private final long[] valTemplate;
+	private long[] rangeMin;
+	private long[] rangeMax;
 	private PhFilter checker;
-	private final PhTree13<T> pht;
+	private final PhTree13SP<T> pht;
 	
 	private PhEntry<T> resultFree;
 	private PhEntry<T> resultToReturn;
 	private boolean isFinished = false;
 	
-	public PhIteratorFullNoGC(PhTree13<T> pht, PhFilter checker) {
+	public PhIteratorNoGC(PhTree13SP<T> pht, PhFilter checker) {
 		this.dims = pht.getDim();
 		this.checker = checker;
 		this.stack = new PhIteratorStack();
@@ -82,28 +84,30 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	}	
 		
 	@Override
-	public PhIteratorFullNoGC<T> reset() {	
+	public void reset(long[] rangeMin, long[] rangeMax) {	
+		this.rangeMin = rangeMin;
+		this.rangeMax = rangeMax;
 		this.stack.size = 0;
 		this.isFinished = false;
 		
 		if (pht.getRoot() == null) {
 			//empty index
 			isFinished = true;
-			return this;
+			return;
 		}
 		
 		stack.prepareAndPush(pht.getRoot());
 		findNextElement();
-		return this;
 	}
 
 	private void findNextElement() {
 		PhEntry<T> result = resultFree; 
 		while (!stack.isEmpty()) {
-			NodeIteratorFullNoGC<T> p = stack.peek();
+			NodeIteratorNoGC<T> p = stack.peek();
 			while (p.increment(result)) {
 				if (result.hasNodeInternal()) {
 					p = stack.prepareAndPush((Node) result.getNodeInternal());
+					continue;
 				} else {
 					resultFree = resultToReturn;
 					resultToReturn = result;
@@ -148,7 +152,8 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	
 	@Override
 	public T next() {
-		return nextEntryReuse().getValue();
+		T v = nextEntryReuse().getValue();
+		return v == PhTreeHelper.NULL ? null : v;
 	}
 
 	/**
@@ -171,6 +176,34 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * This method should be called after changing the min/max values.
+	 * The method ensures that, at least for shrinking MBB, the iterator
+	 * is 'popped' in case it iterates over a node that does not intersect
+	 * with the new MBBs.  
+	 */
+	public void adjustMinMax() {
+		
+		//First check: does the node still intersect with the query rectangle?
+		while (stack.size > 1 && !stack.peek().verifyMinMax()) {
+			stack.pop();
+		}
+		
+		//Second: does the node still intersect with the checked range? 
+		if (checker != null) {
+			while (!stack.isEmpty() && 
+					!checker.isValid(stack.peek().node().getPostLen()+1, valTemplate)) {
+				stack.pop();
+			}
+		}
+
+		//Third: So if the node is still important, lets's adjust the internal masks
+		//       and pop up if the local iterator is already outside the intersection.
+		while (!stack.isEmpty() && !stack.peek().adjustMinMax(rangeMin, rangeMax)) {
+			stack.pop();
+		}
 	}
 	
 }

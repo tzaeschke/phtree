@@ -6,7 +6,7 @@
  * and Tilmann Zäschke.
  * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v13.nt;
+package ch.ethz.globis.phtree.v13SynchedPool.nt;
 
 import ch.ethz.globis.phtree.PhTreeHelper;
 
@@ -17,7 +17,7 @@ import ch.ethz.globis.phtree.PhTreeHelper;
  */
 public class NtNodePool {
 	
-	private static final NtNode<?>[] POOL = 
+	private static final NtNode<?>[] POOL =
 			new NtNode[PhTreeHelper.MAX_OBJECT_POOL_SIZE];
 	private static int poolSize;
 	/** Nodes currently used outside the pool. */

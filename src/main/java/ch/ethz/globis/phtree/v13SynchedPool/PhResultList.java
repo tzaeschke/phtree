@@ -1,34 +1,18 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
- * Copyright 2019 Improbable. All rights reserved.
  *
- * This file is part of the PH-Tree project.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This software is the proprietary information of ETH Zurich
+ * and Tilmann Zäschke.
+ * Use is subject to license terms.
  */
-package ch.ethz.globis.phtree.v16;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
+package ch.ethz.globis.phtree.v13SynchedPool;
 
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.util.PhMapper;
+
+import java.util.*;
 
 /**
  * Immutable result list.
@@ -261,10 +245,10 @@ public abstract class PhResultList<T, R> implements List<R> {
 		private PhEntry<T> free;
 		private final PhFilter filter;
 		private final PhMapper<T, R> mapper;
-		private final PhEntryFactory<T> factory;
+		private final PhResultList.PhEntryFactory<T> factory;
 		
-		MappingResultList(PhFilter filter, PhMapper<T, R> mapper,
-				PhEntryFactory<T> factory) {
+		public MappingResultList(PhFilter filter, PhMapper<T, R> mapper,
+				PhResultList.PhEntryFactory<T> factory) {
 			this.list = new ArrayList<>();
 			this.free = factory.create();
 			this.filter = filter;

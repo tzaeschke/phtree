@@ -1,10 +1,21 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich
- * and Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v16;
 
@@ -13,6 +24,7 @@ import java.util.NoSuchElementException;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
+import ch.ethz.globis.phtree.util.unsynced.LongArrayOps;
 
 /**
  * This PhIterator uses a loop instead of recursion in findNextElement();. 
@@ -33,7 +45,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 		private int size = 0;
 		
 		@SuppressWarnings("unchecked")
-		public PhIteratorStack() {
+		PhIteratorStack() {
 			stack = new NodeIteratorFullNoGC[PhTree16.DEPTH_64];
 		}
 
@@ -61,7 +73,6 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 		}
 	}
 
-	private final int dims;
 	private final PhIteratorStack stack;
 	private PhFilter checker;
 	private final PhTree16<T> pht;
@@ -71,12 +82,11 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	private boolean isFinished = false;
 	
 	public PhIteratorFullNoGC(PhTree16<T> pht, PhFilter checker) {
-		this.dims = pht.getDim();
 		this.checker = checker;
 		this.stack = new PhIteratorStack();
 		this.pht = pht;
-		this.resultFree = new PhEntry<>(new long[dims], null);
-		this.resultToReturn = new PhEntry<>(new long[dims], null);
+		this.resultFree = new PhEntry<>(new long[pht.getDim()], null);
+		this.resultToReturn = new PhEntry<>(new long[pht.getDim()], null);
 	}	
 		
 	@Override
@@ -102,7 +112,6 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 			while (p.increment(result)) {
 				if (result.hasNodeInternal()) {
 					p = stack.prepareAndPush((Node) result.getNodeInternal());
-					continue;
 				} else {
 					resultFree = resultToReturn;
 					resultToReturn = result;
@@ -120,13 +129,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 	public long[] nextKey() {
 		long[] key = nextEntryReuse().getKey();
 		long[] ret = new long[key.length];
-		if (dims > 10) {
-			System.arraycopy(key, 0, ret, 0, key.length);
-		} else {
-			for (int i = 0; i < key.length; i++) {
-				ret[i] = key[i];
-			}
-		}
+		LongArrayOps.arraycopy(key, 0, ret, 0, key.length);
 		return ret;
 	}
 
