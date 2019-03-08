@@ -1,8 +1,25 @@
+/*
+ * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
+ *
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ch.ethz.globis.phtree.v16hd;
 
 import java.util.Arrays;
 
-import ch.ethz.globis.phtree.PhTreeHelperHD;
 import ch.ethz.globis.phtree.util.BitsLong;
 
 /**
@@ -21,7 +38,6 @@ import ch.ethz.globis.phtree.util.BitsLong;
 public class BitsHD {
 
     private static final long UNIT_0xFF = 0xFFFFFFFFFFFFFFFFL;  	//0xFF for byte=8 bits=3exp
-	public static final long HIGH_1 = 1<<63;
 
 //	public static int mod64(int n) {
 //		return n & 0x3F;
@@ -130,47 +146,6 @@ public class BitsHD {
 		return true;
 	}
 	   
-	@Deprecated
-    public static long[] readArrayHD(long[] ba, int offsetBit, int entryLen) {
-    	if (entryLen == 0) {
-    		//TODO return [0]?
-    		return null;
-    	}
-    	
-    	long[] ret = PhTreeHelperHD.newHDPos(entryLen);
-    	int subEntryLen = mod65x(entryLen);
-    	for (int i = 0; i < ret.length; i++) {
-    		ret[i] = BitsLong.readArray(ba, offsetBit, subEntryLen);
-    		//TODO make/use read64()/write64 functions?
-    		offsetBit += subEntryLen;  
-    		subEntryLen = 64;
-    	}
-    	return ret;
-    }
-
-
-	@Deprecated
-    public static void readArrayHD(long[] ba, int offsetBit, int entryLen, long[] out) {
-    	if (entryLen == 0) {
-    		return;
-    	}
-
-    	int iStart = out.length - BitsHD.div64(entryLen-1) - 1;
-       	int subEntryLen = mod65x(entryLen);
-       	
-       	//first read a partial chunk
-       	long mask = subEntryLen == 64 ? 0 : (-1L) << subEntryLen;
-		out[iStart] = (out[iStart] & mask) | (BitsLong.readArray(ba, offsetBit, subEntryLen) & ~mask);
-		offsetBit += subEntryLen;  
-		
-    	for (int i = iStart+1; i < out.length; i++) {
-    		out[i] = BitsLong.readArray(ba, offsetBit, 64);
-    		//TODO make/use read64()/write64 functions?
-    		offsetBit += 64;  
-    	}
-    }
-
-
     /**
      * 
      * @param ba byte array
@@ -297,7 +272,7 @@ public class BitsHD {
      * @param rangeMax range (inclusive)
      * @return Number of conflicting bits (number of highest conf. bit + 1)
      */
-    public static final int getMaxConflictingBits(long[] v1, long[] v2, int rangeMax) {
+    public static int getMaxConflictingBits(long[] v1, long[] v2, int rangeMax) {
     	int iMin = v1.length - BitsHD.div64(rangeMax) - 1;
     	int rmMod64 = BitsHD.mod64(rangeMax);
     	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
@@ -322,7 +297,7 @@ public class BitsHD {
      * @param rangeMax range (inclusive)
      * @return Number of conflicting bits (number of highest conf. bit + 1)
      */
-    public static final int getMaxConflictingBits(long[] v1, long[] v2, int rangeMin, int rangeMax) {
+    public static int getMaxConflictingBits(long[] v1, long[] v2, int rangeMin, int rangeMax) {
     	int iMin = v1.length - BitsHD.div64(rangeMax) - 1;
     	int iMax = v1.length - BitsHD.div64(rangeMin+1);
     	int rmMod64 = BitsHD.mod64(rangeMax);
@@ -345,7 +320,7 @@ public class BitsHD {
      * @param rangeMax range (inclusive)
      * @return Number of conflicting bits (number of highest conf. bit + 1)
      */
-    public static final boolean hasConflictingBits(long[] v1, long[] v2, int rangeMax) {
+    public static boolean hasConflictingBits(long[] v1, long[] v2, int rangeMax) {
     	int iMin = v1.length - BitsHD.div64(rangeMax) - 1;
     	int rmMod64 = BitsHD.mod64(rangeMax);
     	long mask = rmMod64 == 63 ? (-1L) : ~(-1L << (rmMod64+1));
@@ -368,7 +343,7 @@ public class BitsHD {
      * @param rangeMax range (inclusive)
      * @return Number of conflicting bits (number of highest conf. bit + 1)
      */
-    public static final boolean hasConflictingBits(long[] v1, long[] v2, int rangeMin, int rangeMax) {
+    public static boolean hasConflictingBits(long[] v1, long[] v2, int rangeMin, int rangeMax) {
     	int iMin = v1.length - BitsHD.div64(rangeMax) - 1;
     	int iMax = v1.length - BitsHD.div64(rangeMin+1);
     	int rmMod64 = BitsHD.mod64(rangeMax);

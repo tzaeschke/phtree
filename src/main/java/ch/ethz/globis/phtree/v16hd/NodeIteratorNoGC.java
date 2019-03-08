@@ -1,10 +1,20 @@
 /*
- * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich
- * and Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v16hd;
 
@@ -43,16 +53,6 @@ public class NodeIteratorNoGC<T> {
 		this.niIterator = new BSTIteratorMask();
 	}
 	
-	/**
-	 * 
-	 * @param node
-	 * @param rangeMin The minimum value that any found value should have. If the found value is
-	 *  lower, the search continues.
-	 * @param rangeMax
-	 * @param lower The minimum HC-Pos that a value should have.
-	 * @param upper
-	 * @param checker result verifier, can be null.
-	 */
 	private void reinit(Node node, long[] rangeMin, long[] rangeMax, PhFilter checker) {
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
@@ -97,12 +97,6 @@ public class NodeIteratorNoGC<T> {
 	}
 
 
-	/**
-	 * 
-	 * @param rangeMin
-	 * @param rangeMax
-	 * @param prefix
-	 */
 	private void calcLimits(long[] rangeMin, long[] rangeMax, long[] prefix) {
 		//create limits for the local node. there is a lower and an upper limit. Each limit
 		//consists of a series of DIM bit, one for each dimension.

@@ -2,6 +2,10 @@
 ==========
 Pre-Release 2.1.0
 - (TZ for Improbable) Some cleanup and javadoc updates
+- (TZ for Improbable) Improvements for running multiple PH-Trees concurrently:
+    - removed AtomicInt entry counter
+    - Changed Object/array pools to be unsynchronized and local (to the tree) instead of global and synchronmized.
+
 
 2018-12-04
 ==========

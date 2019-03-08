@@ -1,17 +1,26 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich
- * and Tilmann Zäschke.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree.v13;
 
-import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.v13.PhQueryKnnHS.KnnResultList;
-import ch.ethz.globis.phtree.v13.nt.NtIteratorMinMax;
 
 
 
@@ -27,7 +36,6 @@ public class NodeIteratorFullToList<T> {
 	
 	private final int dims;
 	private Node node;
-	private NtIteratorMinMax<Object> ntIterator;
 	private long[] prefix;
 	private final long maxPos;
 
@@ -43,9 +51,9 @@ public class NodeIteratorFullToList<T> {
 	
 	/**
 	 * 
-	 * @param node
-	 * @param resultList
-	 * @param prefix 
+	 * @param node node
+	 * @param resultList result buffer
+	 * @param prefix prefix
 	 */
 	private void reinit(Node node, KnnResultList<T> resultList, long[] prefix) {
 		this.node = node;
@@ -96,9 +104,7 @@ public class NodeIteratorFullToList<T> {
 
 
 	private void getAll(KnnResultList<T> resultList) {
-		if (node.isNT()) {
-			niFindNext(resultList);
-		} else if (node.isAHC()) {
+		if (node.isAHC()) {
 			getAllAHC(resultList);
 		} else {
 			getNextLHC(resultList);
@@ -124,17 +130,6 @@ public class NodeIteratorFullToList<T> {
 			currentPos = Bits.readArray(node.ba(), currentOffsetKey, Node.IK_WIDTH(dims));
 			currentOffsetKey += postEntryLenLHC;
 			readValue(nEntriesFound-1, currentPos, resultList);
-		}
-	}
-	
-	private void niFindNext(KnnResultList<T> resultList) {
-		if (ntIterator == null) {
-			ntIterator = new NtIteratorMinMax<>(dims);
-		}
-		ntIterator.reset(node.ind(), 0, Long.MAX_VALUE);
-		while (ntIterator.hasNext()) {
-			NtEntry<Object> e = ntIterator.nextEntryReuse();
-			readValue(e.getKdKey(), e.value(), resultList);
 		}
 	}
 

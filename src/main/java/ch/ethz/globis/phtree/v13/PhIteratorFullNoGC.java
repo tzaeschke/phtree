@@ -33,7 +33,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 		private int size = 0;
 		
 		@SuppressWarnings("unchecked")
-		public PhIteratorStack() {
+		PhIteratorStack() {
 			stack = new NodeIteratorFullNoGC[PhTree13.DEPTH_64];
 		}
 
@@ -104,7 +104,6 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 			while (p.increment(result)) {
 				if (result.hasNodeInternal()) {
 					p = stack.prepareAndPush((Node) result.getNodeInternal());
-					continue;
 				} else {
 					resultFree = resultToReturn;
 					resultToReturn = result;

@@ -25,7 +25,6 @@ import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhDistanceL;
@@ -36,16 +35,19 @@ import ch.ethz.globis.phtree.PhRangeQuery;
 import ch.ethz.globis.phtree.PhTree;
 import ch.ethz.globis.phtree.PhTreeConfig;
 import ch.ethz.globis.phtree.PhTreeHelper;
-import ch.ethz.globis.phtree.util.PhMapper;
-import ch.ethz.globis.phtree.util.PhTreeStats;
-import ch.ethz.globis.phtree.util.StringBuilderLn;
-import ch.ethz.globis.phtree.v13.nt.NodeTreeV13;
-import ch.ethz.globis.phtree.v13.nt.NtNode;
+import ch.ethz.globis.phtree.util.*;
+import ch.ethz.globis.phtree.util.unsynced.LongArrayPool;
+import ch.ethz.globis.phtree.util.unsynced.ObjectArrayPool;
+import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
- * 
- * Version 13: Based on Version 11. Some optimizations, for example store HC-Pos in postFix.
+ *
+ *
+ * Version 13:
+ * Version 13SP: Based on Version 11. Some optimizations, for example store HC-Pos in postFix.
+ * 				Version 13SP has 'synchronized' object pools and NT nodes for high dim.
+ * 			    Version 13 has local unsynchronized pools. It also has the NT tree removed.
  * 
  * Version 12: This was an attempt at a persistent version.
  * 
@@ -108,44 +110,44 @@ public class PhTree13<T> implements PhTree<T> {
 	//Dimension. This is the number of attributes of an entity.
 	private final int dims;
 
-	private final AtomicInteger nEntries = new AtomicInteger();
+	private int nEntries = 0;
 
 	private Node root = null;
+
+	private final ObjectPool<Node> nodePool;
+	private final ObjectArrayPool<Object> refPool;
+	private final LongArrayPool bitPool;
 
 	Node getRoot() {
 		return root;
 	}
 
-    void changeRoot(Node newRoot) {
-        this.root = newRoot;
-    }
-
 	public PhTree13(int dim) {
-		dims = dim;
+		this.dims = dim;
+		this.nodePool = ObjectPool.create(Node::createEmpty);
+		this.refPool = ObjectArrayPool.create();
+		this.bitPool = LongArrayPool.create();
 		debugCheck();
 	}
 
 	public PhTree13(PhTreeConfig cnf) {
-		dims = cnf.getDimActual();
-		debugCheck();
-		switch (cnf.getConcurrencyType()) {
-		case PhTreeConfig.CONCURRENCY_NONE: break;
-		default:
+		this(cnf.getDimActual());
+		if (cnf.getConcurrencyType() != PhTreeConfig.CONCURRENCY_NONE) {
 			throw new UnsupportedOperationException("type= " + cnf.getConcurrencyType());
 		}
 	}
 
 	void increaseNrEntries() {
-		nEntries.incrementAndGet();
+		nEntries++;
 	}
 
 	void decreaseNrEntries() {
-		nEntries.decrementAndGet();
+		nEntries--;
 	}
 
 	@Override
 	public int size() {
-		return nEntries.get();
+		return nEntries;
 	}
 
 	@Override
@@ -158,9 +160,6 @@ public class PhTree13<T> implements PhTree<T> {
 		if (node.isAHC()) {
 			stats.nAHC++;
 		}
-		if (node.isNT()) {
-			stats.nNT++;
-		}
 		stats.infixHist[node.getInfixLen()]++;
 		stats.nodeDepthHist[currentDepth]++;
 		int size = node.getEntryCount();
@@ -169,30 +168,14 @@ public class PhTree13<T> implements PhTree<T> {
 		currentDepth += node.getInfixLen();
 		stats.q_totalDepth += currentDepth;
 
-		if (node.values() != null) {
-			for (Object o: node.values()) {
-				if (o instanceof Node) {
-					getStats(currentDepth + 1, (Node) o, stats);
-				} else if (o != null) {
-					stats.q_nPostFixN[currentDepth]++;
-				}
-			}
-		} else {
-			List<Object> entries = new ArrayList<>();
-			NodeTreeV13.getStats(node.ind(), stats, dims, entries);
-			for (Object child: entries) {
-				if (child instanceof Node) {
-					getStats(currentDepth + 1, (Node) child, stats);
-				} else if (child != null) {
-					stats.q_nPostFixN[currentDepth]++;
-				}
-			}
-			if (entries.size() != node.ntGetSize()) {
-				System.err.println("WARNING: entry count mismatch: a-found/ec=" + 
-						entries.size() + "/" + node.getEntryCount());
+		for (Object o: node.values()) {
+			if (o instanceof Node) {
+				getStats(currentDepth + 1, (Node) o, stats);
+			} else if (o != null) {
+				stats.q_nPostFixN[currentDepth]++;
 			}
 		}
-		
+
 		final int REF = 4;//bytes for a reference
 		// this +  value[] + ba[] + ind() + isHC + postLen + infLen + nEntries
 		stats.size += align8(12 + REF + REF + REF + 1 + 1 + 1 + 4);
@@ -200,7 +183,7 @@ public class PhTree13<T> implements PhTree<T> {
 		int nChildren = node.getEntryCount();
 		stats.size += 16 + align8(Bits.arraySizeInByte(node.ba()));
 		stats.size += node.values() != null ? 16 + align8(node.values().length * REF) : 0;
-		if (nChildren == 1 && (node != getRoot()) && nEntries.get() > 1) {
+		if (nChildren == 1 && (node != getRoot()) && nEntries > 1) {
 			//This should not happen! Except for a root node if the tree has <2 entries.
 			System.err.println("WARNING: found lonely node...");
 		}
@@ -242,13 +225,12 @@ public class PhTree13<T> implements PhTree<T> {
     }
 
     private void insertRoot(long[] key, Object value) {
-        root = Node.createNode(dims, 0, DEPTH_64-1);
+        root = Node.createNode(dims, 0, DEPTH_64-1, this);
         long pos = posInArray(key, root.getPostLen());
-        root.addPostPIN(pos, -1, key, value);
+        root.addPostPIN(pos, -1, key, value, this);
         increaseNrEntries();
     }
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public boolean contains(long... key) {
 		Object o = getRoot();
@@ -256,7 +238,7 @@ public class PhTree13<T> implements PhTree<T> {
 			Node currentNode = (Node) o;
 			o = currentNode.doIfMatching(key, true, null, null, null, this);
 		}
-		return (T) o != null;
+		return o != null;
 	}
 
 
@@ -338,8 +320,7 @@ public class PhTree13<T> implements PhTree<T> {
 				" AHC/LHC=" + Node.AHC_LHC_BIAS +  
 				" AHC-on=" + AHC_ENABLED +  
 				" HCI-on=" + HCI_ENABLED +  
-				" NtLimit=" + Node.NT_THRESHOLD +  
-				" NtMaxDim=" + NtNode.MAX_DIM +  
+				" NtLimit=NT_DISABLED" +
 				" DEBUG=" + PhTreeHelper.DEBUG;
 	}
 
@@ -423,7 +404,7 @@ public class PhTree13<T> implements PhTree<T> {
 
 	@Override
 	public PhExtent<T> queryExtent() {
-		return new PhIteratorFullNoGC<T>(this, null).reset();
+		return new PhIteratorFullNoGC<>(this, null).reset();
 	}
 
 
@@ -481,7 +462,7 @@ public class PhTree13<T> implements PhTree<T> {
 //		}
 		
 		PhResultList<T, R> list = new PhResultList.MappingResultList<>(null, mapper,
-				() -> new PhEntry<T>(new long[dims], null));
+				() -> new PhEntry<>(new long[dims], null));
 		
 		NodeIteratorListReuse<T, R> it = new NodeIteratorListReuse<>(dims, list);
 		return it.resetAndRun(getRoot(), min, max, maxResults);
@@ -543,13 +524,8 @@ public class PhTree13<T> implements PhTree<T> {
 	@Override
 	public void clear() {
 		root = null;
-		nEntries.set(0);
+		nEntries = 0;
 	}
-
-	void adjustCounts(int deletedPosts) {
-		nEntries.addAndGet(-deletedPosts);
-	}
-
 
 	/**
 	 * Best HC incrementer ever. 
@@ -570,6 +546,18 @@ public class PhTree13<T> implements PhTree<T> {
 		//latter can happen if there is only one possible value (all filter bits are set).
 		//The <= is also owed to the bug tested in testBugDecrease()
 		//return (r <= v) ? -1 : r;
+	}
+
+	ObjectPool<Node> nodePool() {
+		return nodePool;
+	}
+
+	ObjectArrayPool<Object> objPool() {
+		return refPool;
+	}
+
+	LongArrayPool longPool() {
+		return bitPool;
 	}
 }
 

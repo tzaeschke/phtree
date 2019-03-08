@@ -190,13 +190,13 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 	 * 
 	 * When looking for nMin > 1, one could search for queries with at least nMin results...
 	 * 
-	 * @param val
-	 * @param nMin
+	 * @param val value
+	 * @param nMin min N
 	 */
 	private void nearestNeighbourBinarySearch(long[] val, int nMin) {
 		//special case with minDist = 0
 		if (nMin == 1 && pht.contains(val)) {
-			addEntry(new PhEntry<T>(val, pht.get(val)), val);
+			addEntry(new PhEntry<>(val, pht.get(val)), val);
 			return;
 		}
 
@@ -222,7 +222,7 @@ public class PhQueryKnnMbbPP<T> implements PhKnnQuery<T> {
 		}
 	}
 
-	private final boolean findNeighbours(double maxDist, int nMin, long[] val) {
+	private boolean findNeighbours(double maxDist, int nMin, long[] val) {
 		//Epsilon for calculating the distance depends on DIM, the magnitude of the values and
 		//the precision of the Double mantissa.
 		final double EPS = dims * maxDist / (double)(1L << 51);//2^(53-2));

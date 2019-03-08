@@ -16,6 +16,7 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import ch.ethz.globis.phtree.v16.PhTree16;
 import org.junit.Test;
 
 import ch.ethz.globis.phtree.v16.Node;
@@ -29,9 +30,10 @@ public class TestBST16 {
 	private static final int N2 = 10*N1;
 	
 	private static final int DIM = 10;
+	private static final PhTree16<Object> tree = new PhTree16<>(DIM);
 	
 	private Node create() {
-		return Node.createNode(DIM, 0, 63);
+		return Node.createNode(DIM, 0, 63, tree);
 	}
 	
 	@Test
@@ -65,7 +67,7 @@ public class TestBST16 {
 	}
 	
 	private List<BSTEntry> createData(int n) {
-		return IntStream.range(0, n).boxed().map(i -> createEntry(i)).collect(Collectors.toList());
+		return IntStream.range(0, n).boxed().map(TestBST16::createEntry).collect(Collectors.toList());
 	}
 	
 	private List<BSTEntry> createDataRND(int seed, int n) {
@@ -84,7 +86,7 @@ public class TestBST16 {
 			//if (i%1000 == 0) 
 			//System.out.println("ins=" + i);
 			//ht.bstPut((Integer)i.getValue(), i);
-			BSTEntry newBE = ht.bstGetOrCreate((int)i.getValue());
+			BSTEntry newBE = ht.bstGetOrCreate((int)i.getValue(), tree);
 			newBE.set((int)i.getValue(), i.getKdKey(), i.getValue());
 			
 			//Check
@@ -102,7 +104,7 @@ public class TestBST16 {
 			BSTEntry e = ht.bstGet((Integer)i.getValue());
 			//assertNotNull("i=" + i, e);
 			int x = (int) e.getValue();
-			assertEquals(i.getValue(), (int) x);
+			assertEquals(i.getValue(), x);
 		}
 		long l22 = System.currentTimeMillis();
 		
@@ -133,7 +135,7 @@ public class TestBST16 {
 		long l31 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
 			//ht.bstPut((Integer)i.getValue(), new BSTEntry(i.getKdKey(), -(Integer)i.getValue()));
-			BSTEntry newBE = ht.bstGetOrCreate((Integer)i.getValue());
+			BSTEntry newBE = ht.bstGetOrCreate((Integer)i.getValue(), tree);
 			newBE.setValue(-(Integer)i.getValue());
 		}
 		long l32 = System.currentTimeMillis();
@@ -142,7 +144,7 @@ public class TestBST16 {
 		//remove some
 		long l41 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
-			assertEquals(-(Integer)i.getValue(), ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null).getValue());
+			assertEquals(-(Integer)i.getValue(), ht.bstRemove((Integer)i.getValue(), i.getKdKey(), null, tree).getValue());
 		}
 		long l42 = System.currentTimeMillis();
 		assertEquals(0, ht.getEntryCount());
@@ -179,12 +181,12 @@ public class TestBST16 {
 		for (int r = 0; r < 10; r++) {
 		
 			for (int i = 0; i < 100000; i++) {
-				BSTEntry e = ht.bstGetOrCreate(i);
+				BSTEntry e = ht.bstGetOrCreate(i, tree);
 				e.set(i, new long[] {i}, i);
 			}
 			
 			for (int i = 0; i < 100000; i++) {
-				BSTEntry e = ht.bstRemove(i, new long[] {i}, null);
+				BSTEntry e = ht.bstRemove(i, new long[] {i}, null, tree);
 				assertEquals(i, (int)e.getValue());
 			}
 		
@@ -205,7 +207,7 @@ public class TestBST16 {
 		BSTIteratorMask iterMask = new BSTIteratorMask().reset(ht.getRoot(), 0, 0xFFFFFFFFFFFEL, ht.getEntryCount());
 		assertFalse(iterMask.hasNextEntry());
 				
-		BSTEntry e2 = ht.bstRemove(12345, null, null);
+		BSTEntry e2 = ht.bstRemove(12345, null, null, tree);
 		assertNull(e2);
 	}
 
