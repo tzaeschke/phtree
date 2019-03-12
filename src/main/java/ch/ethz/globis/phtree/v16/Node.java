@@ -190,17 +190,34 @@ public class Node {
      * @return the position of the most significant conflicting bit (starting with 1) or
      * 0 in case of no conflicts.
      */
-    private static int calcConflictingBits(long[] v1, long[] v2, long mask) {
+	private static int calcConflictingBits(long[] v1, long[] v2, long mask) {
 		//long mask = (1l<<node.getPostLen()) - 1l; // e.g. (0-->0), (1-->1), (8-->127=0x01111111)
-     	//write all differences to diff, we just check diff afterwards
+		//write all differences to diff, we just check diff afterwards
 		long diff = 0;
 		for (int i = 0; i < v1.length; i++) {
 			diff |= (v1[i] ^ v2[i]);
 		}
-    	return Long.SIZE-Long.numberOfLeadingZeros(diff & mask);
-    }
-    
-    
+		return Long.SIZE-Long.numberOfLeadingZeros(diff & mask);
+	}
+
+
+	/**
+	 * @param v1 key 1
+	 * @param v2 key 2
+	 * @return the position of the most significant conflicting bit (starting with 1) or
+	 * 0 in case of no conflicts.
+	 */
+	public static int calcConflictingBits(long[] v1, long[] v2) {
+		//long mask = (1l<<node.getPostLen()) - 1l; // e.g. (0-->0), (1-->1), (8-->127=0x01111111)
+		//write all differences to diff, we just check diff afterwards
+		long diff = 0;
+		for (int i = 0; i < v1.length; i++) {
+			diff |= (v1[i] ^ v2[i]);
+		}
+		return Long.SIZE-Long.numberOfLeadingZeros(diff);
+	}
+
+
 	private void mergeIntoParentNt(long[] key, Node parent, PhTree16<?> tree) {
 		//check if merging is necessary (check children count || isRootNode)
 		if (parent == null || getEntryCount() > 2) {
@@ -341,17 +358,27 @@ public class Node {
 	}
 
 
-	public void decEntryCount() {
-		--entryCnt;
-	}
+    public void decEntryCount() {
+        --entryCnt;
+    }
+
+    public void decEntryCountGlobal(PhTree16<?> tree) {
+        --entryCnt;
+        tree.decreaseNrEntries();
+    }
 
 
 	public void incEntryCount() {
 		++entryCnt;
 	}
 
+	@Deprecated //TODO remove?
+	public void incEntryCountTree(PhTree16<?> tree) {
+		tree.increaseNrEntries();
+	}
 
-	int getInfixLen() {
+
+	public int getInfixLen() {
 		return infixLenStored() - 1;
 	}
 
@@ -388,27 +415,32 @@ public class Node {
 	}
 
 
-	public final BSTEntry bstGetOrCreate(long key, PhTree16<?> tree) {
-		BSTreePage page = getRoot();
-		if (page.isLeaf()) {
-			BSTEntry e = page.getOrCreate(key, null, -1, this);
-			if (e.getKdKey() == null && e.getValue() instanceof BSTreePage) {
-    			BSTreePage newPage = (BSTreePage) e.getValue();
-				root = BSTreePage.create(this, null, page, newPage, tree);
-				e.setValue(null);
-			}
-			return e;
-		}
+    public final BSTEntry bstGetOrCreate(long key, PhTree16<?> tree) {
+        BSTreePage page = getRoot();
+        if (page.isLeaf()) {
+            BSTEntry e = page.getOrCreate(key, null, -1, this);
+            if (e.getKdKey() == null && e.getValue() instanceof BSTreePage) {
+                BSTreePage newPage = (BSTreePage) e.getValue();
+                root = BSTreePage.create(this, null, page, newPage, tree);
+                e.setValue(null);
+            }
+            return e;
+        }
 
-		Object o = page;
-		while (o instanceof BSTreePage && !((BSTreePage)o).isLeaf()) {
-			o = ((BSTreePage)o).getOrCreate(key, this);
-		}
-		return (BSTEntry)o;
-	}
+        Object o = page;
+        while (o instanceof BSTreePage && !((BSTreePage)o).isLeaf()) {
+            o = ((BSTreePage)o).getOrCreate(key, this);
+        }
+        return (BSTEntry)o;
+    }
 
 
-	public BSTEntry bstRemove(long key, long[] kdKey, PhTree16.UpdateInfo ui, PhTree16<?> tree) {
+    public final void bstSetRoot(BSTreePage newRoot) {
+	    this.root = newRoot;
+    }
+
+
+    public BSTEntry bstRemove(long key, long[] kdKey, PhTree16.UpdateInfo ui, PhTree16<?> tree) {
 		final BSTreePage rootPage = getRoot();
 		if (rootPage.isLeaf()) {
 			return rootPage.remove(key, kdKey, this, ui);
@@ -423,17 +455,18 @@ public class Node {
 	}
 
 
-    public <T> BSTEntry bstCompute(long key, long[] kdKey, boolean doIfAbsent, boolean doIfPresent,
+    public <T> BSTEntry bstCompute(long key, long[] kdKey, PhTree16<?> tree, boolean doIfAbsent, boolean doIfPresent,
                                    BiFunction<long[], ? super T, ? extends T> mappingFunction) {
         final BSTreePage rootPage = getRoot();
         if (rootPage.isLeaf()) {
-            return rootPage.computeLeaf(key, kdKey, this, doIfAbsent, doIfPresent, mappingFunction);
+            return rootPage.computeLeaf(key, kdKey, -1, this, doIfAbsent, doIfPresent, mappingFunction);
         }
 
         BSTEntry result = rootPage.findAndCompute(key, kdKey, this, doIfAbsent, doIfPresent, mappingFunction);
         if (rootPage.getNKeys() == 0) {
             root = rootPage.getFirstSubPage();
-            BSTPool.reportFreeNode(rootPage);
+            root.setParent(null);
+            tree.bstPool().reportFreeNode(rootPage);
         }
         return result;
     }
@@ -553,35 +586,64 @@ public class Node {
 		return handleCollision(be, kdKey, value, tree);
 	}
 
-	
-	private Object handleCollision(BSTEntry existingE, long[] kdKey, Object value, PhTree16<?> tree) {
-		//We have two entries in the same location (local hcPos).
-		//Now we need to compare the kdKeys.
-		//If they are identical, we either replace the VALUE or return the SUB-NODE
-		// (that's actually the same, simply return the VALUE)
-		//If the kdKey differs, we have to split, insert a newSubNode and return null.
 
-		Object localVal = existingE.getValue();
-		if (localVal instanceof Node) {
-			Node subNode = (Node) localVal;
-			if (subNode.getInfixLen() > 0) {
-				long mask = calcInfixMask(subNode.getPostLen());
-				return insertSplit(existingE, kdKey, value, mask, tree);
-			}
-			//No infix conflict, just traverse subnode
-			return localVal;
-		} else {
-			if (getPostLen() > 0) {
-				return insertSplit(existingE, kdKey, value, -1L, tree);
-			}
-			//perfect match -> replace value
-			existingE.set(existingE.getKey(), kdKey, value);
-			return localVal;
-		}
-	}
-	
+    private Object handleCollision(BSTEntry existingE, long[] kdKey, Object value, PhTree16<?> tree) {
+        //We have two entries in the same location (local hcPos).
+        //Now we need to compare the kdKeys.
+        //If they are identical, we either replace the VALUE or return the SUB-NODE
+        // (that's actually the same, simply return the VALUE)
+        //If the kdKey differs, we have to split, insert a newSubNode and return null.
 
-	private Object insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, long mask, PhTree16<?> tree) {
+        Object localVal = existingE.getValue();
+        if (localVal instanceof Node) {
+            Node subNode = (Node) localVal;
+            if (subNode.getInfixLen() > 0) {
+                long mask = calcInfixMask(subNode.getPostLen());
+                return insertSplit(existingE, kdKey, value, mask, tree);
+            }
+            //No infix conflict, just traverse subnode
+            return localVal;
+        } else {
+            if (getPostLen() > 0) {
+                return insertSplit(existingE, kdKey, value, -1L, tree);
+            }
+            //perfect match -> replace value
+            existingE.set(existingE.getKey(), kdKey, value);
+            return localVal;
+        }
+    }
+
+
+    public Object handleCollisionForCompute(BSTEntry existingE, long[] kdKey, Object value, PhTree16<?> tree) {
+        //We have two entries in the same location (local hcPos).
+        //Now we need to compare the kdKeys.
+        //If they are identical, we either replace the VALUE or return the SUB-NODE
+        // (that's actually the same, simply return the VALUE)
+        //If the kdKey differs, we have to split, insert a newSubNode and return null.
+
+        Object localVal = existingE.getValue();
+        if (localVal instanceof Node) {
+            Node subNode = (Node) localVal;
+            if (subNode.getInfixLen() > 0) {
+                long mask = calcInfixMask(subNode.getPostLen());
+                return insertSplit(existingE, kdKey, value, mask, tree);
+            }
+            //No infix conflict, just traverse subnode
+            return localVal;
+        } else {
+            if (getPostLen() > 0) {
+                return insertSplit(existingE, kdKey, value, -1L, tree);
+            }
+            //perfect match -> replace value
+            existingE.set(existingE.getKey(), kdKey, value);
+            return localVal;
+        }
+    }
+
+
+
+
+    private Object insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, long mask, PhTree16<?> tree) {
 		if (mask == 0) {
 			//There won't be any split, no need to check.
 			return currentEntry.getValue();
@@ -624,14 +686,12 @@ public class Node {
 	}
 
     <T> Object computeEntry(long hcPos, long[] keyToMatch, Node parent, PhTree16<?> tree,
+                            boolean doIfAbsent, boolean doIfPresent,
                             BiFunction<long[], ? super T, ? extends T> mappingFunction) {
-        Object v = computeEntry(hcPos, keyToMatch, mappingFunction);
-        if (v != null && !(v instanceof Node)) {
-            //Found and removed entry.
-            tree.decreaseNrEntries();
-            if (getEntryCount() == 1) {
-                mergeIntoParentNt(keyToMatch, parent, tree);
-            }
+        Object v = computeEntry(hcPos, keyToMatch, tree, doIfAbsent, doIfPresent, mappingFunction);
+        //Check for removed elements
+        if (getEntryCount() == 1) {
+            mergeIntoParentNt(keyToMatch, parent, tree);
         }
         return v;
     }
@@ -667,10 +727,10 @@ public class Node {
         return prev == null ? null : prev.getValue();
     }
 
-    private <T> Object computeEntry(long hcPos, long[] key,
+    private <T> Object computeEntry(long hcPos, long[] key, PhTree16<?> tree, boolean doIfAbsent, boolean doIfPresent,
                                     BiFunction<long[], ? super T, ? extends T> mappingFunction) {
         //Only remove value-entries, node-entries are simply returned without removing them
-        BSTEntry prev = bstCompute(hcPos, key, mappingFunction);
+        BSTEntry prev = bstCompute(hcPos, key, tree,  doIfAbsent, doIfPresent, mappingFunction);
         //return values:
         // - null -> not found / remove failed
         // - Node -> recurse node
@@ -709,31 +769,6 @@ public class Node {
     }
 
 
-    public static <T> REMOVE_OP bstInternalRemoveCallback(BSTEntry currentEntry, long[] key,
-                                                          BiFunction<long[], ? super T, ? extends T> mappingFunction) {
-        if (matches(currentEntry, key)) {
-            if (currentEntry.getValue() instanceof Node) {
-                return REMOVE_OP.KEEP_RETURN;
-            }
-            if (ui != null) {
-                //replace
-                int bitPosOfDiff = Node.calcConflictingBits(key, ui.newKey, -1L);
-                if (bitPosOfDiff <= getPostLen()) {
-                    //replace
-                    //simply replace kdKey!!
-                    //Replacing the long[] should be correct (and fastest, and avoiding GC)
-                    currentEntry.set(currentEntry.getKey(), ui.newKey, currentEntry.getValue());
-                    return REMOVE_OP.KEEP_RETURN;
-                } else {
-                    ui.insertRequired = bitPosOfDiff;
-                }
-            }
-            return REMOVE_OP.REMOVE_RETURN;
-        }
-        return REMOVE_OP.KEEP_RETURN_NULL;
-    }
-
-
     BSTEntry getEntry(long hcPos, long[] keyToMatch) {
         BSTEntry be = bstGet(hcPos);
         if (be == null) {
@@ -746,10 +781,11 @@ public class Node {
     }
 
 
-    private boolean matches(BSTEntry be, long[] keyToMatch) {
+    public boolean matches(BSTEntry be, long[] keyToMatch) {
         //This is always 0, unless we decide to put several keys into a single array
         if (be.getValue() instanceof Node) {
             Node sub = (Node) be.getValue();
+            //TODO 2019 is this vectorizable?
             if (sub.getInfixLen() > 0) {
                 final long mask = calcInfixMask(sub.getPostLen());
                 return checkKdKey(be.getKdKey(), keyToMatch, mask);
@@ -771,6 +807,10 @@ public class Node {
 
     private static boolean checkKdKey(long[] allKeys, long[] keyToMatch) {
         for (int i = 0; i < keyToMatch.length; i++) {
+            //TODO 2019
+//            if (allKeys[i] != keyToMatch[i]) {
+//                return false;
+//            }
             if ((allKeys[i] ^ keyToMatch[i]) != 0) {
                 return false;
             }
@@ -810,6 +850,10 @@ public class Node {
             this.key = key;
             kdKey = k;
             value = v;
+        }
+
+        public BSTEntry() {
+            //for pool
         }
 
         public long getKey() {

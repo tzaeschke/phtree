@@ -227,5 +227,16 @@ public abstract class PhTreeHelper {
 		}
     }
 
+
+	public static <T> Object maskNull(T value) {
+		return value == null ? PhTreeHelper.NULL : value;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> T unmaskNull(Object value) {
+		return value == PhTreeHelper.NULL ? null : (T) value;
+	}
+
+
 }
 

@@ -30,7 +30,8 @@ public class BSTPool {
     private final ObjectArrayPool<BSTEntry> entryArrayPool = ObjectArrayPool.create(n -> new BSTEntry[n]);
     private final LongArrayPool longArrayPool = LongArrayPool.create();
 	private final ObjectArrayPool<BSTreePage> pageArrayPool = ObjectArrayPool.create(n -> new BSTreePage[n]);
-    private final ObjectPool<BSTreePage> pagePool = ObjectPool.create(null);
+	private final ObjectPool<BSTreePage> pagePool = ObjectPool.create(null);
+	private final ObjectPool<BSTEntry> poolEntries = ObjectPool.create(BSTEntry::new);
 
     public static BSTPool create(){
     	return new BSTPool();
@@ -132,4 +133,12 @@ public class BSTPool {
 		return new BSTreePage(ind, parent, isLeaf, leftPredecessor, tree);
 	}
 
+	public BSTEntry getEntry() {
+    	return poolEntries.get();
+	}
+
+	public void offerEntry(BSTEntry entry) {
+    	entry.set(0, null, null);
+    	poolEntries.offer(entry);
+	}
 }
