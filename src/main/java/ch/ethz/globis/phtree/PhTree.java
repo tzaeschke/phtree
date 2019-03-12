@@ -208,7 +208,7 @@ public interface PhTree<T> {
 	static <T> PhTree<T> create(int dim) {
 		if (dim > 60) {
 			return new PhTree16HD<>(dim);
-		} else if (dim >= 8) {
+		} else if (dim >= 0) {
 			return new PhTree16<>(dim);
 		}
 		return new PhTree13<>(dim);
@@ -224,7 +224,7 @@ public interface PhTree<T> {
 	static <T> PhTree<T> create(PhTreeConfig cfg) {
 		if (cfg.getDim() > 60) {
 			return new PhTree16HD<>(cfg);
-		} else if (cfg.getDim() >= 8) {
+		} else if (cfg.getDim() >= 0) {
 			return new PhTree16<>(cfg);
 		}
 		return new PhTree13<>(cfg);

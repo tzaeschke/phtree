@@ -266,6 +266,7 @@ public class Node {
 	 * @param value new value
 	 */
 	private void writeEntry(int pin, long hcPos, long[] newKey, Object value, PhTree16<?> tree) {
+	    //TODO remnove PIN and initialize new nodes in a faster way!
 		if (value instanceof Node) {
 			Node node = (Node) value;
 			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;  
@@ -455,15 +456,18 @@ public class Node {
 	}
 
 
-    public <T> BSTEntry bstCompute(long key, long[] kdKey, PhTree16<?> tree, boolean doIfAbsent, boolean doIfPresent,
+    public <T> Object bstCompute(long key, long[] kdKey, PhTree16<?> tree, boolean doIfAbsent, boolean doIfPresent,
                                    BiFunction<long[], ? super T, ? extends T> mappingFunction) {
-        final BSTreePage rootPage = getRoot();
-        if (rootPage.isLeaf()) {
-            return rootPage.computeLeaf(key, kdKey, -1, this, doIfAbsent, doIfPresent, mappingFunction);
+        BSTreePage page = getRoot();
+        int pos = -1;
+        while (!page.isLeaf()) {
+            pos = page.binarySearchInnerNode(key);
+            page = page.getSubPages()[pos];
         }
+        Object result = page.computeLeaf(key, kdKey, pos, this, doIfAbsent, doIfPresent, mappingFunction);
 
-        BSTEntry result = rootPage.findAndCompute(key, kdKey, this, doIfAbsent, doIfPresent, mappingFunction);
-        if (rootPage.getNKeys() == 0) {
+        BSTreePage rootPage = getRoot();
+        if (!rootPage.isLeaf() && rootPage.getNKeys() == 0) {
             root = rootPage.getFirstSubPage();
             root.setParent(null);
             tree.bstPool().reportFreeNode(rootPage);
@@ -688,7 +692,7 @@ public class Node {
     <T> Object computeEntry(long hcPos, long[] keyToMatch, Node parent, PhTree16<?> tree,
                             boolean doIfAbsent, boolean doIfPresent,
                             BiFunction<long[], ? super T, ? extends T> mappingFunction) {
-        Object v = computeEntry(hcPos, keyToMatch, tree, doIfAbsent, doIfPresent, mappingFunction);
+        Object v = bstCompute(hcPos, keyToMatch, tree,  doIfAbsent, doIfPresent, mappingFunction);
         //Check for removed elements
         if (getEntryCount() == 1) {
             mergeIntoParentNt(keyToMatch, parent, tree);
@@ -713,24 +717,6 @@ public class Node {
     private Object removeEntry(long hcPos, long[] key, UpdateInfo ui, PhTree16<?> tree) {
         //Only remove value-entries, node-entries are simply returned without removing them
         BSTEntry prev = bstRemove(hcPos, key, ui, tree);
-        //return values:
-        // - null -> not found / remove failed
-        // - Node -> recurse node
-        // - T -> remove success
-        //Node: removing a node is never necessary: When values are removed from the PH-Tree, nodes are replaced
-        // with vales from sub-nodes, but they are never simply removed.
-        //-> The BST.remove() needs to do:
-        //  - Key not found: no delete, return null
-        //  - No match: no delete, return null
-        //  - Match Node: no delete, return Node
-        //  - Match Value: delete, return value
-        return prev == null ? null : prev.getValue();
-    }
-
-    private <T> Object computeEntry(long hcPos, long[] key, PhTree16<?> tree, boolean doIfAbsent, boolean doIfPresent,
-                                    BiFunction<long[], ? super T, ? extends T> mappingFunction) {
-        //Only remove value-entries, node-entries are simply returned without removing them
-        BSTEntry prev = bstCompute(hcPos, key, tree,  doIfAbsent, doIfPresent, mappingFunction);
         //return values:
         // - null -> not found / remove failed
         // - Node -> recurse node
