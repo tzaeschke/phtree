@@ -9,6 +9,7 @@ package ch.ethz.globis.phtree.test;
 import ch.ethz.globis.phtree.PhTree;
 import ch.ethz.globis.phtree.test.util.TestSuper;
 import ch.ethz.globis.phtree.test.util.TestUtil;
+import ch.ethz.globis.phtree.v13.PhTree13;
 import ch.ethz.globis.phtree.v16.PhTree16;
 import org.junit.Test;
 
@@ -23,7 +24,7 @@ public class TestJava8MapAPI extends TestSuper {
 	private <T> PhTree<T> create(int dim) {
 		//return TestUtil.newTree(dim);
 		//TODO
-		return new PhTree16<>(dim);
+		return new PhTree13<>(dim);
 	}
 
 	@Test
