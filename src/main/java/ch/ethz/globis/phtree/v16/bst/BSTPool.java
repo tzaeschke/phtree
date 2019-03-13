@@ -28,10 +28,10 @@ import ch.ethz.globis.phtree.v16.PhTree16;
 public class BSTPool {
 
     private final ObjectArrayPool<BSTEntry> entryArrayPool = ObjectArrayPool.create(n -> new BSTEntry[n]);
-    private final LongArrayPool longArrayPool = LongArrayPool.create();
+    private final LongArrayPool keyPool = LongArrayPool.create();
 	private final ObjectArrayPool<BSTreePage> pageArrayPool = ObjectArrayPool.create(n -> new BSTreePage[n]);
 	private final ObjectPool<BSTreePage> pagePool = ObjectPool.create(null);
-	private final ObjectPool<BSTEntry> poolEntries = ObjectPool.create(BSTEntry::new);
+	private final ObjectPool<BSTEntry> entryPool = ObjectPool.create(BSTEntry::new);
 
     public static BSTPool create(){
     	return new BSTPool();
@@ -70,7 +70,7 @@ public class BSTPool {
      * @return New array.
      */
     public long[] arrayCreateLong(int newSize) {
-    	return longArrayPool.getArray(newSize);
+    	return keyPool.getArray(newSize);
 	}
 
 	
@@ -81,9 +81,9 @@ public class BSTPool {
      * @return New array larger array.
      */
     public long[] arrayExpand(long[] oldA, int newSize) {
-    	long[] newA = longArrayPool.getArray(newSize);
+    	long[] newA = keyPool.getArray(newSize);
     	System.arraycopy(oldA, 0, newA, 0, oldA.length);
-    	longArrayPool.offer(oldA);
+    	keyPool.offer(oldA);
     	return newA;
 	}
 
@@ -112,7 +112,7 @@ public class BSTPool {
 
 	
 	public void reportFreeNode(BSTreePage p) {
-		longArrayPool.offer(p.getKeys());
+		keyPool.offer(p.getKeys());
 		if (p.isLeaf()) {
 			p.updateNeighborsRemove();
 			entryArrayPool.offer(p.getValues());
@@ -134,11 +134,11 @@ public class BSTPool {
 	}
 
 	public BSTEntry getEntry() {
-    	return poolEntries.get();
+    	return entryPool.get();
 	}
 
-	public void offerEntry(BSTEntry entry) {
+	void offerEntry(BSTEntry entry) {
     	entry.set(0, null, null);
-    	poolEntries.offer(entry);
+    	entryPool.offer(entry);
 	}
 }

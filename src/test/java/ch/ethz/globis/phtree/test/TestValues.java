@@ -30,30 +30,30 @@ import ch.ethz.globis.phtree.test.util.TestUtil;
 
 public class TestValues extends TestSuper {
 
-    public static <T> PhTree<T> createTree(int dim, int depth) {
-    	return TestUtil.newTree(dim, depth);
+    private static <T> PhTree<T> createTree(int dim) {
+    	return TestUtil.newTree(dim);
     }
     
 	@Test
 	public void test3D() {
-		smokeTest(10000, 3, 32, 0);
+		smokeTest(10000, 3, 0);
 	}
 	
 	@Test
 	public void test2D() {
-		smokeTest(100000, 2, 32, 0);
+		smokeTest(100000, 2, 0);
 	}
 	
 	@Test
 	public void test2D_8() {
-		smokeTest(100, 2, 32, 2);
+		smokeTest(100, 2, 2);
 	}
 	
 	@Test
 	public void test2D_8_Bug10b() {
 //		for (int i = 0; i < 10000; i++) {
 //			System.out.println("iii=" + i);
-			smokeTest(5, 2, 32, 1619);
+			smokeTest(5, 2, 1619);
 //		}
 	}
 	
@@ -61,13 +61,13 @@ public class TestValues extends TestSuper {
 	public void test2D_8_BugNP() {
 //		for (int i = 0; i < 1000; i++) {
 //			System.out.println("iii=" + i);
-			smokeTest(20, 2, 32, 205);
+			smokeTest(20, 2, 205);
 //		}
 	}
 	
-	private void smokeTest(int N, int DIM, int DEPTH, long SEED) { 
+	private void smokeTest(int N, int DIM, long SEED) {
 		Random R = new Random(SEED);
-		PhTree<Integer> ind = createTree(DIM, DEPTH);
+		PhTree<Integer> ind = createTree(DIM);
 		long[][] keys = new long[N][DIM];
 		for (int i = 0; i < N; i++) {
 			for (int d = 0; d < DIM; d++) {
@@ -78,7 +78,7 @@ public class TestValues extends TestSuper {
 				continue;
 			}
 			//build
-			assertNull(ind.put(keys[i], Integer.valueOf(i)));
+			assertNull(ind.put(keys[i], i));
 			//System.out.println("key=" + Bits.toBinary(keys[i], 64));
 			//System.out.println(ind);
 			assertTrue("i="+ i, ind.contains(keys[i]));
@@ -94,7 +94,7 @@ public class TestValues extends TestSuper {
 		
 		//update
 		for (int i = 0; i < N; i++) {
-			assertEquals(i, (int)ind.put(keys[i], Integer.valueOf(-i)));
+			assertEquals(i, (int)ind.put(keys[i], -i));
 			assertTrue(ind.contains(keys[i]));
 			assertEquals(-i, (int)ind.get(keys[i]));
 		}
@@ -124,7 +124,7 @@ public class TestValues extends TestSuper {
 				{0b00100001, 0b10110100},//   v=null
 		};
 		
-		PhTree<Integer> ind = createTree(2, 16);
+		PhTree<Integer> ind = createTree(2);
 
 		ind.put(keys[0], 0);
 		assertNotNull(ind.get(keys[0]));
@@ -156,7 +156,7 @@ public class TestValues extends TestSuper {
 				{0.7713129661706796, 0.7126874281456893, 0.2112353749298962, 0.7830924897671794, 0.945333238959629, 0.014236355103667941} 
 		};
 		
-		PhTree<Object> ind = createTree(DIM, 64);
+		PhTree<Object> ind = createTree(DIM);
 
 		Object V = new Object();
 		for (int i = 0; i < keysD.length; i++) {
@@ -173,9 +173,8 @@ public class TestValues extends TestSuper {
 	public void testQuery() {
 		int N = 1000;
 		int DIM = 3;
-		int DEPTH = 64; 
 		Random R = new Random(0);
-		PhTree<Integer> ind = createTree(DIM, DEPTH);
+		PhTree<Integer> ind = createTree(DIM);
 		long[][] keys = new long[N][DIM];
 		for (int i = 0; i < N; i++) {
 			for (int d = 0; d < DIM; d++) {
@@ -186,8 +185,10 @@ public class TestValues extends TestSuper {
 				continue;
 			}
 			//build
-			assertNull(ind.put(keys[i], Integer.valueOf(i)));
+			assertNull(ind.put(keys[i], i));
 			assertTrue(ind.contains(keys[i]));
+			ind.getStats();
+			assertEquals(i+1, ind.size());
 			assertEquals(i, (int)ind.get(keys[i]));
 		}
 
@@ -242,8 +243,7 @@ public class TestValues extends TestSuper {
 	@Test
 	public void testQueryBug() {
 		int DIM = 3;
-		int DEPTH = 64; 
-		PhTree<Integer> ind = createTree(DIM, DEPTH);
+		PhTree<Integer> ind = createTree(DIM);
 		long[][] keys = {
 				{629649304, -1266264776, 99807007},
 				{5955764, -1946737912, 39620447},
@@ -256,7 +256,7 @@ public class TestValues extends TestSuper {
 				continue;
 			}
 			//build
-			assertNull(ind.put(keys[i], Integer.valueOf(i)));
+			assertNull(ind.put(keys[i], i));
 			assertTrue(ind.contains(keys[i]));
 			assertEquals(i, (int)ind.get(keys[i]));
 		}
@@ -312,9 +312,8 @@ public class TestValues extends TestSuper {
 	public void testQuerySet() {
 		int N = 1000;
 		int DIM = 3;
-		int DEPTH = 64; 
 		Random R = new Random(0);
-		PhTree<Integer> ind = createTree(DIM, DEPTH);
+		PhTree<Integer> ind = createTree(DIM);
 		long[][] keys = new long[N][DIM];
 		for (int i = 0; i < N; i++) {
 			for (int d = 0; d < DIM; d++) {
@@ -325,7 +324,7 @@ public class TestValues extends TestSuper {
 				continue;
 			}
 			//build
-			assertNull(ind.put(keys[i], Integer.valueOf(i)));
+			assertNull(ind.put(keys[i], i));
 			assertTrue(ind.contains(keys[i]));
 			assertEquals(i, (int)ind.get(keys[i]));
 		}

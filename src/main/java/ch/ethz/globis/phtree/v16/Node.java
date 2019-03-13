@@ -171,19 +171,39 @@ public class Node {
         int newPostLen = mcb - 1;
         Node newNode = createNode(key1.length, newLocalInfLen, newPostLen, tree);
 
-        long posSub1 = posInArray(key1, newPostLen);
+		long posSub1 = posInArray(key1, newPostLen);
         long posSub2 = posInArray(key2, newPostLen);
+		BSTEntry e1 = newNode.createEntry(posSub1, key1, val1, tree);
+		BSTEntry e2 = newNode.createEntry(posSub2, key2, val2, tree);
         if (posSub1 < posSub2) {
-        	newNode.writeEntry(0, posSub1, key1, val1, tree);
-        	newNode.writeEntry(1, posSub2, key2, val2, tree);
+        	newNode.root.init(e1, e2);
         } else {
-        	newNode.writeEntry(0, posSub2, key2, val2, tree);
-        	newNode.writeEntry(1, posSub1, key1, val1, tree);
+			newNode.root.init(e2, e1);
         }
+        newNode.entryCnt = 2;
         return newNode;
     }
 
-    /**
+	/**
+	 * Writes a complete entry.
+	 * This should only be used for new nodes.
+	 *
+	 * @param hcPos HC pos
+	 * @param newKey new key
+	 * @param value new value
+	 */
+	private BSTEntry createEntry(long hcPos, long[] newKey, Object value, PhTree16<?> tree) {
+		if (value instanceof Node) {
+			Node node = (Node) value;
+			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;
+			node.setInfixLen(newSubInfixLen);
+		}
+		BSTEntry e = tree.bstPool().getEntry();
+		e.set(hcPos, newKey, value);
+		return e;
+	}
+
+	/**
      * @param v1 key 1
      * @param v2 key 2
      * @param mask bits to consider (1) and to ignore (0)
@@ -253,26 +273,6 @@ public class Node {
 		//TODO return old key/BSTEntry to pool
 		
 		discardNode(tree);
-	}
-
-
-	/**
-	 * Writes a complete entry.
-	 * This should only be used for new nodes.
-	 * 
-	 * @param pin position in node
-	 * @param hcPos HC pos
-	 * @param newKey new key
-	 * @param value new value
-	 */
-	private void writeEntry(int pin, long hcPos, long[] newKey, Object value, PhTree16<?> tree) {
-	    //TODO remnove PIN and initialize new nodes in a faster way!
-		if (value instanceof Node) {
-			Node node = (Node) value;
-			int newSubInfixLen = postLenStored() - node.postLenStored() - 1;  
-			node.setInfixLen(newSubInfixLen);
-		} 
-		addEntry(hcPos, newKey, value, tree);
 	}
 
 	
@@ -373,8 +373,7 @@ public class Node {
 		++entryCnt;
 	}
 
-	@Deprecated //TODO remove?
-	public void incEntryCountTree(PhTree16<?> tree) {
+	public static void incEntryCountTree(PhTree16<?> tree) {
 		tree.increaseNrEntries();
 	}
 
@@ -616,35 +615,6 @@ public class Node {
             return localVal;
         }
     }
-
-
-    public Object handleCollisionForCompute(BSTEntry existingE, long[] kdKey, Object value, PhTree16<?> tree) {
-        //We have two entries in the same location (local hcPos).
-        //Now we need to compare the kdKeys.
-        //If they are identical, we either replace the VALUE or return the SUB-NODE
-        // (that's actually the same, simply return the VALUE)
-        //If the kdKey differs, we have to split, insert a newSubNode and return null.
-
-        Object localVal = existingE.getValue();
-        if (localVal instanceof Node) {
-            Node subNode = (Node) localVal;
-            if (subNode.getInfixLen() > 0) {
-                long mask = calcInfixMask(subNode.getPostLen());
-                return insertSplit(existingE, kdKey, value, mask, tree);
-            }
-            //No infix conflict, just traverse subnode
-            return localVal;
-        } else {
-            if (getPostLen() > 0) {
-                return insertSplit(existingE, kdKey, value, -1L, tree);
-            }
-            //perfect match -> replace value
-            existingE.set(existingE.getKey(), kdKey, value);
-            return localVal;
-        }
-    }
-
-
 
 
     private Object insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, long mask, PhTree16<?> tree) {

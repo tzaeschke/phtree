@@ -86,6 +86,20 @@ public class BSTreePage {
 		}
 	}
 
+	public void init(BSTEntry e1, BSTEntry e2) {
+		if (!isLeaf) {
+			throw new IllegalStateException();
+		}
+		if (nEntries > 0) {
+			throw new IllegalStateException("nEntries=" + nEntries);
+		}
+		values[0] = e1;
+		keys[0] = e1.getKey();
+		values[1] = e2;
+		keys[1] = e2.getKey();
+		nEntries = 2;
+	}
+
 	public static BSTreePage create(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor,
                                     PhTree16<?> tree) {
 		return tree.bstPool().getNode(ind, parent, isLeaf, leftPredecessor, tree);
@@ -443,7 +457,6 @@ public class BSTreePage {
 				newP.setParent( this );
 				nEntries++;
 			}
-			return;
 		} else {
 			//treat page overflow
 			BSTreePage newInner = ind.bstCreatePage(parent, false, null, tree);
@@ -623,53 +636,38 @@ public class BSTreePage {
             throw new IllegalStateException();
         }
 
-        //Key found, but entry does not match
+		if (currentValue instanceof Node) {
+			Node subNode = (Node) currentValue;
+			if (subNode.getPostLen() + 1 >= maxConflictingBits) {
+				return subNode;
+			}
+		}
+
+		//Key found, but entry does not match
         if (doIfAbsent) {
             //We have two entries in the same location (local hcPos).
-            //Now we need to compare the kdKeys.
-            //If they are identical, we either replace the VALUE or return the SUB-NODE
-            // (that's actually the same, simply return the VALUE)
             //If the kdKey differs, we have to split, insert a newSubNode and return null.
-            if (currentValue instanceof Node) {
-                Node subNode = (Node) currentValue;
-                if (subNode.getPostLen() + 1 >= maxConflictingBits) {
-                    return subNode;
-                }
-                T newValue = mappingFunction.apply(kdKey, null);
-                if (newValue != null) {
-                    insertSplit(currentEntry, kdKey, newValue, tree, maxConflictingBits, node);
-                    return newValue;
-                }
-                return null;
-            } else {
-                if (node.getPostLen() > 0) {
-                    T newValue = mappingFunction.apply(kdKey, null);
-                    if (newValue != null) {
-                        insertSplit(currentEntry, kdKey, newValue, tree, maxConflictingBits, node);
-                        return newValue;
-                    } else {
-                        return null;
-                    }
-                }
-
-                //Cannot happen. If postLen==0 then MCB cannot be > 0
-                throw new IllegalStateException();
-            }
+			T newValue = mappingFunction.apply(kdKey, null);
+			if (newValue != null) {
+				insertSplit(currentEntry, kdKey, newValue, tree, maxConflictingBits, node);
+				return newValue;
+			}
+			return null;
         }
-        throw new UnsupportedOperationException();
+        //Return 'null' when ignoring absent values
+        return null;
 	}
 
 	private BSTEntry addForCompute(long key, int pos, int posPageInParent, Node node) {
 		BSTEntry o = create(key, pos, parent, posPageInParent, node);
 		//TODO FIX this!!!
-		node.incEntryCountTree(tree);
+		Node.incEntryCountTree(tree);
 		if (o.getKdKey() == null && o.getValue() instanceof BSTreePage) {
 			//add page
 			BSTreePage newPage = (BSTreePage) o.getValue();
 			if (parent != null) {
 				parent.addSubPage(newPage, newPage.getMinKey(), posPageInParent, node);
 			} else {
-				//node.setRoot( tree.bstPool().getNode(node, null, false, this, tree) );
 				node.bstSetRoot( create(node, null, this, newPage, tree) );
 			}
 			o.setValue(null);
@@ -709,7 +707,7 @@ public class BSTreePage {
         Node newNode = node.createNode(newKey, newValue, localKdKey, currentEntry.getValue(), maxConflictingBits, tree);
         //replace local entry with new subnode
         currentEntry.set(currentEntry.getKey(), tree.longPool().arrayClone(localKdKey), newNode);
-        node.incEntryCountTree(tree);
+        Node.incEntryCountTree(tree);
     }
 
     private void checkUnderflowSubpageLeaf(int pos, Node ind) {
@@ -992,6 +990,7 @@ public class BSTreePage {
 		nextLeaf = null;
 		prevLeaf = null;
 		parent = null;
+		nEntries = 0;
 	}
 
 	BSTreePage getNextLeaf() {
@@ -1006,5 +1005,4 @@ public class BSTreePage {
 			nextLeaf.prevLeaf = prevLeaf;
 		}
 	}
-
 }

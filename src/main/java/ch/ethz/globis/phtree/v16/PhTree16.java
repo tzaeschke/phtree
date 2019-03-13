@@ -226,15 +226,6 @@ public class PhTree16<T> implements PhTree<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public T put(long[] key, T value) {
-    	//TODO remove
-        if (value != null) {
-            Object[] ooo = new Object[1];
-            compute(key, (longs, t) -> {
-                ooo[0] = t;
-                return value;
-            });
-            return (T) ooo[0];
-        }
 		Object nonNullValue = maskNull(value);
 		if (getRoot() == null) {
 			insertRoot(key, nonNullValue);
@@ -287,21 +278,14 @@ public class PhTree16<T> implements PhTree<T> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public T remove(long... key) {
-		//TODO remove
-		Object[] ooo = new Object[1];
-		compute(key, (longs, t) -> {
-			ooo[0] = t;
-			return null;
-		});
-		return (T) ooo[0];
-//		Object o = getRoot();
-//		Node parentNode = null;
-//		while (o instanceof Node) {
-//			Node currentNode = (Node) o;
-//			o = currentNode.doIfMatching(key, false, parentNode, null, this);
-//			parentNode = currentNode;
-//		}
-//		return (T) o;
+		Object o = getRoot();
+		Node parentNode = null;
+		while (o instanceof Node) {
+			Node currentNode = (Node) o;
+			o = currentNode.doIfMatching(key, false, parentNode, null, this);
+			parentNode = currentNode;
+		}
+		return (T) o;
 	}
 
 	public static class UpdateInfo {
@@ -391,30 +375,9 @@ public class PhTree16<T> implements PhTree<T> {
 
 	@Override
 	public boolean remove(long[] key, T value) {
-		if (getRoot() == null) {
-			return false;
-		}
-
-		Object o = getRoot();
-		Node parentNode = null;
-		while (true) {
-			Node currentNode = (Node) o;
-			long hcPos = posInArray(key, currentNode.getPostLen());
-			BSTEntry e = currentNode.getEntry(hcPos, key);
-			if (e == null) {
-				return false;
-			}
-			o = e.getValue();
-			if (!(o instanceof Node)) {
-				if (Objects.equals(o, maskNull(value))) {
-					//TODO remove Entry directly -> aboid double binary search
-					currentNode.removeEntry(hcPos, key, parentNode, this);
-					return true;
-				}
-				return false;
-			}
-			parentNode = currentNode;
-		}
+		boolean[] o = new boolean[1];
+		computeIfPresent(key, (longs, t) -> (o[0] = Objects.equals(t, value)) ? null : t);
+		return o[0];
 	}
 
 	@Override
@@ -494,6 +457,8 @@ public class PhTree16<T> implements PhTree<T> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	@Override
 	public T computeIfPresent(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
 		if (getRoot() == null) {
 			return null;
@@ -501,28 +466,18 @@ public class PhTree16<T> implements PhTree<T> {
 
 		Object o = getRoot();
 		Node parentNode = null;
-		while (true) {
+		while (o instanceof Node) {
 			Node currentNode = (Node) o;
 			long hcPos = posInArray(key, currentNode.getPostLen());
-			BSTEntry e = currentNode.getEntry(hcPos, key);
-			if (e == null) {
-				return null;
-			}
-			o = e.getValue();
-			if (!(o instanceof Node)) {
-				T newValue = remappingFunction.apply(key, unmaskNull(o));
-				if (newValue == null) {
-					//TODO remove Entry directly -> aboid double binary search
-					currentNode.removeEntry(hcPos, key, parentNode, this);
-					return null;
-				}
-				e.setValue(maskNull(newValue));
-				return newValue;
-			}
+			o = currentNode.computeEntry(hcPos, key, parentNode, this, false, true, remappingFunction);
 			parentNode = currentNode;
+			// Node: recurse
+			// Otherwise: return value
 		}
+		return (T) o;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public T compute(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
 		if (getRoot() == null) {
@@ -535,43 +490,15 @@ public class PhTree16<T> implements PhTree<T> {
 
 		Object o = getRoot();
 		Node parentNode = null;
-		while (true) {
+		while (o instanceof Node) {
 			Node currentNode = (Node) o;
 			long hcPos = posInArray(key, currentNode.getPostLen());
-
 			o = currentNode.computeEntry(hcPos, key, parentNode, this, true, true, remappingFunction);
+			parentNode = currentNode;
             // Node: recurse
             // Otherwise: return value
-            if (!(o instanceof Node)) {
-                return (T) o;
-            }
-            // Null: Stop -> Not found
-            // Other: return value
-
-
-//
-//			BSTEntry e = currentNode.getEntry(hcPos, key);
-//			if (e == null) {
-//				T newValue = remappingFunction.apply(key, null);
-//				if (newValue != null) {
-//					increaseNrEntries();
-//					currentNode.addEntry(hcPos, key, maskNull(newValue), this);
-//				}
-//				return newValue;
-//			}
-//			o = e.getValue();
-//			if (!(o instanceof Node)) {
-//				T newValue = remappingFunction.apply(key, unmaskNull(o));
-//				if (newValue == null) {
-//					//TODO remove Entry directly -> aboid double binary search
-//					currentNode.removeEntry(hcPos, key, parentNode, this);
-//					return null;
-//				}
-//				e.setValue(maskNull(newValue));
-//				return newValue;
-//			}
-			parentNode = currentNode;
 		}
+		return (T) o;
 	}
 
 
@@ -789,7 +716,6 @@ public class PhTree16<T> implements PhTree<T> {
         return nodePool;
     }
 
-    //TODO make private
     public LongArrayPool longPool() {
         return bitPool;
     }
