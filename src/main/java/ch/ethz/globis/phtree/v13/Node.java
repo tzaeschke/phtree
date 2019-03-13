@@ -36,7 +36,7 @@ public class Node {
 	private static final int HC_BITS = 0;  //number of bits required for storing current (HC)-representation
 	private static final int INN_HC_WIDTH = 0; //Index-NotNull: width of not-null flag for post/infix-hc
 	/** Bias towards using AHC. AHC is used if (sizeLHC*AHC_LHC_BIAS) greater than (sizeAHC)  */
-	public static final double AHC_LHC_BIAS = 2.0; 
+	public static final double AHC_LHC_BIAS = 2.0;
 
 	private Object[] values;
 	
@@ -337,6 +337,7 @@ public class Node {
      * @param key2 key 2
      * @param val2 value 2
      * @param mcb most conflicting bit
+	 * @param tree tree
      * @return A new node or 'null' if there are no conflicting bits
      */
     public Node createNode(long[] key1, Object val1, long[] key2, Object val2, int mcb,
@@ -838,7 +839,7 @@ public class Node {
 	private static long mask1100(int zeroBits) {
 		return zeroBits == 64 ? 0 : ((-1L) << zeroBits);
 	}
-	
+
 	private void applyHcPos(long hcPos, long[] valTemplate) {
 		PhTreeHelper.applyHcPos(hcPos, getPostLen(), valTemplate);
 	}

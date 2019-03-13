@@ -28,8 +28,11 @@ public class LongArrayArrayPool {
 	private int[] poolSize;
 
 	public static LongArrayArrayPool create() {
-		return new LongArrayArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
+		if (PhTreeHelper.ARRAY_POOLING) {
+			return new LongArrayArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
 				PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
+		}
+		return new LongArrayArrayPool(0, 0);
 	}
 
 	private LongArrayArrayPool(int maxArraySize, int maxArrayCount) {
@@ -43,7 +46,7 @@ public class LongArrayArrayPool {
 		if (size == 0) {
 			return EMPTY_REF_ARRAY;
 		}
-		if (size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
+		if (size > maxArraySize) {
 			return new long[size][];
 		}
 		int ps = poolSize[size];
@@ -58,7 +61,7 @@ public class LongArrayArrayPool {
 
 	private void offer(long[][] a) {
 		int size = a.length;
-		if (size == 0 || size > maxArraySize || !PhTreeHelper.ARRAY_POOLING) {
+		if (size == 0 || size > maxArraySize) {
 			return;
 		}
 		int ps = poolSize[size];
@@ -106,7 +109,7 @@ public class LongArrayArrayPool {
 	public long[][] arrayCreate(int size) {
     	return getArray(calcArraySize(size));
     }
-    
+
     /**
      * Discards oldA and returns newA.
      * @param oldA old array
