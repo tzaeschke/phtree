@@ -1,6 +1,12 @@
+2019-03-14
+==========
+Pre-Release 2.2.0
+- (TZ for Improbable) Added Java 8 Map API to V13 and V16 (putIfAbsent(), compute(), ...)
+  Only comput() and computeIfPresent() are currently optimized.
+
 2019-02-26
 ==========
-Pre-Release 2.1.0
+Release 2.1.0
 - (TZ for Improbable) Some cleanup and javadoc updates
 - (TZ for Improbable) Improvements for running multiple PH-Trees concurrently:
     - removed AtomicInt entry counter

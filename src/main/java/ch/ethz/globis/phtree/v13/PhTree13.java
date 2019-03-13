@@ -406,25 +406,24 @@ public class PhTree13<T> implements PhTree<T> {
 		return currentValue;
 	}
 
+    @SuppressWarnings("unchecked")
 	@Override
 	public T computeIfPresent(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
 		if (getRoot() == null) {
 			return null;
 		}
 
-		T currentValue = get(key);
-		if (currentValue != null) {
-			T newValue = remappingFunction.apply(key, currentValue);
-			if (newValue == null) {
-				remove(key);
-			} else {
-				put(key, newValue);
-			}
-			return newValue;
-		}
-		return null;
+        Object o = getRoot();
+        Node parentNode = null;
+        while (o instanceof Node) {
+            Node currentNode = (Node) o;
+            o = currentNode.doCompute(key, false, parentNode, this, remappingFunction);
+            parentNode = currentNode;
+        }
+        return (T) o;
 	}
 
+    @SuppressWarnings("unchecked")
 	@Override
 	public T compute(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
 		if (getRoot() == null) {
@@ -435,15 +434,15 @@ public class PhTree13<T> implements PhTree<T> {
 			return newValue;
 		}
 
-		T currentValue = get(key);
-		T newValue = remappingFunction.apply(key, currentValue);
-		if (newValue == null) {
-			remove(key);
-		} else {
-			put(key, newValue);
-		}
-		return newValue;
-	}
+        Object o = getRoot();
+        Node parentNode = null;
+        while (o instanceof Node) {
+            Node currentNode = (Node) o;
+            o = currentNode.doCompute(key, true, parentNode, this, remappingFunction);
+            parentNode = currentNode;
+        }
+        return (T) o;
+    }
 
 	@Override
 	public String toString() {

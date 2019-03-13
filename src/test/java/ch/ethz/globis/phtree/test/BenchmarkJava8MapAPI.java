@@ -41,15 +41,20 @@ public class BenchmarkJava8MapAPI extends TestSuper {
 
 		Scenario s13getPut =
 				new Scenario("PHTree13-GP: ", () -> new PhTree13<>(DIMS), BenchmarkJava8MapAPI::actionGetPut);
+		Scenario s13comp =
+				new Scenario("PHTree13-CO: ", () -> new PhTree13<>(DIMS), BenchmarkJava8MapAPI::actionCompute);
 		Scenario s16getPut =
 				new Scenario("PHTree16-GP: ", () -> new PhTree16<>(DIMS), BenchmarkJava8MapAPI::actionGetPut);
 		Scenario s16comp =
 				new Scenario("PHTree16-CO: ", () -> new PhTree16<>(DIMS), BenchmarkJava8MapAPI::actionCompute);
 
 		test3(data, s13getPut);
+		test3(data, s13comp);
 		test3(data, s16getPut);
 		test3(data, s16comp);
+
 		test3(data, s13getPut);
+		test3(data, s13comp);
 		test3(data, s16getPut);
 		test3(data, s16comp);
 	}
