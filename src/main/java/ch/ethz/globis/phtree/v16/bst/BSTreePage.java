@@ -601,8 +601,7 @@ public class BSTreePage {
 
 
 	public <T> Object computeLeaf(long key, long[] kdKey, int posInParent, Node node,
-                                    boolean doIfAbsent, boolean doIfPresent,
-                                    BiFunction<long[], ? super T, ? extends T> mappingFunction) {
+                                    boolean doIfAbsent, BiFunction<long[], ? super T, ? extends T> mappingFunction) {
 		int pos = binarySearch(key);
 		if (pos < 0) {
 			//key not found
@@ -633,20 +632,17 @@ public class BSTreePage {
                 //return entry with subnode
                 return currentValue;
             }
-            if (doIfPresent) {
-                T newValue = mappingFunction.apply(kdKey, PhTreeHelper.unmaskNull(currentEntry.getValue()));
-                if (newValue == null) {
-                    //remove
-                    removeForCompute(key, pos, posInParent, node);
-                    tree.bstPool().offerEntry(currentEntry);
-                    return null;
-                } else {
-                    //replace (cannot be null)
-                    currentEntry.setValue(newValue);
-                }
-                return newValue;
+            T newValue = mappingFunction.apply(kdKey, PhTreeHelper.unmaskNull(currentEntry.getValue()));
+            if (newValue == null) {
+                //remove
+                removeForCompute(key, pos, posInParent, node);
+                tree.bstPool().offerEntry(currentEntry);
+                return null;
+            } else {
+                //replace (cannot be null)
+                currentEntry.setValue(newValue);
             }
-            throw new IllegalStateException();
+            return newValue;
         }
 
 		if (currentValue instanceof Node) {
@@ -673,7 +669,6 @@ public class BSTreePage {
 
 	private BSTEntry addForCompute(long key, int pos, int posPageInParent, Node node) {
 		BSTEntry o = create(key, pos, parent, posPageInParent, node);
-		//TODO FIX this!!!
 		Node.incEntryCountTree(tree);
 		if (o.getKdKey() == null && o.getValue() instanceof BSTreePage) {
 			//add page
@@ -695,22 +690,18 @@ public class BSTreePage {
 		System.arraycopy(values, i+1, values, i, nEntries-i-1);
 		nEntries--;
 		node.decEntryCountGlobal(tree);
-		//TODO the second clause is a dirty hack because rerely we keep a reference to a parent page that
-        //has already been returned to the pool.
-		if (parent == null || parent.subPages == null) {
+		if (parent == null) {
 			return;
 		}
 		BSTreePage parentPage = parent;
 		parentPage.checkUnderflowSubpageLeaf(posPageInParent, node);
 
-		parentPage = parentPage.parent;
-		while (parentPage != null) {
-			//TODO can/should ve avoid here? ALternative? create stack.
-			//TODO use posInParent for first level
-			pos = parentPage.binarySearchInnerNode(key);
-			parentPage.handleUnderflowSubInner(pos);
-			parentPage = parentPage.parent;
-		}
+        parentPage = parentPage.parent;
+        while (parentPage != null) {
+            pos = parentPage.binarySearchInnerNode(key);
+            parentPage.handleUnderflowSubInner(pos);
+            parentPage = parentPage.parent;
+        }
 	}
 
 
@@ -832,7 +823,7 @@ public class BSTreePage {
 	 */
 	private void replaceChildPage(BSTreePage subChild, int pos) {
 		subPages[pos] = subChild;
-		if (pos>0) {
+		if (pos > 0) {
 			keys[pos-1] = subChild.getMinKey();
 		}
 		subChild.setParent(this);

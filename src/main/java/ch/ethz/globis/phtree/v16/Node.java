@@ -449,13 +449,14 @@ public class Node {
 		BSTEntry result = rootPage.findAndRemove(key, kdKey, this, ui);
 		if (rootPage.getNKeys() == 0) {
 			root = rootPage.getFirstSubPage();
+			root.setParent(null);
 			tree.bstPool().reportFreeNode(rootPage);
 		}
 		return result;
 	}
 
 
-    public <T> Object bstCompute(long key, long[] kdKey, PhTree16<?> tree, boolean doIfAbsent, boolean doIfPresent,
+    public <T> Object bstCompute(long key, long[] kdKey, PhTree16<?> tree, boolean doIfAbsent,
                                    BiFunction<long[], ? super T, ? extends T> mappingFunction) {
         BSTreePage page = getRoot();
         int pos = -1;
@@ -463,7 +464,7 @@ public class Node {
             pos = page.binarySearchInnerNode(key);
             page = page.getSubPages()[pos];
         }
-        Object result = page.computeLeaf(key, kdKey, pos, this, doIfAbsent, doIfPresent, mappingFunction);
+        Object result = page.computeLeaf(key, kdKey, pos, this, doIfAbsent, mappingFunction);
 
         BSTreePage rootPage = getRoot();
         if (!rootPage.isLeaf() && rootPage.getNKeys() == 0) {
@@ -660,9 +661,8 @@ public class Node {
 	}
 
     <T> Object computeEntry(long hcPos, long[] keyToMatch, Node parent, PhTree16<?> tree,
-                            boolean doIfAbsent, boolean doIfPresent,
-                            BiFunction<long[], ? super T, ? extends T> mappingFunction) {
-        Object v = bstCompute(hcPos, keyToMatch, tree,  doIfAbsent, doIfPresent, mappingFunction);
+                            boolean doIfAbsent, BiFunction<long[], ? super T, ? extends T> mappingFunction) {
+        Object v = bstCompute(hcPos, keyToMatch, tree,  doIfAbsent, mappingFunction);
         //Check for removed elements
         if (getEntryCount() == 1) {
             mergeIntoParentNt(keyToMatch, parent, tree);

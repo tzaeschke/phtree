@@ -469,7 +469,7 @@ public class PhTree16<T> implements PhTree<T> {
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
 			long hcPos = posInArray(key, currentNode.getPostLen());
-			o = currentNode.computeEntry(hcPos, key, parentNode, this, false, true, remappingFunction);
+			o = currentNode.computeEntry(hcPos, key, parentNode, this, false, remappingFunction);
 			parentNode = currentNode;
 			// Node: recurse
 			// Otherwise: return value
@@ -493,7 +493,7 @@ public class PhTree16<T> implements PhTree<T> {
 		while (o instanceof Node) {
 			Node currentNode = (Node) o;
 			long hcPos = posInArray(key, currentNode.getPostLen());
-			o = currentNode.computeEntry(hcPos, key, parentNode, this, true, true, remappingFunction);
+			o = currentNode.computeEntry(hcPos, key, parentNode, this, true, remappingFunction);
 			parentNode = currentNode;
             // Node: recurse
             // Otherwise: return value

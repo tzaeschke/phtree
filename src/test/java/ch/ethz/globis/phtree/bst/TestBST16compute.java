@@ -83,7 +83,7 @@ public class TestBST16compute {
 			//if (i%1000 == 0) 
 			//System.out.println("ins=" + i);
 			//ht.bstPut((Integer)i.getValue(), i);
-			ht.bstCompute((int)i.getValue(), i.getKdKey(), tree, true, true, (longs, o) -> {
+			ht.bstCompute((int)i.getValue(), i.getKdKey(), tree, true, (longs, o) -> {
 				assertSame(i.getKdKey(), longs);
 				assertNull(o);
 				//TODO clone 'i'?
@@ -136,7 +136,7 @@ public class TestBST16compute {
 		long l31 = System.currentTimeMillis();
 		for (BSTEntry i : list) {
 			//ht.bstPut((Integer)i.getValue(), new BSTEntry(i.getKdKey(), -(Integer)i.getValue()));
-			ht.bstCompute((Integer)i.getValue(), i.getKdKey(), tree, true, true,
+			ht.bstCompute((Integer)i.getValue(), i.getKdKey(), tree, true,
 					(longs, o) -> -(Integer)i.getValue() );
 		}
 		long l32 = System.currentTimeMillis();
@@ -147,7 +147,7 @@ public class TestBST16compute {
 		boolean[] found = new boolean[1];
 		for (BSTEntry i : list) {
 			found[0] = false;
-			ht.bstCompute((Integer)i.getValue(), i.getKdKey(), tree, true, true,
+			ht.bstCompute((Integer)i.getValue(), i.getKdKey(), tree, true,
 					(longs, o) -> {
 						found[0] = true;
 						return null;
