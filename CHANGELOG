@@ -2,7 +2,8 @@
 ==========
 Pre-Release 2.2.0
 - (TZ for Improbable) Added Java 8 Map API to V13 and V16 (putIfAbsent(), compute(), ...)
-  Only comput() and computeIfPresent() are currently optimized.
+  Only compute() and computeIfPresent() are currently optimized.
+- (TZ for Improbable) Several minor speed improvements to V13 and V16, including reduced garbage createion.
 
 2019-02-26
 ==========
@@ -10,7 +11,7 @@ Release 2.1.0
 - (TZ for Improbable) Some cleanup and javadoc updates
 - (TZ for Improbable) Improvements for running multiple PH-Trees concurrently:
     - removed AtomicInt entry counter
-    - Changed Object/array pools to be unsynchronized and local (to the tree) instead of global and synchronmized.
+    - Changed Object/array pools to be unsynchronized and local (to the tree) instead of global and synchronized.
 
 
 2018-12-04

@@ -366,17 +366,18 @@ public class Node {
 		//The parent is then updated with the new sub-node and the current node gets a shorter
 		//infix.
 
-		long[] buffer = new long[newKey.length];
+		long[] buffer = tree.longPool().getArray(newKey.length);
 		int maxConflictingBits = calcConflictingBits(newKey, offs, buffer, mask);
 		if (maxConflictingBits == 0) {
 			if (!(currentValue instanceof Node)) {
 				values[pin] = newValue;
 			}
+			tree.longPool().offer(buffer);
 			return currentValue;
 		}
 
-		Node newNode =
-				createNode(newKey, newValue, buffer, currentValue, maxConflictingBits, tree);
+		Node newNode = createNode(newKey, newValue, buffer, currentValue, maxConflictingBits, tree);
+		tree.longPool().offer(buffer);
 
 		replaceEntryWithSub(pin, hcPos, newKey, newNode, tree);
 		tree.increaseNrEntries();
@@ -387,9 +388,10 @@ public class Node {
 	private <T> Object insertSplitCompute(long[] newKey, Object currentValue, boolean doIfAbsent, Node parent,
 										  int pin, long hcPos, PhTree13<?> tree, int offs, long mask,
 										  BiFunction<long[], ? super T, ? extends T> remappingFunction) {
-		long[] buffer = new long[newKey.length];
+		long[] buffer = tree.longPool().getArray(newKey.length);
 		int maxConflictingBits = calcConflictingBits(newKey, offs, buffer, mask);
 		if (maxConflictingBits == 0) {
+			tree.longPool().offer(buffer);
 			if (currentValue instanceof Node) {
 				//This is a node;
 				return currentValue;
@@ -406,16 +408,19 @@ public class Node {
 
 		//No exact match
 		if (!doIfAbsent) {
+			tree.longPool().offer(buffer);
 			return null;
 		}
 
 		T newValue = remappingFunction.apply(newKey, null);
 		if (newValue != null) {
+			tree.longPool().offer(buffer);
 			values[pin] = newValue;
 			return newValue;
 		}
 
 		Node newNode = createNode(newKey, newValue, buffer, currentValue, maxConflictingBits, tree);
+		tree.longPool().offer(buffer);
 		replaceEntryWithSub(pin, hcPos, newKey, newNode, tree);
 		tree.increaseNrEntries();
 		//entry did not exist
