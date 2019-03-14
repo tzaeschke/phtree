@@ -185,17 +185,32 @@ public class BSTreePage {
 
 
 	public int binarySearchInnerNode(long key) {
-		//The stored value[i] is the min-values of the according page[i+1}
-		//read page before that value
-		//TODO simplify
-		int pos = binarySearch(key);
-		if (pos >= 0) {
-			//pos of matching key
-			pos++;
-		} else {
-			pos = -(pos+1);
+		if (nEntries <=8) {
+			long[] keys = this.keys;
+			for (int i = 0; i < nEntries; i++) {
+				if (key <= keys[i]) {
+					return key == keys[i] ? i+1 : i;
+				}
+			}
+			return nEntries;  // key not found.
 		}
-		return pos;
+		long[] keys = this.keys;
+		int low = 0;
+		int high = nEntries - 1;
+
+		while (low <= high) {
+			int mid = (low + high) >>> 1;
+			long midVal = keys[mid];
+
+			if (midVal < key)
+				low = mid + 1;
+			else if (midVal > key)
+				high = mid - 1;
+			else {
+				return mid+1; // key found
+			}
+		}
+		return low;  // key not found.
 	}
 
 	/**
@@ -204,7 +219,7 @@ public class BSTreePage {
 	 * @param key search key
 	 */
 	int binarySearch(long key) {
-		if (nEntries <=6) {
+		if (nEntries <=8) {
 			return linearSearch(key);
 		}
 		long[] keys = this.keys;
@@ -419,12 +434,10 @@ public class BSTreePage {
 			//add page here
 			
 			if (keyPos == NO_POS) {
-			
 				//For now, we assume a unique index.
-				int i = binarySearch(minKey);
+				keyPos = binarySearchInnerNode(minKey);
 				//If the key has a perfect match then something went wrong. This should
 				//never happen so we don't need to check whether (i < 0).
-				keyPos = -(i+1);
 			}
 			
 			if (keyPos > 0) {
