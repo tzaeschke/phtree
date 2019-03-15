@@ -20,6 +20,8 @@
 package ch.ethz.globis.phtree;
 
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import ch.ethz.globis.phtree.util.PhIteratorBase;
 import ch.ethz.globis.phtree.util.PhMapper;
@@ -45,7 +47,6 @@ import ch.ethz.globis.phtree.v16hd.PhTree16HD;
  */
 public interface PhTree<T> {
 
-
 	/**
 	 * @return The number of entries in the tree
 	 */
@@ -55,7 +56,6 @@ public interface PhTree<T> {
 	 * @return PH-Tree statistics
 	 */
 	PhTreeStats getStats();
-
 
 	/**
 	 * Insert an entry associated with a k dimensional key.
@@ -308,5 +308,90 @@ public interface PhTree<T> {
 	 * Clear the tree.
 	 */
 	void clear();
+
+
+	// Overrides of JDK8 Map extension methods
+
+	/**
+	 * @see java.util.Map#getOrDefault(Object, Object)
+	 * @param key key
+	 * @param defaultValue default value
+	 * @return actual value or default value
+	 */
+	default T getOrDefault(long[] key, T defaultValue) {
+		T t = get(key);
+		return t == null ? defaultValue : t;
+	}
+
+	/**
+	 * @see java.util.Map#putIfAbsent(Object, Object)
+	 * @param key key
+	 * @param value new value
+	 * @return previous value or null
+	 */
+	default T putIfAbsent(long[] key, T value) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @see java.util.Map#remove(Object, Object)
+	 * @param key key
+	 * @param value value
+	 * @return {@code true} if the value was removed
+	 */
+	default boolean remove(long[] key, T value) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @see java.util.Map#replace(Object, Object, Object)
+	 * @param key key
+	 * @param oldValue old value
+	 * @param newValue new value
+	 * @return {@code true} if the value was replaced
+	 */
+	default boolean replace(long[] key, T oldValue, T newValue) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @see java.util.Map#replace(Object, Object)
+	 * @param key key
+	 * @param value new value
+	 * @return previous value or null
+	 */
+	default T replace(long[] key, T value) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @see java.util.Map#computeIfAbsent(Object, Function)
+	 * @param key key
+	 * @param mappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	default T computeIfAbsent(long[] key, Function<long[], ? extends T> mappingFunction) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @see java.util.Map#computeIfPresent(Object, BiFunction)
+	 * @param key key
+	 * @param remappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	default T computeIfPresent(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @see java.util.Map#compute(Object, BiFunction)
+	 * @param key key
+	 * @param remappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	default T compute(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		throw new UnsupportedOperationException();
+	}
 }
 

@@ -88,7 +88,7 @@ public abstract class PhTreeHelper {
 		ARRAY_POOLING = flag;
 	}
 	
-    public static final void debugCheck() {
+    public static void debugCheck() {
     	if (DEBUG) {
     		System.err.println("*************************************");
     		System.err.println("** WARNING ** DEBUG IS ENABLED ******");
@@ -101,7 +101,7 @@ public abstract class PhTreeHelper {
 //    	}
     }
     
-	public static final int align8(int n) {
+	public static int align8(int n) {
     	return (int) (8*Math.ceil(n/8.0));
     }
 
@@ -112,7 +112,7 @@ public abstract class PhTreeHelper {
 	 * @param bitsToCheck number of bits to check (starting with least significant bit)
      * @return Position of the highest conflicting bit (counted from the right) or 0 if none.
 	 */
-    public static final int getMaxConflictingBits(long[] v1, long[] v2, int bitsToCheck) {
+    public static int getMaxConflictingBits(long[] v1, long[] v2, int bitsToCheck) {
     	if (bitsToCheck == 0) {
     		return 0;
     	}
@@ -128,7 +128,7 @@ public abstract class PhTreeHelper {
      * @param mask Mask that indicates which bits to check. Only bits where mask=1 are checked.
      * @return Number of conflicting bits or 0 if none.
      */
-    public static final int getMaxConflictingBitsWithMask(long[] v1, long[] v2, long mask) {
+    public static int getMaxConflictingBitsWithMask(long[] v1, long[] v2, long mask) {
         long x = 0;
         for (int i = 0; i < v1.length; i++) {
         	//write all differences to x, we just check x afterwards
@@ -148,7 +148,7 @@ public abstract class PhTreeHelper {
      * @param postLen the postfix length
      * @return Encoded HC position
      */
-    public static final long posInArray(long[] valSet, int postLen) {
+    public static long posInArray(long[] valSet, int postLen) {
         //n=DIM,  i={0..n-1}
         // i = 0 :  |0|1|0|1|0|1|0|1|
         // i = 1 :  | 0 | 1 | 0 | 1 |
@@ -157,7 +157,7 @@ public abstract class PhTreeHelper {
         //Following formula was for inverse ordering of current ordering...
         //pos = sum (i=1..n, len/2^i) = sum (..., 2^(n-i))
 
-    	long valMask = 1l << postLen;
+    	long valMask = 1L << postLen;
     	
         long pos = 0;
         for (int i = 0; i < valSet.length; i++) {
@@ -226,6 +226,17 @@ public abstract class PhTreeHelper {
 //			}
 		}
     }
+
+
+	public static <T> Object maskNull(T value) {
+		return value == null ? PhTreeHelper.NULL : value;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> T unmaskNull(Object value) {
+		return value == PhTreeHelper.NULL ? null : (T) value;
+	}
+
 
 }
 
