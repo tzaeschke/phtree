@@ -163,7 +163,7 @@ public class Node {
      * @param key1 key 1
      * @param val1 value 1
      * @param key2 key 2
-     * @param val2 value 2, PhTree16HD<?> tree
+     * @param val2 value 2
      * @param mcb most conflicting bit
 	 * @param tree tree
      * @return A new node or 'null' if there are no conflicting bits
