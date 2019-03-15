@@ -36,9 +36,8 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 ### 2019-03-15
 
 Release 2.2.0
-- Added Java 8 Map API to V13 and V16 (putIfAbsent(), compute(), ...). Only compute() and computeIfPresent() are currently optimized.
+- Added Java 8 Map API to V13 and V16 (`putIfAbsent()`, `compute()`, ...). Only `compute()` and `computeIfPresent()` are currently optimized.
 - Several minor speed improvements to V13 and V16, including reduced garbage creation.
-
 
 ### 2019-03-08
 
