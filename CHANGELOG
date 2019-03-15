@@ -1,9 +1,9 @@
-2019-03-14
+2019-03-15
 ==========
-Pre-Release 2.2.0
+Release 2.2.0
 - (TZ for Improbable) Added Java 8 Map API to V13 and V16 (putIfAbsent(), compute(), ...)
-  Only compute() and computeIfPresent() are currently optimized.
-- (TZ for Improbable) Several minor speed improvements to V13 and V16, including reduced garbage createion.
+  Only compute() and computeIfPresent() are currently optimized. The other methods use a naive implementation.
+- (TZ for Improbable) Several minor speed improvements to V13 and V16, including reduced garbage creation.
 
 2019-02-26
 ==========

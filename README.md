@@ -22,7 +22,7 @@ Maven:
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.1.0</version>
+    <version>2.2.0</version>
 </dependency>
 ```
 
@@ -32,6 +32,13 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 
 
 # News
+
+### 2019-03-15
+
+Release 2.2.0
+- Added Java 8 Map API to V13 and V16 (putIfAbsent(), compute(), ...). Only compute() and computeIfPresent() are currently optimized.
+- Several minor speed improvements to V13 and V16, including reduced garbage creation.
+
 
 ### 2019-03-08
 
