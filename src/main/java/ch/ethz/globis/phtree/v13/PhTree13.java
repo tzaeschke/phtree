@@ -19,12 +19,11 @@
  */
 package ch.ethz.globis.phtree.v13;
 
-import static ch.ethz.globis.phtree.PhTreeHelper.align8;
-import static ch.ethz.globis.phtree.PhTreeHelper.debugCheck;
-import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import ch.ethz.globis.phtree.PhDistance;
 import ch.ethz.globis.phtree.PhDistanceL;
@@ -39,6 +38,9 @@ import ch.ethz.globis.phtree.util.*;
 import ch.ethz.globis.phtree.util.unsynced.LongArrayPool;
 import ch.ethz.globis.phtree.util.unsynced.ObjectArrayPool;
 import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
+
+import static ch.ethz.globis.phtree.PhTreeHelper.*;
+import static ch.ethz.globis.phtree.PhTreeHelper.maskNull;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
@@ -94,10 +96,10 @@ import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
 public class PhTree13<T> implements PhTree<T> {
 
 	//Enable HC incrementer / iteration
-	public static final boolean HCI_ENABLED = true; 
+	public static final boolean HCI_ENABLED = true;
 	//Enable AHC mode in nodes
-	static final boolean AHC_ENABLED = true; 
-	
+	static final boolean AHC_ENABLED = true;
+
 	//This threshold is used to decide during query iteration whether the first value
 	//should be found by binary search or by full scan.
 	public static final int LHC_BINARY_SEARCH_THRESHOLD = 50;
@@ -313,6 +315,134 @@ public class PhTree13<T> implements PhTree<T> {
 		
 		return (T) value;
 	}
+
+
+
+	// Overrides of new  Java 8 methods
+
+	@Override
+	public T getOrDefault(long[] key, T defaultValue) {
+		T e = get(key);
+		return e == null ? defaultValue : e;
+	}
+
+	@Override
+	public T putIfAbsent(long[] key, T value) {
+		if (getRoot() == null) {
+			insertRoot(key, maskNull(value));
+			return null;
+		}
+
+		T o = get(key);
+		if (o == null) {
+			put(key, value);
+		}
+		return o;
+	}
+
+	@Override
+	public boolean remove(long[] key, T value) {
+		boolean[] o = new boolean[1];
+		computeIfPresent(key, (longs, t) -> (o[0] = Objects.equals(t, value)) ? null : t);
+		return o[0];
+	}
+
+	@Override
+	public boolean replace(long[] key, T oldValue, T newValue) {
+		if (getRoot() == null) {
+			return false;
+		}
+
+		Object o = getRoot();
+		while (o instanceof Node) {
+			Node currentNode = (Node) o;
+			o = currentNode.doIfMatching(key, true, null, null, null, this);
+		}
+
+		if (o != null && Objects.equals(o, oldValue)) {
+			put(key, newValue);
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public T replace(long[] key, T value) {
+		if (getRoot() == null) {
+			return null;
+		}
+
+		Object o = getRoot();
+		while (o instanceof Node) {
+			Node currentNode = (Node) o;
+			o = currentNode.doIfMatching(key, true, null, null, null, this);
+		}
+
+		if (o != null) {
+			put(key, value);
+			return PhTreeHelper.unmaskNull(o);
+		}
+		return null;
+	}
+
+	@Override
+	public T computeIfAbsent(long[] key, Function<long[], ? extends T> mappingFunction) {
+		if (getRoot() == null) {
+			T newValue = mappingFunction.apply(key);
+			if (newValue != null) {
+				insertRoot(key, maskNull(newValue));
+			}
+			return newValue;
+		}
+
+		T currentValue = get(key);
+		if (currentValue == null) {
+			T newValue = mappingFunction.apply(key);
+			if (newValue != null) {
+				put(key, newValue);
+			}
+			return newValue;
+		}
+		return currentValue;
+	}
+
+    @SuppressWarnings("unchecked")
+	@Override
+	public T computeIfPresent(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		if (getRoot() == null) {
+			return null;
+		}
+
+        Object o = getRoot();
+        Node parentNode = null;
+        while (o instanceof Node) {
+            Node currentNode = (Node) o;
+            o = currentNode.doCompute(key, false, parentNode, this, remappingFunction);
+            parentNode = currentNode;
+        }
+        return (T) o;
+	}
+
+    @SuppressWarnings("unchecked")
+	@Override
+	public T compute(long[] key, BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		if (getRoot() == null) {
+			T newValue = remappingFunction.apply(key, null);
+			if (newValue != null) {
+				insertRoot(key, maskNull(newValue));
+			}
+			return newValue;
+		}
+
+        Object o = getRoot();
+        Node parentNode = null;
+        while (o instanceof Node) {
+            Node currentNode = (Node) o;
+            o = currentNode.doCompute(key, true, parentNode, this, remappingFunction);
+            parentNode = currentNode;
+        }
+        return (T) o;
+    }
 
 	@Override
 	public String toString() {

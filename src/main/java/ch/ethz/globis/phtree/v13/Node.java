@@ -23,6 +23,8 @@ import static ch.ethz.globis.phtree.PhTreeHelper.posInArray;
 
 import ch.ethz.globis.phtree.PhTreeHelper;
 
+import java.util.function.BiFunction;
+
 
 /**
  * Node of the PH-tree.
@@ -212,10 +214,10 @@ public class Node {
 	 * @return The sub node or null.
 	 */
 	Object doIfMatching(long[] keyToMatch, boolean getOnly, Node parent,
-			long[] newKey, int[] insertRequired, PhTree13<?> tree) {
-		
+						long[] newKey, int[] insertRequired, PhTree13<?> tree) {
+
 		long hcPos = posInArray(keyToMatch, getPostLen());
-		
+
 		int pin;
 		Object v;
 		int offs;
@@ -254,12 +256,64 @@ public class Node {
 			if (getOnly) {
 				return v;
 			} else {
-				return deleteAndMergeIntoParent(pin, hcPos, keyToMatch, 
-							parent, newKey, insertRequired, v, tree);
-			}			
+				return deleteAndMergeIntoParent(pin, hcPos, keyToMatch,
+						parent, newKey, insertRequired, v, tree);
+			}
 		}
 	}
-	
+
+	<T> Object doCompute(long[] keyToMatch, boolean doIfAbsent, Node parent, PhTree13<?> tree,
+					 BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		long hcPos = posInArray(keyToMatch, getPostLen());
+		int pin = getPosition(hcPos, keyToMatch.length);
+		//check whether hcPos is valid
+		if (pin < 0) {
+			if (doIfAbsent) {
+				T newValue = remappingFunction.apply(keyToMatch, null);
+				if (newValue != null) {
+					tree.increaseNrEntries();
+					addPostPIN(hcPos, pin, keyToMatch, newValue, tree);
+				}
+				return newValue;
+			}
+			return null;
+		}
+
+		Object v;
+		int offs;
+		int dims = keyToMatch.length;
+		if (isAHC()) {
+			v = values[(int) hcPos];
+			offs = posToOffsBitsDataAHC(hcPos, getBitPosIndex(), dims);
+		} else {
+			v = values[pin];
+			offs = pinToOffsBitsDataLHC(pin, getBitPosIndex(), dims);
+		}
+		if (v instanceof Node) {
+			Node sub = (Node) v;
+			if (hasSubInfix(offs, dims)) {
+				long mask = calcInfixMask(sub.getPostLen());
+				return insertSplitCompute(keyToMatch, v, doIfAbsent, parent, pin, hcPos, tree, offs, mask,
+						remappingFunction);
+			}
+			return v;
+		} else {
+			if (getPostLen() > 0) {
+				long mask = calcPostfixMask();
+				return insertSplitCompute(keyToMatch, v, doIfAbsent, parent, pin, hcPos, tree, offs, mask,
+						remappingFunction);
+			}
+			//perfect match
+			T newValue = remappingFunction.apply(keyToMatch, PhTreeHelper.unmaskNull(v));
+			if (newValue == null) {
+				deleteAndMergeIntoParent(pin, hcPos, keyToMatch, parent, null, null, v, tree);
+			} else {
+				values[pin] = newValue;
+			}
+			return newValue;
+		}
+	}
+
 	private boolean readAndCheckKdKey(int offs, long[] keyToMatch, long mask) {
 		for (int i = 0; i < keyToMatch.length; i++) {
 			long k = Bits.readArray(ba, offs, postLenStored());
@@ -296,41 +350,84 @@ public class Node {
 	 */
 	private Object insertSplit(long[] newKey, Object newValue, Object currentValue,
 							   int pin, long hcPos, PhTree13<?> tree, int offs, long mask) {
-        //do the splitting
+		//do the splitting
 
-        //What does 'splitting' mean (we assume there is currently a sub-node, in case of a postfix
-        // work similar):
-        //The current sub-node has an infix that is not (or only partially) compatible with 
-        //the new key.
-        //We create a new intermediary sub-node between the parent node and the current sub-node.
-        //The new key/value (which we want to add) should end up as post-fix for the new-sub node. 
-        //All other current post-fixes and sub-nodes stay in the current sub-node. 
+		//What does 'splitting' mean (we assume there is currently a sub-node, in case of a postfix
+		// work similar):
+		//The current sub-node has an infix that is not (or only partially) compatible with
+		//the new key.
+		//We create a new intermediary sub-node between the parent node and the current sub-node.
+		//The new key/value (which we want to add) should end up as post-fix for the new-sub node.
+		//All other current post-fixes and sub-nodes stay in the current sub-node.
 
-        //How splitting works:
-        //We insert a new node between the current and the parent node:
-        //  parent -> newNode -> node
-        //The parent is then updated with the new sub-node and the current node gets a shorter
-        //infix.
+		//How splitting works:
+		//We insert a new node between the current and the parent node:
+		//  parent -> newNode -> node
+		//The parent is then updated with the new sub-node and the current node gets a shorter
+		//infix.
 
-		long[] buffer = new long[newKey.length];
+		long[] buffer = tree.longPool().getArray(newKey.length);
 		int maxConflictingBits = calcConflictingBits(newKey, offs, buffer, mask);
 		if (maxConflictingBits == 0) {
 			if (!(currentValue instanceof Node)) {
 				values[pin] = newValue;
 			}
+			tree.longPool().offer(buffer);
 			return currentValue;
 		}
-		
-		Node newNode =
-                createNode(newKey, newValue, buffer, currentValue, maxConflictingBits, tree);
 
-        replaceEntryWithSub(pin, hcPos, newKey, newNode, tree);
-        tree.increaseNrEntries();
+		Node newNode = createNode(newKey, newValue, buffer, currentValue, maxConflictingBits, tree);
+		tree.longPool().offer(buffer);
+
+		replaceEntryWithSub(pin, hcPos, newKey, newNode, tree);
+		tree.increaseNrEntries();
 		//entry did not exist
-        return null;
-    }
+		return null;
+	}
 
-    /**
+	private <T> Object insertSplitCompute(long[] newKey, Object currentValue, boolean doIfAbsent, Node parent,
+										  int pin, long hcPos, PhTree13<?> tree, int offs, long mask,
+										  BiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		long[] buffer = tree.longPool().getArray(newKey.length);
+		int maxConflictingBits = calcConflictingBits(newKey, offs, buffer, mask);
+		if (maxConflictingBits == 0) {
+			tree.longPool().offer(buffer);
+			if (currentValue instanceof Node) {
+				//This is a node;
+				return currentValue;
+			}
+			//exact match
+			T newValue = remappingFunction.apply(newKey, PhTreeHelper.unmaskNull(currentValue));
+			if (newValue != null) {
+				values[pin] = newValue;
+				return newValue;
+			}
+			deleteAndMergeIntoParent(pin, hcPos, newKey, parent, null, null, null, tree);
+			return null;
+		}
+
+		//No exact match
+		if (!doIfAbsent) {
+			tree.longPool().offer(buffer);
+			return null;
+		}
+
+		T newValue = remappingFunction.apply(newKey, null);
+		if (newValue != null) {
+			tree.longPool().offer(buffer);
+			values[pin] = newValue;
+			return newValue;
+		}
+
+		Node newNode = createNode(newKey, newValue, buffer, currentValue, maxConflictingBits, tree);
+		tree.longPool().offer(buffer);
+		replaceEntryWithSub(pin, hcPos, newKey, newNode, tree);
+		tree.increaseNrEntries();
+		//entry did not exist
+		return newValue;
+	}
+
+	/**
      * 
      * @param key1 key 1
      * @param val1 value 1

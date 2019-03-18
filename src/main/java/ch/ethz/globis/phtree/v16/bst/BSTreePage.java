@@ -19,7 +19,9 @@
 package ch.ethz.globis.phtree.v16.bst;
 
 import java.util.Arrays;
+import java.util.function.BiFunction;
 
+import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v16.Node;
 import ch.ethz.globis.phtree.v16.Node.BSTEntry;
@@ -84,6 +86,20 @@ public class BSTreePage {
 		}
 	}
 
+	public void init(BSTEntry e1, BSTEntry e2) {
+		if (!isLeaf) {
+			throw new IllegalStateException();
+		}
+		if (nEntries > 0) {
+			throw new IllegalStateException("nEntries=" + nEntries);
+		}
+		values[0] = e1;
+		keys[0] = e1.getKey();
+		values[1] = e2;
+		keys[1] = e2.getKey();
+		nEntries = 2;
+	}
+
 	public static BSTreePage create(Node ind, BSTreePage parent, boolean isLeaf, BSTreePage leftPredecessor,
                                     PhTree16<?> tree) {
 		return tree.bstPool().getNode(ind, parent, isLeaf, leftPredecessor, tree);
@@ -116,26 +132,14 @@ public class BSTreePage {
 	
 	public BSTreePage findSubPage(long key) {
 		//The stored value[i] is the min-values of the according page[i+1} 
-        int pos = binarySearch(key);
-        if (pos >= 0) {
-            //pos of matching key
-            pos++;
-        } else {
-            pos = -(pos+1);
-        }
+        int pos = binarySearchInnerNode(key);
         //read page before that value
         return subPages[pos]; 
 	}
 	
 	public BSTEntry findAndRemove(long key, long[] kdKey, Node node, PhTree16.UpdateInfo ui) {
 		//The stored value[i] is the min-values of the according page[i+1} 
-        int pos = binarySearch(key);
-        if (pos >= 0) {
-            //pos of matching key
-            pos++;
-        } else {
-            pos = -(pos+1);
-        }
+        int pos = binarySearchInnerNode(key);
         //read page before that value
         BSTreePage page = subPages[pos]; 
         BSTEntry result;
@@ -148,17 +152,11 @@ public class BSTreePage {
         }
         return result;
 	}
-	
+
 
 	public Object getOrCreate(long key, Node ind) {
 		//The stored value[i] is the min-values of the according page[i+1} 
-        int pos = binarySearch(key);
-        if (pos >= 0) {
-            //pos of matching key
-            pos++;
-        } else {
-            pos = -(pos+1);
-        }
+        int pos = binarySearchInnerNode(key);
         //read page before that value
         BSTreePage page = getPageByPos(pos);
         if (page.isLeaf()) {
@@ -186,13 +184,42 @@ public class BSTreePage {
 	}
 
 
+	public int binarySearchInnerNode(long key) {
+		if (nEntries <=8) {
+			long[] keys = this.keys;
+			for (int i = 0; i < nEntries; i++) {
+				if (key <= keys[i]) {
+					return key == keys[i] ? i+1 : i;
+				}
+			}
+			return nEntries;  // key not found.
+		}
+		long[] keys = this.keys;
+		int low = 0;
+		int high = nEntries - 1;
+
+		while (low <= high) {
+			int mid = (low + high) >>> 1;
+			long midVal = keys[mid];
+
+			if (midVal < key)
+				low = mid + 1;
+			else if (midVal > key)
+				high = mid - 1;
+			else {
+				return mid+1; // key found
+			}
+		}
+		return low;  // key not found.
+	}
+
 	/**
 	 * Binary search.
 	 * 
 	 * @param key search key
 	 */
 	int binarySearch(long key) {
-		if (nEntries <=6) {
+		if (nEntries <=8) {
 			return linearSearch(key);
 		}
 		long[] keys = this.keys;
@@ -267,9 +294,13 @@ public class BSTreePage {
         //key found? -> pos >=0
         if (pos >= 0) {
         	return values[pos];
-        } 
-        
-        BSTEntry value = new BSTEntry(key, null, null);
+        }
+		return create(key, pos, parent, posPageInParent, ind);
+	}
+
+	private BSTEntry create(long key, int pos, BSTreePage parent, int posPageInParent, Node ind) {
+		BSTEntry value = tree.bstPool().getEntry();
+		value.set(key, null, null);
         
         if (nEntries < ind.maxLeafN()) {
         	//okay so we add it locally
@@ -403,12 +434,10 @@ public class BSTreePage {
 			//add page here
 			
 			if (keyPos == NO_POS) {
-			
 				//For now, we assume a unique index.
-				int i = binarySearch(minKey);
+				keyPos = binarySearchInnerNode(minKey);
 				//If the key has a perfect match then something went wrong. This should
 				//never happen so we don't need to check whether (i < 0).
-				keyPos = -(i+1);
 			}
 			
 			if (keyPos > 0) {
@@ -441,7 +470,6 @@ public class BSTreePage {
 				newP.setParent( this );
 				nEntries++;
 			}
-			return;
 		} else {
 			//treat page overflow
 			BSTreePage newInner = ind.bstCreatePage(parent, false, null, tree);
@@ -546,33 +574,147 @@ public class BSTreePage {
 	
 
 	public BSTEntry remove(long key, long[] kdKey, Node node, PhTree16.UpdateInfo ui) {
-        int i = binarySearch(key);
-        if (i < 0) {
-        	//key not found
-        	return null;
-        }
-        
-        // first remove the element
-        BSTEntry prevValue = values[i];
-        REMOVE_OP op = node.bstInternalRemoveCallback(prevValue, kdKey, ui);
-        switch (op) {
-		case REMOVE_RETURN:
-        	System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
-        	System.arraycopy(values, i+1, values, i, nEntries-i-1);
-        	nEntries--;
-        	node.decEntryCount();
-        	return prevValue;
-		case KEEP_RETURN:
-			return prevValue;
-		case KEEP_RETURN_NULL:
+		int i = binarySearch(key);
+		if (i < 0) {
+			//key not found
 			return null;
-		default:
-			throw new IllegalArgumentException();
+		}
+
+		// first remove the element
+		BSTEntry prevValue = values[i];
+		REMOVE_OP op = node.bstInternalRemoveCallback(prevValue, kdKey, ui);
+		switch (op) {
+			case REMOVE_RETURN:
+				System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
+				System.arraycopy(values, i+1, values, i, nEntries-i-1);
+				nEntries--;
+				node.decEntryCount();
+				return prevValue;
+			case KEEP_RETURN:
+				return prevValue;
+			case KEEP_RETURN_NULL:
+				return null;
+			default:
+				throw new IllegalArgumentException();
 		}
 	}
-	
-	
-	private void checkUnderflowSubpageLeaf(int pos, Node ind) {
+
+
+	public <T> Object computeLeaf(long key, long[] kdKey, int posInParent, Node node,
+                                    boolean doIfAbsent, BiFunction<long[], ? super T, ? extends T> mappingFunction) {
+		int pos = binarySearch(key);
+		if (pos < 0) {
+			//key not found
+			if (doIfAbsent) {
+				T newValue = mappingFunction.apply(kdKey, null);
+				if (newValue != null) {
+					BSTEntry e = addForCompute(key, pos, posInParent, node);
+					e.set(key, kdKey, newValue);
+					return newValue;
+				}
+			}
+			return null;
+		}
+
+		BSTEntry currentEntry = values[pos];
+		Object currentValue = currentEntry.getValue();
+		if (currentValue instanceof Node) {
+			if (((Node) currentValue).getInfixLen() == 0) {
+				//Shortcut that avoid MCB calculation: No infix conflict, just traverse the subnode (=currentValue)
+				return currentValue;
+			}
+		}
+
+		long[] localKdKey = currentEntry.getKdKey();
+        int maxConflictingBits = Node.calcConflictingBits(kdKey, localKdKey);
+        if (maxConflictingBits == 0) {
+            if (currentValue instanceof Node) {
+                //return entry with subnode
+                return currentValue;
+            }
+            T newValue = mappingFunction.apply(kdKey, PhTreeHelper.unmaskNull(currentEntry.getValue()));
+            if (newValue == null) {
+                //remove
+                removeForCompute(key, pos, posInParent, node);
+                tree.bstPool().offerEntry(currentEntry);
+                return null;
+            } else {
+                //replace (cannot be null)
+                currentEntry.setValue(newValue);
+            }
+            return newValue;
+        }
+
+		if (currentValue instanceof Node) {
+			Node subNode = (Node) currentValue;
+			if (subNode.getPostLen() + 1 >= maxConflictingBits) {
+				return subNode;
+			}
+		}
+
+		//Key found, but entry does not match
+        if (doIfAbsent) {
+            //We have two entries in the same location (local hcPos).
+            //If the kdKey differs, we have to split, insert a newSubNode and return null.
+			T newValue = mappingFunction.apply(kdKey, null);
+			if (newValue != null) {
+				insertSplit(currentEntry, kdKey, newValue, tree, maxConflictingBits, node);
+				return newValue;
+			}
+			return null;
+        }
+        //Return 'null' when ignoring absent values
+        return null;
+	}
+
+	private BSTEntry addForCompute(long key, int pos, int posPageInParent, Node node) {
+		BSTEntry o = create(key, pos, parent, posPageInParent, node);
+		Node.incEntryCountTree(tree);
+		if (o.getKdKey() == null && o.getValue() instanceof BSTreePage) {
+			//add page
+			BSTreePage newPage = (BSTreePage) o.getValue();
+			if (parent != null) {
+				parent.addSubPage(newPage, newPage.getMinKey(), posPageInParent, node);
+			} else {
+				node.bstSetRoot( create(node, null, this, newPage, tree) );
+			}
+			o.setValue(null);
+			return o;
+		}
+		return o;
+	}
+
+	private void removeForCompute(long key, int pos, int posPageInParent, Node node) {
+		int i = pos;
+		System.arraycopy(keys, i+1, keys, i, nEntries-i-1);
+		System.arraycopy(values, i+1, values, i, nEntries-i-1);
+		nEntries--;
+		node.decEntryCountGlobal(tree);
+		if (parent == null) {
+			return;
+		}
+		BSTreePage parentPage = parent;
+		parentPage.checkUnderflowSubpageLeaf(posPageInParent, node);
+
+        parentPage = parentPage.parent;
+        while (parentPage != null) {
+            pos = parentPage.binarySearchInnerNode(key);
+            parentPage.handleUnderflowSubInner(pos);
+            parentPage = parentPage.parent;
+        }
+	}
+
+
+    private void insertSplit(BSTEntry currentEntry, long[] newKey, Object newValue, PhTree16<?> tree,
+                               int maxConflictingBits, Node node) {
+        long[] localKdKey = currentEntry.getKdKey();
+        Node newNode = node.createNode(newKey, newValue, localKdKey, currentEntry.getValue(), maxConflictingBits, tree);
+        //replace local entry with new subnode
+        currentEntry.set(currentEntry.getKey(), tree.longPool().arrayClone(localKdKey), newNode);
+        Node.incEntryCountTree(tree);
+    }
+
+    private void checkUnderflowSubpageLeaf(int pos, Node ind) {
 		BSTreePage subPage = getPageByPos(pos);
         if (subPage.nEntries == 0) {
         	Node.statNLeaves--;
@@ -631,7 +773,7 @@ public class BSTreePage {
 					}
 					return;
 				}
-		
+
 				if (sub.nEntries == 0) {
 					//only one element left, no merging occurred -> move sub-page up to parent
 					BSTreePage child = sub.getPageByPos(0);
@@ -681,13 +823,13 @@ public class BSTreePage {
 	 */
 	private void replaceChildPage(BSTreePage subChild, int pos) {
 		subPages[pos] = subChild;
-		if (pos>0) {
+		if (pos > 0) {
 			keys[pos-1] = subChild.getMinKey();
 		}
 		subChild.setParent(this);
 	}
 	
-	void setParent(BSTreePage parent) {
+	public void setParent(BSTreePage parent) {
 		this.parent = parent;
 	}
 	
@@ -841,7 +983,7 @@ public class BSTreePage {
 		return subPages[0];
 	}
 
-	BSTreePage[] getSubPages() {
+	public BSTreePage[] getSubPages() {
 		return subPages;
 	}
 
@@ -852,6 +994,7 @@ public class BSTreePage {
 		nextLeaf = null;
 		prevLeaf = null;
 		parent = null;
+		nEntries = 0;
 	}
 
 	BSTreePage getNextLeaf() {
@@ -866,5 +1009,4 @@ public class BSTreePage {
 			nextLeaf.prevLeaf = prevLeaf;
 		}
 	}
-
 }
