@@ -8,6 +8,8 @@ package ch.ethz.globis.phtree;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
@@ -25,13 +27,27 @@ import ch.ethz.globis.phtree.util.PhMapper;
  */
 public class PhTreeSolidF<T> implements Iterable<T> {
 
+	@FunctionalInterface
+	public interface SolidBiFunction<T, U, R> {
+
+		/**
+		 * Applies this function to the given arguments.
+		 *
+		 * @param lower lower left corner
+		 * @param upper upper right corner
+		 * @param value the value
+		 * @return the function result
+		 */
+		R apply(T lower, T upper, U value);
+	}
+
 	private final int dims;
 	private final PhTree<T> pht;
 	private final PreProcessorRangeF pre;
 	private final PhDistanceSF dist;
 	private final double[] qMIN;
 	private final double[] qMAX;
-	
+
 	/**
 	 * Create a new tree with the specified number of dimensions.
 	 * 
@@ -72,7 +88,17 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		qMAX = new double[dims];
 		Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
 	}
-	
+
+	/**
+	 * Create a new {@code double} tree backed by the the specified tree.
+	 * Note that the backing tree's dimensionality must be a multiple of 2.
+	 *
+	 * @param tree the backing tree
+	 */
+	public static <T> PhTreeSolidF wrap(PhTree<T> tree) {
+		return new PhTreeSolidF<>(tree, new PreProcessorRangeF.IEEE(tree.getDim()));
+	}
+
 	/**
 	 * Create a new tree with the specified number of dimensions.
 	 * 
@@ -444,7 +470,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 		@SuppressWarnings("unchecked")
 		@Override
 		public boolean equals(Object obj) {
-			if (obj == null || !(obj instanceof PhEntrySF)) {
+			if (!(obj instanceof PhEntrySF)) {
 				return false;
 			}
 			PhEntrySF<T> e = (PhEntrySF<T>) obj;
@@ -533,7 +559,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	}
 
 	/**
-	 * Same as {@link #queryIntersectAll(double[], double[], int, PhFilter, PhMapper)}, 
+	 * Same as {@link #queryIntersectAll(double[], double[])},
 	 * except that it returns a list instead of an iterator. 
 	 * This may be faster for small result sets. 
 	 * @param lower min value
@@ -603,5 +629,114 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 */
 	public int getDims() {
 		return dims;
+	}
+
+	// Overrides of JDK8 Map extension methods
+
+	/**
+	 * @see java.util.Map#getOrDefault(Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param defaultValue default value
+	 * @return actual value or default value
+	 */
+	public T getOrDefault(double[] lower, double[] upper, T defaultValue) {
+		T t = get(lower, upper);
+		return t == null ? defaultValue : t;
+	}
+
+	/**
+	 * @see java.util.Map#putIfAbsent(Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param value new value
+	 * @return previous value or null
+	 */
+	public T putIfAbsent(double[] lower, double[] upper, T value) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.putIfAbsent(key, value);
+	}
+
+	/**
+	 * @see java.util.Map#remove(Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param value value
+	 * @return {@code true} if the value was removed
+	 */
+	public boolean remove(double[] lower, double[] upper, T value) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.remove(key, value);
+	}
+
+	/**
+	 * @see java.util.Map#replace(Object, Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param oldValue old value
+	 * @param newValue new value
+	 * @return {@code true} if the value was replaced
+	 */
+	public boolean replace(double[] lower, double[] upper, T oldValue, T newValue) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.replace(key, oldValue, newValue);
+	}
+
+	/**
+	 * @see java.util.Map#replace(Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param value new value
+	 * @return previous value or null
+	 */
+	public T replace(double[] lower, double[] upper, T value) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.replace(key, value);
+	}
+
+	/**
+	 * @see java.util.Map#computeIfAbsent(Object, Function)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param mappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T computeIfAbsent(double[] lower, double[] upper,
+							 BiFunction<double[], double[], ? extends T> mappingFunction) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.computeIfAbsent(key, (longs) -> mappingFunction.apply(lower, upper));
+	}
+
+	/**
+	 * @see java.util.Map#computeIfPresent(Object, BiFunction)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param remappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T computeIfPresent(double[] lower, double[] upper,
+							  SolidBiFunction<double[], ? super T, ? extends T> remappingFunction) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.computeIfPresent(key, (longs, value) -> remappingFunction.apply(lower, upper, value));
+	}
+
+	/**
+	 * @see java.util.Map#compute(Object, BiFunction)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param remappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T compute(double[] lower, double[] upper,
+					 SolidBiFunction<double[], ? super T, ? extends T> remappingFunction) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.compute(key, (longs, value) -> remappingFunction.apply(lower, upper, value));
 	}
 }

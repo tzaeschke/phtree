@@ -18,7 +18,7 @@
  */
 package ch.ethz.globis.phtree.test;
 
-import ch.ethz.globis.phtree.PhTree;
+import ch.ethz.globis.phtree.PhTreeF;
 import ch.ethz.globis.phtree.test.util.TestSuper;
 import ch.ethz.globis.phtree.v13.PhTree13;
 import ch.ethz.globis.phtree.v16.PhTree16;
@@ -34,35 +34,35 @@ import java.util.function.IntFunction;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
-public class TestJava8MapAPI extends TestSuper {
+public class TestJava8MapAPIFloat extends TestSuper {
 
 	private static final int N_POINTS = 1000;
 
-    private final IntFunction<PhTree<?>> constructor;
+    private final IntFunction<PhTreeF<?>> constructor;
 
-    public TestJava8MapAPI(IntFunction<PhTree<?>> constructor) {
+    public TestJava8MapAPIFloat(IntFunction<PhTreeF<?>> constructor) {
         this.constructor = constructor;
     }
 
     @Parameterized.Parameters
     public static List<Object[]> distanceFunctions() {
         return Arrays.asList(new Object[][] {
-            { (IntFunction<PhTree<?>>) (dim) -> new PhTree13<>(dim) },
-            { (IntFunction<PhTree<?>>) (dim) -> new PhTree16<>(dim) },
+            { (IntFunction<PhTreeF<?>>) (dim) -> PhTreeF.wrap(new PhTree13<>(dim)) },
+            { (IntFunction<PhTreeF<?>>) (dim) -> PhTreeF.wrap(new PhTree16<>(dim)) },
         });
     }
     
 	@SuppressWarnings("unchecked")
-	private <T> PhTree<T> create(int dim) {
-		return (PhTree<T>) constructor.apply(dim);
+	private <T> PhTreeF<T> create(int dim) {
+		return (PhTreeF<T>) constructor.apply(dim);
 	}
 
 	@Test
 	public void testPutIfAbsent() {
-		PhTree<Integer> ind = create(3);
+		PhTreeF<Integer> ind = create(3);
 		Random R = new Random(0);
 		for (int i = 0; i < N_POINTS; i++) {
-			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
+			double[] v = new double[]{R.nextDouble(), R.nextDouble(), R.nextDouble()};
 			assertNull(ind.putIfAbsent(v, i));
 			assertEquals(i, (int) ind.putIfAbsent(v, -i));
 			assertEquals(i, (int) ind.get(v));
@@ -72,10 +72,10 @@ public class TestJava8MapAPI extends TestSuper {
 
 	@Test
 	public void testComputeIfAbsent() {
-		PhTree<Integer> ind = create(3);
+		PhTreeF<Integer> ind = create(3);
 		Random R = new Random(0);
 		for (int i = 0; i < N_POINTS; i++) {
-			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
+			double[] v = new double[]{R.nextDouble(), R.nextDouble(), R.nextDouble()};
 			final int i2 = i;
 			assertEquals(i2, (int) ind.computeIfAbsent(v, k -> i2));
 			assertEquals(i2, (int) ind.computeIfAbsent(v, k -> -i2));
@@ -86,11 +86,11 @@ public class TestJava8MapAPI extends TestSuper {
 
 	@Test
 	public void testComputeIfPresent() {
-		PhTree<Integer> ind = create(3);
+		PhTreeF<Integer> ind = create(3);
 		Random R = new Random(0);
-		long[][] points = new long[N_POINTS][];
+		double[][] points = new double[N_POINTS][];
 		for (int i = 0; i < points.length; i++) {
-			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
+			double[] v = new double[]{R.nextDouble(), R.nextDouble(), R.nextDouble()};
 			points[i] = v;
 			final int i2 = i;
 			assertNull(ind.computeIfPresent(v, (longs, integer) -> i2));
@@ -100,7 +100,7 @@ public class TestJava8MapAPI extends TestSuper {
 			assertEquals(-i2, (int) ind.get(v));
 		}
 		assertEquals(N_POINTS, ind.size());
-		for (long[] v : points) {
+		for (double[] v : points) {
 			assertTrue(ind.contains(v));
 			assertNull(ind.computeIfPresent(v, (longs, integer) -> null));
 			assertFalse(ind.contains(v));
@@ -110,11 +110,11 @@ public class TestJava8MapAPI extends TestSuper {
 
 	@Test
 	public void testCompute() {
-		PhTree<Integer> ind = create(3);
+		PhTreeF<Integer> ind = create(3);
 		Random R = new Random(0);
-		long[][] points = new long[N_POINTS][];
+		double[][] points = new double[N_POINTS][];
 		for (int i = 0; i < points.length; i++) {
-			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
+			double[] v = new double[]{R.nextDouble(), R.nextDouble(), R.nextDouble()};
 			points[i] = v;
 			final int i2 = i;
 			assertNull(ind.compute(v, (longs, integer) -> {
@@ -135,7 +135,7 @@ public class TestJava8MapAPI extends TestSuper {
 		}
 		assertEquals(N_POINTS, ind.size());
 		for (int i = 0; i < points.length; i++) {
-			long[] v = points[i];
+			double[] v = points[i];
 			final int i2 = i;
 			assertNull(ind.compute(v, (longs, integer) -> {
 				assertEquals(-i2, (int) integer);
@@ -148,10 +148,10 @@ public class TestJava8MapAPI extends TestSuper {
 
 	@Test
 	public void testComputeMini() {
-		PhTree<Integer> ind = create(3);
+		PhTreeF<Integer> ind = create(3);
 
-		long[] i1 = new long[] {0, 0, 0};
-		long[] i2 = new long[] {10, 10, 10};
+		double[] i1 = new double[] {0, 0, 0};
+		double[] i2 = new double[] {10, 10, 10};
 		assertEquals(1, (int) ind.compute(i1, (longs, integer) -> {
 			assertNull(integer);
 			return 1;
@@ -168,10 +168,10 @@ public class TestJava8MapAPI extends TestSuper {
 
 	@Test
 	public void testGetOrDefault() {
-		PhTree<Integer> ind = create(2);
+		PhTreeF<Integer> ind = create(2);
 		Random R = new Random(0);
 		for (int i = 0; i < N_POINTS; i++) {
-			long[] v = new long[]{R.nextInt(), R.nextInt()};
+			double[] v = new double[]{R.nextDouble(), R.nextDouble()};
 			assertEquals(i + 15, (int) ind.getOrDefault(v, i+15));
 			ind.put(v, -i);
 			assertEquals(-i, (int) ind.getOrDefault(v, i+17));
@@ -180,11 +180,11 @@ public class TestJava8MapAPI extends TestSuper {
 
 	@Test
 	public void testRemoveExact() {
-		PhTree<Integer> ind = create(3);
+		PhTreeF<Integer> ind = create(3);
 		Random R = new Random(0);
-		long[][] points = new long[N_POINTS][];
+		double[][] points = new double[N_POINTS][];
 		for (int i = 0; i < points.length; i++) {
-			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
+			double[] v = new double[]{R.nextDouble(), R.nextDouble(), R.nextDouble()};
 			points[i] = v;
 			assertFalse(ind.remove(v, i));
 			ind.put(v, i);
@@ -192,7 +192,7 @@ public class TestJava8MapAPI extends TestSuper {
 		}
 		assertEquals(N_POINTS, ind.size());
 		for (int i = 0; i < points.length; i++) {
-			long[] v = points[i];
+			double[] v = points[i];
 			assertTrue(ind.contains(v));
 			assertFalse(ind.remove(v, i+1));
 			assertTrue(ind.contains(v));
@@ -204,11 +204,11 @@ public class TestJava8MapAPI extends TestSuper {
 
 	@Test
 	public void testReplace() {
-		PhTree<Integer> ind = create(3);
+		PhTreeF<Integer> ind = create(3);
 		Random R = new Random(0);
-		long[][] points = new long[N_POINTS][];
+		double[][] points = new double[N_POINTS][];
 		for (int i = 0; i < points.length; i++) {
-			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
+			double[] v = new double[]{R.nextDouble(), R.nextDouble(), R.nextDouble()};
 			points[i] = v;
 			assertNull(ind.replace(v, i));
 			assertFalse(ind.contains(v));
@@ -221,11 +221,11 @@ public class TestJava8MapAPI extends TestSuper {
 
 	@Test
 	public void testReplaceExact() {
-		PhTree<Integer> ind = create(3);
+		PhTreeF<Integer> ind = create(3);
 		Random R = new Random(0);
-		long[][] points = new long[N_POINTS][];
+		double[][] points = new double[N_POINTS][];
 		for (int i = 0; i < points.length; i++) {
-			long[] v = new long[]{R.nextInt(), R.nextInt(), R.nextInt()};
+			double[] v = new double[]{R.nextDouble(), R.nextDouble(), R.nextDouble()};
 			points[i] = v;
 			assertFalse(ind.replace(v, null, i));
 			assertFalse(ind.replace(v, i, i));
