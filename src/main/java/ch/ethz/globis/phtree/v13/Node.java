@@ -413,10 +413,9 @@ public class Node {
 		}
 
 		T newValue = remappingFunction.apply(newKey, null);
-		if (newValue != null) {
+		if (newValue == null) {
 			tree.longPool().offer(buffer);
-			values[pin] = newValue;
-			return newValue;
+			return null;
 		}
 
 		Node newNode = createNode(newKey, newValue, buffer, currentValue, maxConflictingBits, tree);

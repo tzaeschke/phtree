@@ -41,9 +41,9 @@ public class ObjectPool<T> {
 	private final Supplier<T> constructor;
 
 	@SuppressWarnings("unchecked")
-	private ObjectPool(Supplier<T> constructor) {
+	private ObjectPool(int maxPoolSize, Supplier<T> constructor) {
 		this.constructor = constructor != null ? constructor : () -> null;
-		int size = PhTreeHelper.ARRAY_POOLING ? DEFAULT_POOL_SIZE : 0;
+		int size = PhTreeHelper.ARRAY_POOLING ? maxPoolSize : 0;
 		this.pool = (T[]) new Object[size];
 	}
 
@@ -55,7 +55,18 @@ public class ObjectPool<T> {
 	 * @return New pool.
 	 */
 	public static <T> ObjectPool<T> create(Supplier<T> constructor) {
-		return new ObjectPool<>(constructor);
+		return new ObjectPool<>(DEFAULT_POOL_SIZE, constructor);
+	}
+
+	/**
+	 * @param maxPoolSize Maximum pool size
+	 * @param constructor Construction method. If this is 'null', the pool will never create objects
+	 *                    but only return objects that were previously offered.
+	 * @param <T> object type
+	 * @return New pool.
+	 */
+	public static <T> ObjectPool<T> create(int maxPoolSize, Supplier<T> constructor) {
+		return new ObjectPool<>(maxPoolSize, constructor);
 	}
 
 	public T get() {

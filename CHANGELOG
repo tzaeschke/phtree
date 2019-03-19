@@ -1,3 +1,10 @@
+2019-03-18
+==========
+Release 2.3.0
+- (TZ for Improbable) Fixed bug in compute()/computeIfPresent() in V13
+- (TZ for Improbable) Added missing compute functions fot PhTreeF, PhTreeSolid and PhTreeSolidF
+- (TZ for Improbable) Minor cleanup
+
 2019-03-15
 ==========
 Release 2.2.0

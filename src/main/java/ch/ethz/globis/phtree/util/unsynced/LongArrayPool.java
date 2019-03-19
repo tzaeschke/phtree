@@ -32,13 +32,32 @@ public class LongArrayPool {
     private int[] poolSize;
     private int[] poolStatsNew;
 
-    public static LongArrayPool create() {
+	/**
+	 * Creates a pool of arrays. Ayyays are pooled separately per size, up to a mximum size.
+	 * Maximum array size to be pooled is 10,000 (default). Arrays larger than this are never pooled.
+	 * Max number of arrays that are pooled for each array size. Default is 100.
+	 * @return Array pool
+	 */
+	public static LongArrayPool create() {
 		if (PhTreeHelper.ARRAY_POOLING) {
-	        return new LongArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
-	                PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
+			return new LongArrayPool(PhTreeHelper.ARRAY_POOLING_MAX_ARRAY_SIZE,
+					PhTreeHelper.ARRAY_POOLING_POOL_SIZE);
 		}
 		return new LongArrayPool(0, 0);
-    }
+	}
+
+	/**
+	 * Creates a pool of arrays. Ayyays are pooled separately per size, up to a mximum size.
+	 * @param maxArraySize Maximum array size to be pooled. Arrays larger than this are never pooled.
+	 * @param maxArrayCount Max number of arrays that are pooled for each array size.
+	 * @return Array pool
+	 */
+	public static LongArrayPool create(int maxArraySize, int maxArrayCount) {
+		if (PhTreeHelper.ARRAY_POOLING) {
+			return new LongArrayPool(maxArraySize, maxArrayCount);
+		}
+		return new LongArrayPool(0, 0);
+	}
 
     private LongArrayPool(int maxArraySize, int maxArrayCount) {
         this.maxArraySize = maxArraySize;

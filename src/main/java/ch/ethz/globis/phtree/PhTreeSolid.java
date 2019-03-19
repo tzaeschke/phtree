@@ -1,12 +1,27 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
+ * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree;
 
 import java.util.Arrays;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import ch.ethz.globis.phtree.PhTree.PhIterator;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
@@ -24,11 +39,26 @@ import ch.ethz.globis.phtree.util.PhTreeStats;
  */
 public class PhTreeSolid<T> implements Iterable<T> {
 
+	@FunctionalInterface
+	public interface SolidBiFunction<T, U, R> {
+
+		/**
+		 * Applies this function to the given arguments.
+		 *
+		 * @param lower lower left corner
+		 * @param upper upper right corner
+		 * @param value the value
+		 * @return the function result
+		 */
+		R apply(T lower, T upper, U value);
+	}
+
 	private final int dims;
 	private final PhTree<T> pht;
 	private final PreProcessorRange pre;
 	private final long[] qMIN;
 	private final long[] qMAX;
+
 
 	/**
 	 * Create a new tree with the specified number of dimensions.
@@ -56,6 +86,16 @@ public class PhTreeSolid<T> implements Iterable<T> {
 		Arrays.fill(qMIN, Long.MIN_VALUE);
 		qMAX = new long[dims];
 		Arrays.fill(qMAX, Long.MAX_VALUE);
+	}
+
+	/**
+	 * Create a new range tree backed by the the specified tree.
+	 * Note that the backing tree's dimensionality must be a multiple of 2.
+	 * 
+	 * @param tree the backing tree
+	 */
+	public static <T> PhTreeSolid<T> wrap(PhTree<T> tree) {
+		return new PhTreeSolid<>(tree);
 	}
 
 	/**
@@ -351,7 +391,7 @@ public class PhTreeSolid<T> implements Iterable<T> {
 		@SuppressWarnings("unchecked")
 		@Override
 		public boolean equals(Object obj) {
-			if (obj == null || !(obj instanceof PhEntryS)) {
+			if (!(obj instanceof PhEntryS)) {
 				return false;
 			}
 			PhEntryS<T> e = (PhEntryS<T>) obj;
@@ -425,4 +465,112 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	public String toStringTree() {
 		return pht.toStringTree();
 	}
+
+	// Overrides of JDK8 Map extension methods
+
+	/**
+	 * @see java.util.Map#getOrDefault(Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param defaultValue default value
+	 * @return actual value or default value
+	 */
+	public T getOrDefault(long[] lower, long[] upper, T defaultValue) {
+		T t = get(lower, upper);
+		return t == null ? defaultValue : t;
+	}
+
+	/**
+	 * @see java.util.Map#putIfAbsent(Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param value new value
+	 * @return previous value or null
+	 */
+	public T putIfAbsent(long[] lower, long[] upper, T value) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.putIfAbsent(key, value);
+	}
+
+	/**
+	 * @see java.util.Map#remove(Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param value value
+	 * @return {@code true} if the value was removed
+	 */
+	public boolean remove(long[] lower, long[] upper, T value) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.remove(key, value);
+	}
+
+	/**
+	 * @see java.util.Map#replace(Object, Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param oldValue old value
+	 * @param newValue new value
+	 * @return {@code true} if the value was replaced
+	 */
+	public boolean replace(long[] lower, long[] upper, T oldValue, T newValue) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.replace(key, oldValue, newValue);
+	}
+
+	/**
+	 * @see java.util.Map#replace(Object, Object)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param value new value
+	 * @return previous value or null
+	 */
+	public T replace(long[] lower, long[] upper, T value) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.replace(key, value);
+	}
+
+	/**
+	 * @see java.util.Map#computeIfAbsent(Object, Function)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param mappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T computeIfAbsent(long[] lower, long[] upper, BiFunction<long[], long[], ? extends T> mappingFunction) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.computeIfAbsent(key, (longs) -> mappingFunction.apply(lower, upper));
+	}
+
+	/**
+	 * @see java.util.Map#computeIfPresent(Object, BiFunction)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param remappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T computeIfPresent(long[] lower, long[] upper,
+							  SolidBiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.computeIfPresent(key, (longs, value) -> remappingFunction.apply(lower, upper, value));
+	}
+
+	/**
+	 * @see java.util.Map#compute(Object, BiFunction)
+	 * @param lower lower left corner
+	 * @param upper upper right corner
+	 * @param remappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T compute(long[] lower, long[] upper, SolidBiFunction<long[], ? super T, ? extends T> remappingFunction) {
+		long[] key = new long[lower.length*2];
+		pre.pre(lower, upper, key);
+		return pht.compute(key, (longs, value) -> remappingFunction.apply(lower, upper, value));
+	}
+
 }

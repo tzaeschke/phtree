@@ -1,12 +1,27 @@
 /*
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
+ * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
+ * Copyright 2019 Improbable. All rights reserved.
  *
- * This software is the proprietary information of ETH Zurich.
- * Use is subject to license terms.
+ * This file is part of the PH-Tree project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ch.ethz.globis.phtree;
 
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
@@ -494,7 +509,7 @@ public class PhTreeF<T> {
 	 */
 	public List<PhEntryF<T>> queryAll(double[] min, double[] max) {
 		return queryAll(min, max, Integer.MAX_VALUE, null,
-				e -> new PhEntryF<T>(PhMapperK.toDouble(e.getKey()), e.getValue()));
+				e -> new PhEntryF<>(PhMapperK.toDouble(e.getKey()), e.getValue()));
 	}
 
 	/**
@@ -555,6 +570,105 @@ public class PhTreeF<T> {
 
 	public PhTreeStats getStats() {
 		return pht.getStats();
+	}
+
+
+	// Overrides of JDK8 Map extension methods
+
+	/**
+	 * @see java.util.Map#getOrDefault(Object, Object)
+	 * @param key key
+	 * @param defaultValue default value
+	 * @return actual value or default value
+	 */
+	public T getOrDefault(double[] key, T defaultValue) {
+		T t = get(key);
+		return t == null ? defaultValue : t;
+	}
+
+	/**
+	 * @see java.util.Map#putIfAbsent(Object, Object)
+	 * @param key key
+	 * @param value new value
+	 * @return previous value or null
+	 */
+	public T putIfAbsent(double[] key, T value) {
+		long[] lKey = new long[key.length];
+		pre.pre(key, lKey);
+		return pht.putIfAbsent(lKey, value);
+	}
+
+	/**
+	 * @see java.util.Map#remove(Object, Object)
+	 * @param key key
+	 * @param value value
+	 * @return {@code true} if the value was removed
+	 */
+	public boolean remove(double[] key, T value) {
+		long[] lKey = new long[key.length];
+		pre.pre(key, lKey);
+		return pht.remove(lKey, value);
+	}
+
+	/**
+	 * @see java.util.Map#replace(Object, Object, Object)
+	 * @param key key
+	 * @param oldValue old value
+	 * @param newValue new value
+	 * @return {@code true} if the value was replaced
+	 */
+	public boolean replace(double[] key, T oldValue, T newValue) {
+		long[] lKey = new long[key.length];
+		pre.pre(key, lKey);
+		return pht.replace(lKey, oldValue, newValue);
+	}
+
+	/**
+	 * @see java.util.Map#replace(Object, Object)
+	 * @param key key
+	 * @param value new value
+	 * @return previous value or null
+	 */
+	public T replace(double[] key, T value) {
+		long[] lKey = new long[key.length];
+		pre.pre(key, lKey);
+		return pht.replace(lKey, value);
+	}
+
+	/**
+	 * @see java.util.Map#computeIfAbsent(Object, Function)
+	 * @param key key
+	 * @param mappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T computeIfAbsent(double[] key, Function<double[], ? extends T> mappingFunction) {
+		long[] lKey = new long[key.length];
+		pre.pre(key, lKey);
+		return pht.computeIfAbsent(lKey, longs -> mappingFunction.apply(key));
+	}
+
+	/**
+	 * @see java.util.Map#computeIfPresent(Object, BiFunction)
+	 * @param key key
+	 * @param remappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T computeIfPresent(double[] key, BiFunction<double[], ? super T, ? extends T> remappingFunction) {
+		long[] lKey = new long[key.length];
+		pre.pre(key, lKey);
+		return pht.computeIfPresent(lKey, (longs, t) -> remappingFunction.apply(key, t));
+	}
+
+	/**
+	 * @see java.util.Map#compute(Object, BiFunction)
+	 * @param key key
+	 * @param remappingFunction mapping function
+	 * @return new value or null if none is associated
+	 */
+	public T compute(double[] key, BiFunction<double[], ? super T, ? extends T> remappingFunction) {
+		long[] lKey = new long[key.length];
+		pre.pre(key, lKey);
+		return pht.compute(lKey, (longs, t) -> remappingFunction.apply(key, t));
 	}
 }
 
