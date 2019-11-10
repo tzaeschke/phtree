@@ -15,14 +15,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.function.IntFunction;
 
 import org.junit.Test;
 
+import ch.ethz.globis.phtree.PhDistanceL;
+import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhRangeQuery;
 import ch.ethz.globis.phtree.PhTree;
 import ch.ethz.globis.phtree.PhTree.PhIterator;
 import ch.ethz.globis.phtree.test.util.TestUtil;
 import ch.ethz.globis.phtree.util.Bits;
+import ch.ethz.globis.phtree.v13.PhTree13;
+import ch.ethz.globis.phtree.v16.PhTree16;
+import ch.ethz.globis.phtree.v16hd.PhTree16HD;
 
 public class TestRangeQuery {
 
@@ -112,7 +118,7 @@ public class TestRangeQuery {
 		final int range = MAXV/2;
 		final Random R = new Random(0);
 		for (int d = 0; d < LOOP; d++) {
-			PhTree<Object> ind = TestUtil.newTree(DIM, 32);
+			PhTree<Object> ind = TestUtil.newTree(DIM);
 			PhRangeQuery<Object> q = ind.rangeQuery(1, new long[DIM]);
 			for (int i = 0; i < N; i++) {
 				long[] v = new long[DIM];
@@ -140,6 +146,76 @@ public class TestRangeQuery {
 				check(v, exp, nn);
 			}
 		}
+	}
+
+	@Test
+	public void testQueryNDRandomFilter13() {
+		testQueryNDRandomFilter(dim -> new PhTree13<Object>(dim));
+	}
+	
+	@Test
+	public void testQueryNDRandomFilter16() {
+		testQueryNDRandomFilter(dim -> new PhTree16<Object>(dim));
+	}
+	
+	@Test
+	public void testQueryNDRandomFilter16HD() {
+		testQueryNDRandomFilter(dim -> new PhTree16HD<Object>(dim));
+	}
+	
+	private void testQueryNDRandomFilter(IntFunction<PhTree<Object>> factory) {
+		final int DIM = 5;
+		final int LOOP = 10;
+		final int N = 1000;
+		final int NQ = 1000;
+		final int MAXV = 1000;
+		final int range = MAXV/2;
+		final Random R = new Random(0);
+		
+		for (int d = 0; d < LOOP; d++) {
+			long[] v = new long[DIM];
+			long[] min = new long[DIM];
+			long[] max = new long[DIM];
+			PhFilter filter = filter(v, range);
+			PhTree<Object> ind = factory.apply(DIM);
+			PhTree.PhQuery<Object> q = ind.query(min, max, filter);
+			for (int i = 0; i < N; i++) {
+				long[] v2 = new long[DIM];
+				for (int j = 0; j < DIM; j++) {
+					v2[j] = Math.abs(R.nextInt(MAXV));
+				}
+				ind.put(v2, null);
+			}
+			for (int i = 0; i < NQ; i++) {
+				for (int j = 0; j < DIM; j++) {
+					v[j] = Math.abs(R.nextInt(MAXV));
+					min[j] = v[j]-range;
+					max[j] = v[j]+range;
+				}
+				long[] exp = rangeQuery(ind, range, v).get(0);
+				List<long[]> nnList = toList(q.reset(min, max));
+				assertTrue("i=" + i + " d=" + d, !nnList.isEmpty());
+				long[] nn = nnList.get(0);
+				check(v, exp, nn);
+			}
+		}
+	}
+	
+	private PhFilter filter(long[] v, double radius) {
+		return new PhFilter() {
+			private static final long serialVersionUID = 1L;
+			@Override
+			public boolean isValid(int bitsToIgnore, long[] prefix) {
+				//if (true) throw new IllegalStateException();
+				return true;
+			}
+			
+			@Override
+			public boolean isValid(long[] key) {
+				//return true;
+				return PhDistanceL.THIS.dist(v, key) <= radius;
+			}
+		};
 	}
 
 	/**
@@ -471,6 +547,14 @@ public class TestRangeQuery {
 			}
 		}
 		return false;
+	}
+
+	private List<long[]> toList(PhTree.PhQuery<?> q) {
+		ArrayList<long[]> ret = new ArrayList<>();
+		while (q.hasNext()) {
+			ret.add(q.nextKey());
+		}
+		return ret;
 	}
 
 	private List<long[]> toList(PhRangeQuery<?> q) {

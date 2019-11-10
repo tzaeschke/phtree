@@ -22,7 +22,7 @@ Maven:
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.3.0</version>
+    <version>2.4.0</version>
 </dependency>
 ```
 
@@ -33,11 +33,14 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 
 # News
 
+### 2019-11-10
+Release 2.4.0
+- Added missing public API for filtered queries: `PhTree.query(min, max, filter)`
+
 ### 2019-03-19
 Release 2.3.0
 - Added missing compute functions for `PhTreeF`, `PhTreeSolid` and `PhTreeSolidF`
 - Fixed bug in `compute()`/`computeIfPresent()` in V13
-
 
 ### 2019-03-15
 

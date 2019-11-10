@@ -114,6 +114,18 @@ public interface PhTree<T> {
 	PhQuery<T> query(long[] min, long[] max);
 
 	/**
+	 * Performs a rectangular window query. The parameters are the min and max keys which 
+	 * contain the minimum respectively the maximum keys in every dimension.
+	 * @param min Minimum values
+	 * @param max Maximum values
+	 * @param filter A filter function. The iterator will only return results that match the filter. 
+	 * @return Result iterator.
+	 */
+	default PhQuery<T> query(long[] min, long[] max, PhFilter filter) {
+		throw new UnsupportedOperationException("This is only supported in V13, V16 and V16HD.");
+	}
+
+	/**
 	 * 
 	 * @return the number of dimensions of the tree
 	 */
@@ -278,8 +290,9 @@ public interface PhTree<T> {
 		 * Reset the query with the new 'min' and 'max' boundaries.
 		 * @param min min values
 		 * @param max max values
+		 * @return the query itself
 		 */
-		void reset(long[] min, long[] max);
+		PhQuery<T> reset(long[] min, long[] max);
 	}
 
 	/**

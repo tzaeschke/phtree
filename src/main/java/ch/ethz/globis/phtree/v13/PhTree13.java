@@ -561,6 +561,25 @@ public class PhTree13<T> implements PhTree<T> {
 	 * contain the minimum respectively the maximum keys in every dimension.
 	 * @param min Minimum values
 	 * @param max Maximum values
+	 * @param filter A filter function. The iterator will only return results that match the filter. 
+	 * @return Result iterator.
+	 */
+	@Override
+	public PhQuery<T> query(long[] min, long[] max, PhFilter filter) {
+		if (min.length != dims || max.length != dims) {
+			throw new IllegalArgumentException("Invalid number of arguments: " + min.length +  
+					" / " + max.length + "  DIM=" + dims);
+		}
+		PhQuery<T> q = new PhIteratorNoGC<>(this, filter);
+		q.reset(min, max);
+		return q;
+	}
+
+	/**
+	 * Performs a rectangular window query. The parameters are the min and max keys which 
+	 * contain the minimum respectively the maximum keys in every dimension.
+	 * @param min Minimum values
+	 * @param max Maximum values
 	 * @return Result list.
 	 */
 	@Override

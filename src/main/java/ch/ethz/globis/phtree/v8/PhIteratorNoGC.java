@@ -95,7 +95,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 	}	
 		
 	@Override
-	public void reset(long[] rangeMin, long[] rangeMax) {	
+	public PhIteratorNoGC<T> reset(long[] rangeMin, long[] rangeMax) {	
 		this.rangeMin = rangeMin;
 		this.rangeMax = rangeMax;
 		this.stack.size = 0;
@@ -104,7 +104,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 		if (pht.getRoot() == null) {
 			//empty index
 			isFinished = true;
-			return;
+			return this;
 		}
 		
 		if (stack.prepare(pht.getRoot())) {
@@ -112,6 +112,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 		} else {
 			isFinished = true;
 		}
+		return this;
 	}
 
 	private void findNextElement() {
