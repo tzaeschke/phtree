@@ -93,6 +93,8 @@ public class PhTreeSolid<T> implements Iterable<T> {
 	 * Note that the backing tree's dimensionality must be a multiple of 2.
 	 * 
 	 * @param tree the backing tree
+	 * @return A new range tree around 'tree' 
+	 * @param <T> value type
 	 */
 	public static <T> PhTreeSolid<T> wrap(PhTree<T> tree) {
 		return new PhTreeSolid<>(tree);

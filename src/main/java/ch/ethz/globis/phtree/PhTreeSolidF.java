@@ -94,8 +94,10 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 	 * Note that the backing tree's dimensionality must be a multiple of 2.
 	 *
 	 * @param tree the backing tree
+	 * @return A new range tree around 'tree' 
+	 * @param <T> value type
 	 */
-	public static <T> PhTreeSolidF wrap(PhTree<T> tree) {
+	public static <T> PhTreeSolidF<T> wrap(PhTree<T> tree) {
 		return new PhTreeSolidF<>(tree, new PreProcessorRangeF.IEEE(tree.getDim()));
 	}
 
