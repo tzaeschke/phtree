@@ -376,7 +376,7 @@ Switzerland.
 Copyright 2016-2019 by Tilmann Zäschke,
 zoodb@gmx.de.
 
-Copyright 2019-2020 by Improbable WOrlds Limited
+Copyright 2019-2020 by Improbable Worlds Limited
 
 The critbit tree (namespace `org.zoodb`) is copyright 2009-2018 by
 Tilmann Zäschke,
