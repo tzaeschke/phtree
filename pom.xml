@@ -8,9 +8,6 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
-	<prerequisites>
-		<maven>3.0.3</maven>
-	</prerequisites>
 
 	<name>PH-Tree</name>
 	<description>The PH-Tree is a multi-dimensional index</description>
@@ -85,6 +82,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
+      			<version>3.2.1</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
