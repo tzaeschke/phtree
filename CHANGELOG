@@ -1,3 +1,13 @@
+2020-04-30
+==========
+Release 2.5.0
+- (TZ) Added convenience API for multi-map (PH-Tree with duplicates): PhTreeMultiMapF.
+
+2019-11-10
+==========
+Release 2.4.0
+- (TZ for Improbable) Added missing public API for filtered queries: PhTree.query(min, max, filter)
+
 2019-03-18
 ==========
 Release 2.3.0

@@ -3,6 +3,7 @@
 The PH-tree is a multi-dimensional indexing and storage structure.
 By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
 It supports kNN (k nearest neighbor) queries, range queries, window queries and fast update/move/reinsert of individual entries.
+The PH-Tree is a **map**, it allows only one entry per position. Multiple entries per position can be implemented by using IDs (see `PhTreeMultiMap`) or by storing collections at each position. 
 
 Documents
 
@@ -22,7 +23,7 @@ Maven:
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.4.0</version>
+    <version>2.5.0</version>
 </dependency>
 ```
 
@@ -32,6 +33,13 @@ A C++ version of the PH-Tree (with slightly different design) is available [here
 
 
 # News
+
+### 2020-04-30
+Release 2.5.0
+- Added convenience API for multi-map: `PhTreeMultiMapF`. This API emulates a PH-Tree that (unlike normal PH-Trees)
+  support multiple entries for any coordinate. This is enabled by storing a unique identifier
+  in an additional dimension.
+  For performance reasons it is recommended to use small absolute values for IDs. such as 16bit or 32bit integers.
 
 ### 2019-11-10
 Release 2.4.0
@@ -145,8 +153,8 @@ There are currently two main versions, the classic PH-Tree (called **PH1**, late
 - Performance/dimensionality: depending on the dataset, performance of window queries may degrade when using data with more than 30 dimensions. 
 - Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better than traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
 - Storage (PH1 only): The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about _iterators_ below on some strategies to avoid this problem. 
-
-
+- (= unexpected property) The PH-Tree is a **map**, it support only one entry at each position. Storing multiple entries per position
+  is possible by, for example, using the `PhTreeMultiMapF` or by storing a collectionh of value with `PhTreeF<List<YourClass>>` or similar. 
 
 ### Generally
 
@@ -178,6 +186,7 @@ The four variants are:
 
 - `PhTree`          For point data with integer coordinates. This is the native storage format.
 - `PhTreeF`         For point data with floating point coordinates.
+- `PhTreeMultiMapF` Same as `PhTreeF`, but allows multiple values for each coordinate by relying on a unique ID which is stored in an additional dimension.
 - `PhTreeSolid`     For intervals/rectangles/boxes (solids) with integer coordinates.
 - `PhTreeSolidF`    For intervals/rectangles/boxes (solids) with floating point coordinates.
 
@@ -373,7 +382,7 @@ Universitätsstrasse 6,
 8092 Zurich,
 Switzerland.
 
-Copyright 2016-2019 by Tilmann Zäschke,
+Copyright 2016-2020 by Tilmann Zäschke,
 zoodb@gmx.de.
 
 Copyright 2019-2020 by Improbable Worlds Limited

@@ -56,7 +56,7 @@ public interface PreProcessorPointF {
 
 		@Override
 		public void post(long[] pre, double[] post) {
-			for (int d=0; d<pre.length; d++) {
+			for (int d=0; d<post.length; d++) {
 				post[d] = BitTools.toDouble(pre[d]);
 			}
 		}
