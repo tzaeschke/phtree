@@ -3,7 +3,7 @@
 	<groupId>ch.ethz.globis.phtree</groupId>
 	<artifactId>phtree</artifactId>
 	<packaging>jar</packaging>
-	<version>2.4.1-SNAPSHOT</version>
+	<version>2.5.0</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,7 +16,7 @@
   		<connection>scm:git:git@github.com:tzaeschke/phtree.git</connection>
   		<developerConnection>scm:git:git@github.com:tzaeschke/phtree.git</developerConnection>
   		<url>https://github.com/tzaeschke/phtree</url>
-      <tag>HEAD</tag>
+      <tag>phtree-2.5.0</tag>
   </scm>	
 	<licenses>
 	  <license>
