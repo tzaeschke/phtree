@@ -37,8 +37,12 @@ import ch.ethz.globis.phtree.util.PhTreeStats;
  *
  * The multi-map allows, unlike plain PH-Trees, to store more than one value per
  * coordinate. The multi-map uses a simple trick, it adds one additional
- * dimension that stores an unique identifier to distinguish mutliple values
+ * dimension that stores an unique identifier to distinguish multiple values
  * with the same coordinate.
+ * 
+ * It is strongly suggested to use small (ideally positive) integers as IDs, such as
+ * 16 or 32 bit numbers. The larger the number are, the more likely they are to split the tree into 
+ * additional subtrees and thus affect query performance. 
  *
  * @author ztilmann (Tilmann Zaeschke)
  *
@@ -335,8 +339,8 @@ public class PhTreeMultiMapF<T> {
         protected PhQueryMMF(PhQuery<T> iter, int dims, PreProcessorPointF pre) {
             super(iter, dims, pre);
             q = iter;
-            lMin = new long[dims];
-            lMax = new long[dims];
+            lMin = new long[dims + 1];
+            lMax = new long[dims + 1];
         }
 
         /**
@@ -348,6 +352,8 @@ public class PhTreeMultiMapF<T> {
         public void reset(double[] lower, double[] upper) {
             pre.pre(lower, lMin);
             pre.pre(upper, lMax);
+            lMin[dims] = Long.MIN_VALUE;
+            lMax[dims] = Long.MAX_VALUE;
             q.reset(lMin, lMax);
         }
     }
@@ -367,7 +373,7 @@ public class PhTreeMultiMapF<T> {
             super(iter, dims, pre);
             this.dims = dims;
             q = iter;
-            lCenter = new long[dims];
+            lCenter = new long[dims + 1];
             buffer = new PhEntryDistMMF<>(new double[dims], -1, null, Double.NaN);
         }
 

@@ -26,6 +26,7 @@ import ch.ethz.globis.phtree.PhDistanceMMF;
 import ch.ethz.globis.phtree.PhTreeMultiMapF;
 import ch.ethz.globis.phtree.PhTreeMultiMapF.PhIteratorMMF;
 import ch.ethz.globis.phtree.PhTreeMultiMapF.PhKnnQueryMMF;
+import ch.ethz.globis.phtree.PhTreeMultiMapF.PhQueryMMF;
 import ch.ethz.globis.phtree.PhTreeMultiMapF.PhRangeQueryMMF;
 import ch.ethz.globis.phtree.util.BitTools;
 import ch.ethz.globis.phtree.util.Bits;
@@ -288,8 +289,21 @@ public class TestMultiMapF {
                 min[i] = -0.5;
                 max[i] = 0.5;
             }
-            Iterator<double[]> it = ind.query(min, max);
+            
+            // query
+            PhQueryMMF<double[]> it = ind.query(min, max);
             int n = 0;
+            while (it.hasNext()) {
+                n++;
+                it.next();
+            }
+            assertTrue(n > 0);
+            assertTrue(n < N);
+            assertTrue(n % 2 == 0);
+            
+            // reset
+            it.reset(min, max);
+            n = 0;
             while (it.hasNext()) {
                 n++;
                 it.next();
