@@ -26,8 +26,7 @@ Maven:
     <version>2.5.0</version>
 </dependency>
 ```
-
-A C++ version of the PH-Tree (with slightly different design) is available [here](https://github.com/mcxme/phtree).
+A C++ version of the PH-Tree is offered by [Improbable](https://github.com/improbable-eng/phtree-cpp). Another version (with slightly different design) is available [here](https://github.com/mcxme/phtree).
 
 **_Other spatial indexes can be found in the [TinSpin spatial index collection](https://github.com/tzaeschke/tinspin-indexes)._**
 
