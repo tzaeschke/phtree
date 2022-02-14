@@ -43,12 +43,12 @@ public class BitTools {
 	}
 
 	public static double toDouble(long value) {
-		return Double.longBitsToDouble(value >= 0.0 ? value : value ^ 0x7FFFFFFFFFFFFFFFL);
+		return Double.longBitsToDouble(value >= 0 ? value : value ^ 0x7FFFFFFFFFFFFFFFL);
 	}
 
 	public static float toFloat(long value) {
 		int iVal = (int) value;
-		return Float.intBitsToFloat(iVal >= 0.0 ? iVal : iVal ^ 0x7FFFFFFF);
+		return Float.intBitsToFloat(iVal >= 0 ? iVal : iVal ^ 0x7FFFFFFF);
 	}
 
     /**
