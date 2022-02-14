@@ -1,3 +1,8 @@
+2022-02-14
+==========
+- (TZ) Tiny optimization: Change (value >=0.0) to (value >=0)
+- (TZ) Added tests for IEEE conversion
+
 2020-04-30
 ==========
 Release 2.5.0
