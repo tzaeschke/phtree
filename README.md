@@ -30,7 +30,11 @@ Since 2019, development is kindly supported by [Improbable](https://improbable.i
 ```
 
 ## C++
-A C++ version of the PH-Tree is offered by [Improbable](https://github.com/improbable-eng/phtree-cpp). Another version (with slightly different design) is available [here](https://github.com/mcxme/phtree).
+There are several C++ implementations available:
+- [My own](https://github.com/tzaeschke/phtree-cpp) (a fork of Improbable's implementation)
+- Implementation by [Improbable](https://github.com/improbable-eng/phtree-cpp)
+- Implementation by [mcxme](https://github.com/mcxme/phtree)
+
 
 # News
 
