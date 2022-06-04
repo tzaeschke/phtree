@@ -35,6 +35,8 @@ There are several C++ implementations available:
 - Implementation by [Improbable](https://github.com/improbable-eng/phtree-cpp)
 - Implementation by [mcxme](https://github.com/mcxme/phtree)
 
+## Support
+You can create GitHub Issues or contact me on [Discord](https://discord.gg/GNYjyyYq).
 
 # News
 
@@ -376,7 +378,7 @@ Universitätsstrasse 6,
 8092 Zurich,
 Switzerland.
 
-Copyright 2016-2020 by Tilmann Zäschke,
+Copyright 2016-2022 by Tilmann Zäschke,
 zoodb@gmx.de.
 
 Copyright 2019-2020 by Improbable Worlds Limited
@@ -385,3 +387,10 @@ The critbit tree (namespace `org.zoodb`) is copyright 2009-2018 by
 Tilmann Zäschke,
 zoodb@gmx.de.
 The critbit tree (and other spatial indexes) are also separately available [here](https://github.com/tzaeschke/zoodb-indexes)
+
+# Contact
+
+- zoodb@gmx.de
+
+- [Discord](https://discord.gg/GNYjyyYq)
+
