@@ -12,7 +12,7 @@ Documents
 [The PH-Tree: A Space-Efficient Storage Structure and Multi-Dimensional Index](https://github.com/tzaeschke/phtree/blob/master/PH-Tree-v1.1-2014-06-28.pdf), 
 Tilmann Zäschke, Christoph Zimmerli and Moira C. Norrie, 
 Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
-- The hypercube navigation is discussed in detail in [Efficient Z-Ordered Traversal of Hypercube Indexes](https://dl.gi.de/handle/20.500.12116/647), Tilmann Zäschke and Moira C. Norrie, Proc. is Intl. Conf. Datenbanksysteme für Business, Technologie und Web (BTW 2017), pp 465-484, 2017
+- The hypercube navigation is discussed in detail in [Efficient Z-Ordered Traversal of Hypercube Indexes](https://dl.gi.de/handle/20.500.12116/647), Tilmann Zäschke and Moira C. Norrie, Proc. of Intl. Conf. on Datenbanksysteme für Business, Technologie und Web (BTW 2017), pp 465-484, 2017
 - The current version of the PH-tree is discussed in more detail in this [The PH-Tree Revisited](https://github.com/tzaeschke/phtree/blob/master/PhTreeRevisited.pdf) (2015).
 - There is a Master thesis about [Cluster-Computing and Parallelization for the Multi-Dimensional PH-Index](http://e-collection.library.ethz.ch/eserv/eth:47729/eth-47729-01.pdf) (2015).
 
