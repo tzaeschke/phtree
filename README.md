@@ -1,6 +1,6 @@
 # PH-Tree
 
-The PH-tree is a multi-dimensional indexing and storage structure.
+The [PH-tree](https://tzaeschke.github.io/phtree-site/) is a multi-dimensional indexing and storage structure.
 By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
 It supports kNN (k nearest neighbor) queries, range queries, window queries and fast update/move/reinsert of individual entries.
 The PH-Tree is a **map**, it allows only one entry per position. Multiple entries per position can be implemented by using IDs (see `PhTreeMultiMap`) or by storing collections at each position. 
