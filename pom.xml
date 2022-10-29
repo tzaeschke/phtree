@@ -10,8 +10,8 @@
 	</properties>
 
 	<name>PH-Tree</name>
-	<description>The PH-Tree is a multi-dimensional index</description>
-	<url>https://www.phtree.org</url>
+	<description>The PH-Tree is a multi-dimensional / spatial index</description>
+	<url>http://phtree.org</url>
 	<scm>
   		<connection>scm:git:git@github.com:tzaeschke/phtree.git</connection>
   		<developerConnection>scm:git:git@github.com:tzaeschke/phtree.git</developerConnection>
@@ -27,11 +27,6 @@
       </license>
     </licenses>
  
-	<organization>
-		<name>ETH Zurich</name>
-		<url>https://globis.ethz.ch/</url>
-	</organization>
-    
 	<developers>
 		<developer>
 			<name>Tilmann Zäschke</name>
