@@ -11,7 +11,7 @@ import static ch.ethz.globis.phtree.PhTreeHelper.align8;
 import java.util.List;
 
 import ch.ethz.globis.pht64kd.MaxKTreeI;
-import ch.ethz.globis.phtree.util.IntVar;
+import ch.ethz.globis.phtree.util.MutableInt;
 import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.StringBuilderLn;
 import ch.ethz.globis.phtree.v11.Bits;
@@ -41,7 +41,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	private static int WARNINGS = 0;
 
 	
-	protected final IntVar nEntries = new IntVar(0);
+	protected final MutableInt nEntries = new MutableInt(0);
 	//Number of bit in the global key: [1..64].
 	private final int keyBitWidth;
 	
@@ -73,7 +73,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
 	 * @return The previous value at the position, if any.
 	 */
 	private static <T> T addEntry(NtNode<T> root, long hcPos, 
-			long[] kdKey, Object value, IntVar entryCount) {
+			long[] kdKey, Object value, MutableInt entryCount) {
 		T t = addEntry(root, hcPos, kdKey, value, (Node)null);
 		if (t == null) {
 			entryCount.inc();
@@ -216,7 +216,7 @@ public class NodeTreeV11<T> implements MaxKTreeI {
      * @param <T> value type
 	 */
 	public static <T> Object removeEntry(
-			NtNode<T> root, long hcPos, int outerDims, IntVar entryCount) {
+			NtNode<T> root, long hcPos, int outerDims, MutableInt entryCount) {
 		Object t = removeEntry(root, hcPos, outerDims, null, null, null, (Node)null);
 		if (t != null) {
 			entryCount.dec();
