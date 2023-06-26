@@ -46,6 +46,9 @@ You can create GitHub Issues or contact me on [Discord](https://discord.gg/GNYjy
 
 # News
 
+### 2023-06-26
+- Added new multimap: `PhTreeMultiMapF2`.
+
 ### 2020-04-30
 Release 2.5.0
 - Added convenience API for multi-map: `PhTreeMultiMapF`. This API emulates a PH-Tree that (unlike normal PH-Trees)
@@ -136,6 +139,11 @@ Released version 0.3.0 of the PH-tree (internal version: v11). Features (partly 
 
 There are currently two main versions, the classic PH-Tree (called **PH1**, latest implementation v13) and the new PH-Tree (called **PH2**, latest implementation v16/v16HD).
 
+Note that the PH-Tree is a **map** that stores natively only one entry per key. To store multiple entries per key,
+please use a mutli-map wrapper such as:
+- `PhTreeMultiMapF`: a multimap which uses a unique ID as additional dimension (fastest option )
+- `PhTreeMultiMapF2` a multimap which stores a collection of values at each point (most convenient option)
+
 ### Advantages
 
 - Memory efficient (PH1 only): Due to prefix sharing and other optimizations the tree may consume less memory than a flat array of integers/floats.
@@ -150,13 +158,14 @@ There are currently two main versions, the classic PH-Tree (called **PH1**, late
 
 ### Disadvantages
 
-- The PH1 will not work with more then 62 dimensions. The PH2 supports up to 2^31 dimensions but at the cost of increased memory requiremts.
-- Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more.
+- The PH1 will not work with more than 62 dimensions. The PH2 supports up to 2^31 dimensions but at the cost of increased memory requiremts.
+- Performance/size: the tree generally performs less well with smaller datasets, it is best used with 1 million entries or more.
 - Performance/dimensionality: depending on the dataset, performance of window queries may degrade when using data with more than 30 dimensions. 
-- Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better than traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
+- Data: The tree may degrade with extreme datasets, as described in the paper. However, it will still perform better than traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
 - Storage (PH1 only): The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about _iterators_ below on some strategies to avoid this problem. 
-- (= unexpected property) The PH-Tree is a **map**, it support only one entry at each position. Storing multiple entries per position
-  is possible by, for example, using the `PhTreeMultiMapF` or by storing a collectionh of value with `PhTreeF<List<YourClass>>` or similar. 
+- **(= unexpected property)** The PH-Tree is a **map**, it supports only one entry at each position. Storing multiple entries per position
+  is possible by, for example, using the `PhTreeMultiMapF` (which uses a unique ID as additional dimension) or 
+- `PhTreeMultiMapF2` (which stores a collection of values at each point). 
 
 ### Generally
 
