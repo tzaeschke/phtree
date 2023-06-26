@@ -6,7 +6,7 @@
  */
 package ch.ethz.globis.phtree.test;
 
-import ch.ethz.globis.phtree.PhDistanceMMF;
+import ch.ethz.globis.phtree.PhDistanceF;
 import ch.ethz.globis.phtree.PhTreeMultiMapF2;
 import ch.ethz.globis.phtree.PhTreeMultiMapF2.*;
 import ch.ethz.globis.phtree.util.BitTools;
@@ -206,11 +206,11 @@ public class TestMultiMapF2 {
         assertTrue(result.isEmpty());
         
         result = toList(idx.nearestNeighbour(3, 2, 2));
-        assertEquals(3, result.size());
         check(result.get(0), 2, 2);
         check(result.get(1), 2, 2);
         check(result.get(2), 2, 2);
-        
+        assertEquals(3, result.size());
+
         result = toList(idx.nearestNeighbour(1, 1, 1));
         assertEquals(1, result.size());
         check(result.get(0), 1, 1);
@@ -244,13 +244,16 @@ public class TestMultiMapF2 {
             
             //check full result
             int n = 0;
-            Iterator<double[]> it = ind.queryExtent();
+            PhExtentMMF<double[]> it = ind.queryExtent();
             for (int i = 0; i < N*2; i++) {
                 it.next();
                 n++;
             }
             assertFalse(it.hasNext());
             assertEquals(N * 2, n);
+
+            it.reset();
+            assertTrue(it.hasNext());
         }
     }
 
@@ -269,8 +272,8 @@ public class TestMultiMapF2 {
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextDouble();
                 }
-                assertNull(Bits.toBinary(v), ind.put(v, v));
-                assertNull(Bits.toBinary(v), ind.put(v, v));
+                assertTrue(Bits.toBinary(v), ind.put(v, v));
+                assertTrue(Bits.toBinary(v), ind.put(v, v));
             }
             
             double[] min = new double[DIM];
@@ -316,7 +319,7 @@ public class TestMultiMapF2 {
 		for (int d = 0; d < LOOP; d++) {
 		    long id = 0;
 			PhTreeMultiMapF2<Object> ind = newTree(DIM);
-			PhRangeQueryMMF<Object> q = ind.rangeQuery(1, PhDistanceMMF.THIS, new double[DIM]);
+			PhRangeQueryMMF<Object> q = ind.rangeQuery(1, PhDistanceF.THIS, new double[DIM]);
 			for (int i = 0; i < N; i++) {
 				double[] v = new double[DIM];
 				for (int j = 0; j < DIM; j++) {

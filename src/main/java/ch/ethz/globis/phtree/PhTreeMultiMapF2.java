@@ -105,7 +105,7 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param key   the key to store the value to store
      * @param value the value
-     * @return `true` (this implementation allows duplicate key/value entries
+     * @return `true` (this implementation allows duplicate key/value entries)
      */
     public boolean put(double[] key, T value) {
         pht.compute(pre(key), (keyInternal, list) -> {
@@ -192,12 +192,10 @@ public class PhTreeMultiMapF2<T> {
      * @return Result iterator.
      */
     public PhQueryMMF<T> query(double[] min, double[] max) {
-        long[] lMin = new long[min.length + 1];
-        long[] lMax = new long[max.length + 1];
+        long[] lMin = new long[min.length];
+        long[] lMax = new long[max.length];
         pre.pre(min, lMin);
         pre.pre(max, lMax);
-        lMin[lMin.length - 1] = Long.MIN_VALUE;
-        lMax[lMax.length - 1] = Long.MAX_VALUE;
         return new PhQueryMMF<>(pht.query(lMin, lMax), pht.getDim(), pre);
     }
 
@@ -209,7 +207,7 @@ public class PhTreeMultiMapF2<T> {
      * @return All entries with at most distance `dist` from `center`.
      */
     public PhRangeQueryMMF<T> rangeQuery(double dist, double ... center) {
-        return rangeQuery(dist, PhDistanceMMF.THIS, center);
+        return rangeQuery(dist, PhDistanceF.THIS, center);
     }
 
     /**
@@ -222,7 +220,7 @@ public class PhTreeMultiMapF2<T> {
      */
     public PhRangeQueryMMF<T> rangeQuery(double dist, PhDistance optionalDist, double ... center) {
         if (optionalDist == null) {
-            optionalDist = PhDistanceMMF.THIS;
+            optionalDist = PhDistanceF.THIS;
         }
         long[] lKey = new long[center.length];
         pre.pre(center, lKey);
@@ -243,10 +241,10 @@ public class PhTreeMultiMapF2<T> {
      * @return List of neighbours.
      */
     public PhKnnQueryMMF<T> nearestNeighbour(int nMin, double ... key) {
-        long[] lKey = new long[key.length + 1];
+        long[] lKey = new long[key.length];
         pre.pre(key, lKey);
-        PhKnnQuery<LinkedList<T>> iter = pht.nearestNeighbour(nMin, PhDistanceMMF.THIS, null, lKey);
-        return new PhKnnQueryMMF<>(iter, pht.getDim() - 1, pre);
+        PhKnnQuery<LinkedList<T>> iter = pht.nearestNeighbour(nMin, PhDistanceF.THIS, null, lKey);
+        return new PhKnnQueryMMF<>(iter, pht.getDim(), pre);
     }
 
     /**
@@ -260,10 +258,10 @@ public class PhTreeMultiMapF2<T> {
      * @return KNN query iterator.
      */
     public PhKnnQueryMMF<T> nearestNeighbour(int nMin, PhDistance dist, double ... key) {
-        long[] lKey = new long[key.length + 1];
+        long[] lKey = new long[key.length];
         pre.pre(key, lKey);
         PhKnnQuery<LinkedList<T>> iter = pht.nearestNeighbour(nMin, dist, null, lKey);
-        return new PhKnnQueryMMF<>(iter, pht.getDim() - 1, pre);
+        return new PhKnnQueryMMF<>(iter, pht.getDim(), pre);
     }
 
     /**
@@ -275,23 +273,15 @@ public class PhTreeMultiMapF2<T> {
         private final PhIteratorBase<LinkedList<T>, ? extends PhEntry<LinkedList<T>>> iter;
         private Iterator<T> iter2 = null;
         protected final PreProcessorPointF pre;
-        protected final int dims;
         private final PhEntryMMF<T> buffer;
 
         protected PhIteratorMMF(PhIteratorBase<LinkedList<T>, ? extends PhEntry<LinkedList<T>>> iter, int dims,
                 PreProcessorPointF pre) {
             this.iter = iter;
             this.pre = pre;
-            this.dims = dims;
             this.buffer = new PhEntryMMF<>(new double[dims], null);
-            if (!iter.hasNext()) {
-                return; // empty result
-            }
-            PhEntry<LinkedList<T>> e = iter.nextEntryReuse();
-            pre.post(e.getKey(), buffer.key);
-            iter2 = e.getValue().iterator();
-            findNext();
-        }
+            resetInternal();
+         }
 
         private void findNext() {
             if (iter2.hasNext()) {
@@ -358,6 +348,22 @@ public class PhTreeMultiMapF2<T> {
             throw new UnsupportedOperationException();
         }
 
+        private void resetInternal() {
+            if (!iter.hasNext()) {
+                iter2 = null;
+                return;
+            }
+            PhEntry<LinkedList<T>> e = iter.nextEntryReuse();
+            pre.post(e.getKey(), buffer.key);
+            iter2 = e.getValue().iterator();
+            findNext();
+        }
+
+        protected PhIteratorMMF<T> reset() {
+            resetInternal();
+            return this;
+        }
+
         private void checkNext() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
@@ -385,6 +391,7 @@ public class PhTreeMultiMapF2<T> {
          */
         public PhExtentMMF<T> reset() {
             iter.reset();
+            super.reset();
             return this;
         }
     }
@@ -402,8 +409,8 @@ public class PhTreeMultiMapF2<T> {
         protected PhQueryMMF(PhQuery<LinkedList<T>> iter, int dims, PreProcessorPointF pre) {
             super(iter, dims, pre);
             q = iter;
-            lMin = new long[dims + 1];
-            lMax = new long[dims + 1];
+            lMin = new long[dims];
+            lMax = new long[dims];
         }
 
         /**
@@ -415,9 +422,8 @@ public class PhTreeMultiMapF2<T> {
         public void reset(double[] lower, double[] upper) {
             pre.pre(lower, lMin);
             pre.pre(upper, lMax);
-            lMin[dims] = Long.MIN_VALUE;
-            lMax[dims] = Long.MAX_VALUE;
             q.reset(lMin, lMax);
+            super.reset();
         }
     }
 
@@ -426,29 +432,33 @@ public class PhTreeMultiMapF2<T> {
      * 
      * @param <T> value type
      */
-    public static class PhKnnQueryMMF<T> extends PhIteratorMMF<T> {
+    public static class PhKnnQueryMMF<T> implements PhIteratorBase<T, PhEntryDistMMF<T>> {
         private final long[] lCenter;
-        private final PhKnnQuery<LinkedList<T>> q;
+        private final PreProcessorPointF pre;
         private final PhEntryDistMMF<T> buffer;
         private final PhKnnQuery<LinkedList<T>> iter;
         private Iterator<T> iter2 = null;
 
         protected PhKnnQueryMMF(PhKnnQuery<LinkedList<T>> iter, int dims, PreProcessorPointF pre) {
-            super(iter, dims, pre);
             this.iter = iter;
-            q = iter;
+            this.pre = pre;
             lCenter = new long[dims];
             buffer = new PhEntryDistMMF<>(new double[dims], null, Double.NaN);
+            resetInternal();
+        }
+
+        private void resetInternal() {
             if (!iter.hasNext()) {
+                iter2 = null;
                 return; // empty result
             }
             PhEntry<LinkedList<T>> e = iter.nextEntryReuse();
             pre.post(e.getKey(), buffer.key);
             iter2 = e.getValue().iterator();
-            findNextkNN();
+            findNextKnn();
         }
 
-        private void findNextkNN() {
+        private void findNextKnn() {
             if (iter2.hasNext()) {
                 return;
             }
@@ -470,10 +480,15 @@ public class PhTreeMultiMapF2<T> {
         }
 
         @Override
+        public T next() {
+            return nextValue();
+        }
+
+        @Override
         public PhEntryDistMMF<T> nextEntry() {
             checkNextKnn();
             T value = iter2.next();
-            findNextkNN();
+            findNextKnn();
             return new PhEntryDistMMF<>(buffer.key.clone(), value, buffer.dist);
         }
 
@@ -481,9 +496,27 @@ public class PhTreeMultiMapF2<T> {
         public PhEntryDistMMF<T> nextEntryReuse() {
             checkNextKnn();
             T value = iter2.next();
-            findNextkNN();
+            findNextKnn();
             buffer.set(value);
             return buffer;
+        }
+
+        /**
+         * @return the key of the next entry
+         */
+        public double[] nextKey() {
+            checkNextKnn();
+            iter2.next();
+            findNextKnn();
+            return buffer.getKey().clone();
+        }
+
+        @Override
+        public T nextValue() {
+            checkNextKnn();
+            T value = iter2.next();
+            findNextKnn();
+            return value;
         }
 
         private void checkNextKnn() {
@@ -503,7 +536,8 @@ public class PhTreeMultiMapF2<T> {
          */
         public PhKnnQueryMMF<T> reset(int nMin, PhDistance dist, double... center) {
             pre.pre(center, lCenter);
-            q.reset(nMin, dist, lCenter);
+            iter.reset(nMin, dist, lCenter);
+            resetInternal();
             return this;
         }
     }
@@ -520,7 +554,7 @@ public class PhTreeMultiMapF2<T> {
         protected PhRangeQueryMMF(PhRangeQuery<LinkedList<T>> iter, PhTree<LinkedList<T>> tree, PreProcessorPointF pre) {
             super(iter, tree.getDim(), pre);
             this.q = iter;
-            this.lCenter = new long[dims + 1];
+            this.lCenter = new long[tree.getDim()];
         }
 
         /**
@@ -533,6 +567,7 @@ public class PhTreeMultiMapF2<T> {
         public PhRangeQueryMMF<T> reset(double range, double... center) {
             pre.pre(center, lCenter);
             q.reset(range, lCenter);
+            super.reset();
             return this;
         }
     }
