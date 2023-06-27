@@ -1,4 +1,5 @@
-- (TZ) Updated maven dependencies
+- (TZ) Added CI with GitHub actions. [#25](https://github.com/tzaeschke/phtree/pull/25)
+- (TZ) Updated maven dependencies. [#24](https://github.com/tzaeschke/phtree/pull/24)
 
 2022-02-14
 ==========

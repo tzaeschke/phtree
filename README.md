@@ -1,5 +1,7 @@
 # PH-Tree
 
+![Java 8](https://github.com/tzaeschke/phtree/actions/workflows/build-java-8.yml/badge.svg)
+
 The [PH-tree](https://tzaeschke.github.io/phtree-site/) is a multi-dimensional indexing and storage structure.
 By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
 It supports kNN (k nearest neighbor) queries, range queries, window queries and fast update/move/reinsert of individual entries.
