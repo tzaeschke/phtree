@@ -1,3 +1,5 @@
+- (TZ) Updated maven dependencies
+
 2022-02-14
 ==========
 - (TZ) Tiny optimization: Change (value >=0.0) to (value >=0)
