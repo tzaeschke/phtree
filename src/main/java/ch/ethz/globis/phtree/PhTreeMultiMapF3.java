@@ -35,6 +35,12 @@ import java.util.function.Function;
  * <p>
  * The multimap allows, unlike plain PH-Trees, to store more than one value per
  * coordinate.
+ * While this multimap allows multiple identical key/value pairs, the API is optimized for the assumption that
+ * key/value pairs are unique, i.e. either the key or the value of any given pair is different.
+ * The implication is that API methods that have to match key/value paris, such as `putIfAbsent()` or `update()` will
+ * process or return at most one existing pair or value. This does not affect query methods which will always return
+ * all matching paris.
+ * <p>
  * This PhTreeMultiMapF2 uses a different approach than PhTreeMultiMapF.
  * PhTreeMultiMapF2 stores a collection (list) at each coordinate in order to handle multiple entries per coordinate.
  *
@@ -135,7 +141,7 @@ public class PhTreeMultiMapF3<T> {
         Object v = pht.get(pre(key));
         if (v != null) {
             if (v instanceof ArrayList) {
-                return ((ArrayList<T>)v).contains(value);
+                return ((ArrayList<T>) v).contains(value);
             }
             return Objects.equals(value, v);
         }
@@ -154,7 +160,7 @@ public class PhTreeMultiMapF3<T> {
             return Collections.emptyList();
         }
         ArrayList<T> list = new ArrayList<>(1);
-        list.add((T)v);
+        list.add((T) v);
         return list;
     }
 
@@ -175,7 +181,7 @@ public class PhTreeMultiMapF3<T> {
         }
         size--;
         ArrayList<T> list = new ArrayList<>(1);
-        list.add((T)v);
+        list.add((T) v);
         return list;
     }
 
@@ -410,34 +416,9 @@ public class PhTreeMultiMapF3<T> {
      * @return current value or null if there was no association.
      * @see Map#putIfAbsent(Object, Object)
      */
-    public Iterable<T> putIfAbsent(double[] key, T value) {
-        MutableRef<ArrayList<T>> ref = new MutableRef<>();
-        pht.compute(pre(key), (keyInternal, entry) -> {
-            if (entry == null) {
-                return value;
-            }
-            ArrayList<T> list;
-            if (entry instanceof ArrayList) {
-                list = (ArrayList<T>) entry;
-                if (list.contains(value)) {
-                    ref.set(list);
-                } else {
-                    list.add(value);
-                }
-            } else {
-                if (Objects.equals(entry, value)) {
-                    // exit
-                    ref.set(new ArrayList<>());
-                    ref.get().add((T) entry);
-                    return value;
-                }
-                list = new ArrayList<>(SIZE);
-                list.add((T) entry);
-                list.add(value);
-            }
-            return list;
-        });
-        size += ref.get() == null ? 1 : 0;
+    public T putIfAbsent(double[] key, T value) {
+        MutableRef<T> ref = new MutableRef<>();
+        compute(key, value, (k,  v) -> v == null ? value : ref.set(v).get());
         return ref.get();
     }
 
@@ -451,7 +432,6 @@ public class PhTreeMultiMapF3<T> {
      * @see Map#replace(Object, Object, Object)
      */
     public boolean replace(double[] key, T oldValue, T newValue) {
-        // TODO size?
         return computeIfPresent(key, oldValue, (doubles, t) -> newValue) != null;
     }
 
@@ -464,35 +444,7 @@ public class PhTreeMultiMapF3<T> {
      */
     public T computeIfAbsent(double[] key, T value, Function<double[], ? extends T> mappingFunction) {
         MutableRef<T> ref = new MutableRef<>();
-        pht.compute(pre(key), (keyInternal, entry) -> {
-            if (entry == null) {
-                ref.set( mappingFunction.apply(key) );
-                return ref.get(); // may be `null`
-            }
-            if (entry instanceof ArrayList) {
-                ArrayList<T> list = (ArrayList<T>) entry;
-                if (!list.contains(value)) {
-                    T value2 = mappingFunction.apply(key);
-                    if (value2 != null) {
-                        list.add(value2);
-                        ref.set(value2);
-                    }
-                    return list;
-                }
-            } else {
-                if (!Objects.equals(entry, value)) {
-                    T value2 = mappingFunction.apply(key);
-                    if (value2 != null) {
-                        ArrayList<T> list = new ArrayList<>(SIZE);
-                        list.add(value2);
-                        ref.set(value2);
-                        return list;
-                    }
-                }
-            }
-            return null;
-        });
-        size += ref.get() != null ? 1 : 0;
+        compute(key, value, (k,  v) -> v == null ? ref.set(mappingFunction.apply(k)).get() : v);
         return ref.get();
     }
 
@@ -504,44 +456,7 @@ public class PhTreeMultiMapF3<T> {
      * @see Map#computeIfPresent(Object, BiFunction)
      */
     public T computeIfPresent(double[] key, T value, BiFunction<double[], ? super T, ? extends T> remappingFunction) {
-        MutableRef<T> ref = new MutableRef<>();
-        MutableInt delta = new MutableInt(0);
-        pht.computeIfPresent(pre(key), (keyInternal, entry) -> {
-            if (entry == null) {
-                return null; // not present
-            }
-            if (entry instanceof ArrayList) {
-                ArrayList<T> list = (ArrayList<T>) entry;
-                ListIterator<T> it = list.listIterator();
-                while (it.hasNext()) {
-                    T valueOld = it.next();
-                    if (Objects.equals(value, valueOld)) {
-                        T valueNew = remappingFunction.apply(key, valueOld);
-                        if (valueNew != null) {
-                            it.set(valueNew);
-                            ref.set(valueNew);
-                        } else {
-                            it.remove();
-                            delta.dec();
-                        }
-                        break;
-                    }
-                }
-                return list.size() == 1 ? list.get(0) : list;
-            } else {
-                T valueOld = (T) entry;
-                if (Objects.equals(value, valueOld)) {
-                    ref.set( remappingFunction.apply(key, valueOld) );
-                    if (ref.get() == null) {
-                        delta.dec();
-                   }
-                   return ref.get();
-                }
-                return entry;
-            }
-        });
-        size += delta.get();
-        return ref.get();
+        return compute(key, value, (k, v) -> v == null ? null : remappingFunction.apply(k, v));
     }
 
     /**
@@ -580,20 +495,14 @@ public class PhTreeMultiMapF3<T> {
                 }
                 return list.isEmpty() ? null : list;
             } else {
-                if (Objects.equals(value, entry)) {
-                    ref.set( remappingFunction.apply(key, (T) entry) );
-                    if (ref.get() != null) {
-                        delta.inc();
-                        ArrayList<T> list = new ArrayList<>();
-                        list.add((T)entry);
-                        list.add(ref.get());
-                        return list;
-                    }
-                } else {
-                    ref.set(remappingFunction.apply(key, null));
-                    if (ref.get() != null) {
-                        delta.inc();
-                    }
+                T arg1 = Objects.equals(value, entry) ? (T) entry : null;
+                ref.set(remappingFunction.apply(key, arg1));
+                if (ref.get() != null) {
+                    delta.inc();
+                    ArrayList<T> list = new ArrayList<>();
+                    list.add((T) entry);
+                    list.add(ref.get());
+                    return list;
                 }
                 return ref.get();
             }
@@ -617,9 +526,9 @@ public class PhTreeMultiMapF3<T> {
         protected final PreProcessorPointF pre;
         private final PhIteratorBase<Object, ? extends PhEntry<Object>> iter;
         private final PhEntryMMF<T> buffer;
-        private Iterator<T> iter2 = null;
         // For storing non-list entries
         private final ArrayList<T> bufferList = new ArrayList<>();
+        private Iterator<T> iter2 = null;
 
         protected PhIteratorMMF(PhIteratorBase<Object, ? extends PhEntry<Object>> iter, int dims, PreProcessorPointF pre) {
             this.iter = iter;
@@ -636,13 +545,13 @@ public class PhTreeMultiMapF3<T> {
             while (iter.hasNext()) {
                 PhEntry<Object> e = iter.nextEntryReuse();
                 if (e.getValue() instanceof ArrayList) {
-                    iter2 = ((ArrayList<T>)e.getValue()).iterator();
+                    iter2 = ((ArrayList<T>) e.getValue()).iterator();
                     if (iter2.hasNext()) {
                         pre.post(e.getKey(), buffer.key);
                         return;
                     }
                 } else {
-                    bufferList.set(0, nextEntry().getValue());
+                    bufferList.set(0, (T) e.getValue());
                     iter2 = bufferList.iterator(); // TODO try to avoid creating iterator here...  Use pos/index?
                     pre.post(e.getKey(), buffer.key);
                     return;
@@ -709,7 +618,7 @@ public class PhTreeMultiMapF3<T> {
             PhEntry<Object> e = iter.nextEntryReuse();
             pre.post(e.getKey(), buffer.key);
             if (e.getValue() instanceof ArrayList) {
-                iter2 = ((ArrayList<T>)e.getValue()).iterator();
+                iter2 = ((ArrayList<T>) e.getValue()).iterator();
             } else {
                 bufferList.set(0, (T) e.getValue());
                 iter2 = bufferList.iterator();
@@ -831,8 +740,8 @@ public class PhTreeMultiMapF3<T> {
         private final PreProcessorPointF pre;
         private final PhEntryDistMMF<T> buffer;
         private final PhKnnQuery<Object> iter;
-        private Iterator<T> iter2 = null;
         private final ArrayList<T> bufferList = new ArrayList<>();
+        private Iterator<T> iter2 = null;
 
         protected PhKnnQueryMMF(PhKnnQuery<Object> iter, int dims, PreProcessorPointF pre) {
             this.iter = iter;
@@ -848,10 +757,11 @@ public class PhTreeMultiMapF3<T> {
                 iter2 = null;
                 return; // empty result
             }
-            PhEntry<Object> e = iter.nextEntryReuse();
+            PhEntryDist<Object> e = iter.nextEntryReuse();
             pre.post(e.getKey(), buffer.key);
+            buffer.dist = e.dist();
             if (e.getValue() instanceof ArrayList) {
-                iter2 = ((ArrayList<T>)e.getValue()).iterator();
+                iter2 = ((ArrayList<T>) e.getValue()).iterator();
             } else {
                 bufferList.set(0, (T) e.getValue());
                 iter2 = bufferList.iterator();
@@ -863,21 +773,17 @@ public class PhTreeMultiMapF3<T> {
             if (iter2.hasNext()) {
                 return;
             }
-            while (iter.hasNext()) {
+            if (iter.hasNext()) {
                 PhEntryDist<Object> e = iter.nextEntryReuse();
+                pre.post(e.getKey(), buffer.key);
+                buffer.dist = e.dist();
                 if (e.getValue() instanceof ArrayList) {
-                    iter2 = ((ArrayList<T>)e.getValue()).iterator();
-                    if (iter2.hasNext()) {
-                        pre.post(e.getKey(), buffer.key);
-                        buffer.dist = e.dist();
-                        return;
-                    }
+                    iter2 = ((ArrayList<T>) e.getValue()).iterator();
                 } else {
-                    bufferList.set(0, nextEntry().getValue());
+                    bufferList.set(0, (T) e.getValue());
                     iter2 = bufferList.iterator(); // TODO try to avoid creating iterator here...  Use pos/index?
-                    pre.post(e.getKey(), buffer.key);
-                    return;
                 }
+                return;
             }
             iter2 = null; // end of iterator
         }

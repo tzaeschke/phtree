@@ -116,14 +116,18 @@ public class TestMultiMapF3 {
                 switch (R.nextInt(3)) {
                     case 0:
                         assertNull(idx.putIfAbsent(v, id));
+                        assertEquals(id, (int) idx.putIfAbsent(v, id));
                         break;
                     case 1: {
                         final int id2 = id;
                         assertEquals(id2, (int) idx.computeIfAbsent(v, id2, (v2) -> id2));
+                        assertNull(idx.computeIfAbsent(v, id2, (v2) -> id2));
                         break;
                     }
                     case 2:
                         final int id2 = id;
+                        assertEquals(id2, (int) idx.compute(v, id, (v2, idNull2) -> id2));
+                        // idempotent operation:
                         assertEquals(id2, (int) idx.compute(v, id, (v2, idNull2) -> id2));
                         break;
                     default:
@@ -138,13 +142,15 @@ public class TestMultiMapF3 {
         assertEquals(N * DX, map.size());
         assertEquals(N * DX, idx.size());
 
+        for (Map.Entry<Integer, double[]> e : map.entrySet()) {
+            assertTrue(idx.contains(e.getValue(), e.getKey()));
+        }
+
         // replace values
         for (Map.Entry<Integer, double[]> e : map.entrySet()) {
             if (R.nextBoolean()) {
-                System.out.println("T " + e.getKey() + "  " + Arrays.toString(e.getValue())); // TODO
                 assertEquals(-e.getKey(), (int) idx.compute(e.getValue(), e.getKey(), (v2, id2) -> -id2));
             } else {
-                System.out.println("F " + e.getKey() + "  " + Arrays.toString(e.getValue())); // TODO
                 assertEquals(-e.getKey(), (int) idx.computeIfPresent(e.getValue(), e.getKey(), (v2, id2) -> -id2));
             }
         }
@@ -209,26 +215,72 @@ public class TestMultiMapF3 {
         idx.put(new double[]{1, 3}, new double[]{1, 3});
         idx.put(new double[]{3, 1}, new double[]{3, 1});
 
-        List<double[]> result = toList(idx.nearestNeighbour(0, 3, 3));
+        List<PhEntryDistMMF<double[]>> result = toList(idx.nearestNeighbour(0, 3, 3));
         assertTrue(result.isEmpty());
 
         result = toList(idx.nearestNeighbour(3, 2, 2));
-        check(result.get(0), 2, 2);
-        check(result.get(1), 2, 2);
-        check(result.get(2), 2, 2);
+        check(result.get(0).getKey(), 2, 2);
+        check(result.get(1).getKey(), 2, 2);
+        check(result.get(2).getKey(), 2, 2);
         assertTrue(3 <= result.size());
 
         result = toList(idx.nearestNeighbour(1, 1, 1));
         assertTrue(1 <= result.size());
-        check(result.get(0), 1, 1);
+        check(result.get(0).getKey(), 1, 1);
 
         result = toList(idx.nearestNeighbour(1, 1, 3));
         assertTrue(1 <= result.size());
-        check(result.get(0), 1, 3);
+        check(result.get(0).getKey(), 1, 3);
 
         result = toList(idx.nearestNeighbour(1, 3, 1));
         assertTrue(1 <= result.size());
-        check(result.get(0), 3, 1);
+        check(result.get(0).getKey(), 3, 1);
+    }
+
+    @Test
+    public void testKnnLarge() {
+        final int DIM = 3;
+        final int LOOP = 10;
+        final int N = 1000;
+        final int N_DUPL = 3;
+        final int NQ = 100;
+        final int MAXV = 1000;
+        final int range = MAXV / 2;
+        final Random R = new Random(0);
+        int id = 0;
+        final ArrayList<PhEntryDistMMF<Integer>> list = new ArrayList<>();
+        for (int d = 0; d < LOOP; d++) {
+            PhTreeMultiMapF3<Integer> ind = newTree(DIM);
+            for (int i = 0; i < N; i++) {
+                double[] v = new double[DIM];
+                for (int j = 0; j < DIM; j++) {
+                    v[j] = R.nextDouble() * MAXV;
+                }
+                for (int dupl = 0; dupl <= i % N_DUPL; dupl++) {
+                    ind.put(v, id);
+                    list.add(new PhEntryDistMMF<>(v,id, 0 ));
+                    id++;
+                }
+            }
+            assertEquals(id, ind.size());
+
+            PhKnnQueryMMF<Integer> q = ind.nearestNeighbour(10, new double[DIM]);
+            for (int i = 0; i < NQ; i++) {
+                double[] v = new double[DIM];
+                for (int j = 0; j < DIM; j++) {
+                    v[j] = R.nextDouble() * MAXV;
+                }
+                Collections.sort(list, (o1, o2) -> Double.compare(dist(o1.getKey(), v), dist(o2.getKey(), v)));
+                List<PhEntryDistMMF<Integer>> nnList = toList(q.reset(10, PhDistanceF.THIS, v));
+                assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
+                for (int x = 0; x < 10; ++x) {
+                    assertEquals(list.get(x).dist(), nnList.get(x).dist());
+                    assertArrayEquals(list.get(x).getKey(), nnList.get(x).getKey(), 0.0);
+                }
+//                double[] nn = nnList.get(0);
+//                check(v, exp, nn);
+            }
+        }
     }
 
     @Test
@@ -323,15 +375,15 @@ public class TestMultiMapF3 {
         final int range = MAXV / 2;
         final Random R = new Random(0);
         for (int d = 0; d < LOOP; d++) {
-            PhTreeMultiMapF3<Object> ind = newTree(DIM);
-            PhRangeQueryMMF<Object> q = ind.rangeQuery(1, PhDistanceF.THIS, new double[DIM]);
+            PhTreeMultiMapF3<Integer> ind = newTree(DIM);
+            PhRangeQueryMMF<Integer> q = ind.rangeQuery(1, PhDistanceF.THIS, new double[DIM]);
             for (int i = 0; i < N; i++) {
                 double[] v = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextDouble() * MAXV;
                 }
-                ind.put(v, null);
-                ind.put(v, null);
+                ind.put(v, 2*i);
+                ind.put(v, 2*i + 1);
             }
             for (int i = 0; i < NQ; i++) {
                 double[] v = new double[DIM];
@@ -400,10 +452,15 @@ public class TestMultiMapF3 {
         return ret;
     }
 
-    private List<double[]> toList(PhKnnQueryMMF<?> q) {
-        ArrayList<double[]> ret = new ArrayList<>();
+    private <T> List<PhEntryDistMMF<T>> toList(PhKnnQueryMMF<T> q) {
+        ArrayList<PhEntryDistMMF<T>> ret = new ArrayList<>();
         while (q.hasNext()) {
-            ret.add(q.nextKey());
+            if (ret.size() % 2 == 0) {
+                ret.add(q.nextEntry());
+            } else {
+                PhEntryDistMMF<?> e = q.nextEntryReuse();
+                ret.add(new PhEntryDistMMF<T>(e.getKey().clone(), (T) e.getValue(), e.dist()));
+            }
         }
         return ret;
     }
