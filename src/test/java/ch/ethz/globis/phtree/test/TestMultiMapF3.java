@@ -237,6 +237,18 @@ public class TestMultiMapF3 {
         check(result.get(0).getKey(), 3, 1);
     }
 
+    private static class EntryDist<T> {
+        double[] key;
+        T value;
+        double dist;
+
+        public EntryDist(double[] key, T v, double dist) {
+            this.key = key;
+            this.value = v;
+            this.dist = dist;
+        }
+    }
+
     @Test
     public void testKnnLarge() {
         final int DIM = 3;
@@ -245,11 +257,11 @@ public class TestMultiMapF3 {
         final int N_DUPL = 3;
         final int NQ = 100;
         final int MAXV = 1000;
-        final int range = MAXV / 2;
         final Random R = new Random(0);
-        int id = 0;
-        final ArrayList<PhEntryDistMMF<Integer>> list = new ArrayList<>();
+        final ArrayList<EntryDist<Integer>> list = new ArrayList<>();
         for (int d = 0; d < LOOP; d++) {
+            list.clear();
+            int id = 0;
             PhTreeMultiMapF3<Integer> ind = newTree(DIM);
             for (int i = 0; i < N; i++) {
                 double[] v = new double[DIM];
@@ -258,7 +270,7 @@ public class TestMultiMapF3 {
                 }
                 for (int dupl = 0; dupl <= i % N_DUPL; dupl++) {
                     ind.put(v, id);
-                    list.add(new PhEntryDistMMF<>(v,id, 0 ));
+                    list.add(new EntryDist<>(v,id, 0 ));
                     id++;
                 }
             }
@@ -270,15 +282,14 @@ public class TestMultiMapF3 {
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextDouble() * MAXV;
                 }
-                list.sort((o1, o2) -> Double.compare(dist(o1.getKey(), v), dist(o2.getKey(), v)));
+                list.forEach(xx -> xx.dist = dist(v, xx.key));
+                list.sort((o1, o2) -> Double.compare(o1.dist, o2.dist));
                 List<PhEntryDistMMF<Integer>> nnList = toList(q.reset(10, PhDistanceF.THIS, v));
                 assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
                 for (int x = 0; x < 10; ++x) {
-                    assertEquals(list.get(x).dist(), nnList.get(x).dist(), 0.0);
-                    assertArrayEquals(list.get(x).getKey(), nnList.get(x).getKey(), 0.0);
+                    assertEquals(list.get(x).dist, nnList.get(x).dist(), 0.0);
+                    assertArrayEquals(list.get(x).key, nnList.get(x).getKey(), 0.0);
                 }
-//                double[] nn = nnList.get(0);
-//                check(v, exp, nn);
             }
         }
     }
@@ -322,8 +333,6 @@ public class TestMultiMapF3 {
         Random R = new Random(0);
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
-            //System.out.println("d="+ DIM);
-            int id = 1;
             PhTreeMultiMapF3<double[]> ind = newTree(DIM);
             for (int i = 0; i < N; i++) {
                 double[] v = new double[DIM];
@@ -458,8 +467,8 @@ public class TestMultiMapF3 {
             if (ret.size() % 2 == 0) {
                 ret.add(q.nextEntry());
             } else {
-                PhEntryDistMMF<?> e = q.nextEntryReuse();
-                ret.add(new PhEntryDistMMF<T>(e.getKey().clone(), (T) e.getValue(), e.dist()));
+                PhEntryDistMMF<T> e = q.nextEntryReuse();
+                ret.add(new PhEntryDistMMF<>(e.getKey().clone(), e.getValue(), e.dist()));
             }
         }
         return ret;

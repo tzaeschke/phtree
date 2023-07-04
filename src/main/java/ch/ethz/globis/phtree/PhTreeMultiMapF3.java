@@ -736,7 +736,7 @@ public class PhTreeMultiMapF3<T> {
         private final PreProcessorPointF pre;
         private final PhEntryDistMMF<T> buffer;
         private PhEntryDistMMF<T> bufferToReturn;
-        private PhEntryDist<T> bufferInternalTree;
+        private PhEntryDist<Object> internalEntry;
         private final PhKnnQuery<Object> iter;
         private final ArrayList<T> bufferList = new ArrayList<>();
         private Iterator<T> iter2 = null;
@@ -755,13 +755,13 @@ public class PhTreeMultiMapF3<T> {
                 iter2 = null;
                 return; // empty result
             }
-            PhEntryDist<Object> e = iter.nextEntryReuse();
-            pre.post(e.getKey(), buffer.key);
-            buffer.dist = e.dist();
-            if (e.getValue() instanceof ArrayList) {
-                iter2 = ((ArrayList<T>) e.getValue()).iterator();
+            internalEntry = iter.nextEntryReuse();
+//            pre.post(e.getKey(), buffer.key);
+//            buffer.dist = e.dist();
+            if (internalEntry.getValue() instanceof ArrayList) {
+                iter2 = ((ArrayList<T>) internalEntry.getValue()).iterator();
             } else {
-                bufferList.set(0, (T) e.getValue());
+                bufferList.set(0, (T) internalEntry.getValue());
                 iter2 = bufferList.iterator();
             }
             findNextKnn();
@@ -772,13 +772,13 @@ public class PhTreeMultiMapF3<T> {
                 return;
             }
             if (iter.hasNext()) {
-                PhEntryDist<Object> e = iter.nextEntryReuse();
-                pre.post(e.getKey(), buffer.key);
-                buffer.dist = e.dist();
-                if (e.getValue() instanceof ArrayList) {
-                    iter2 = ((ArrayList<T>) e.getValue()).iterator();
+                internalEntry = iter.nextEntryReuse();
+//                pre.post(e.getKey(), buffer.key);
+//                buffer.dist = e.dist();
+                if (internalEntry.getValue() instanceof ArrayList) {
+                    iter2 = ((ArrayList<T>) internalEntry.getValue()).iterator();
                 } else {
-                    bufferList.set(0, (T) e.getValue());
+                    bufferList.set(0, (T) internalEntry.getValue());
                     iter2 = bufferList.iterator(); // TODO try to avoid creating iterator here...  Use pos/index?
                 }
                 return;
@@ -799,8 +799,10 @@ public class PhTreeMultiMapF3<T> {
         @Override
         public PhEntryDistMMF<T> nextEntry() {
             checkNextKnn();
-            T value = iter2.next();
-            PhEntryDistMMF<T> ret = new PhEntryDistMMF<>(buffer.key.clone(), value, buffer.dist);
+            pre.post(internalEntry.getKey(), buffer.key);
+            buffer.dist = internalEntry.dist();
+            buffer.set(iter2.next());
+            PhEntryDistMMF<T> ret = new PhEntryDistMMF<>(buffer.key.clone(), buffer.value, buffer.dist);
             findNextKnn();
             return ret;
         }
@@ -808,8 +810,9 @@ public class PhTreeMultiMapF3<T> {
         @Override
         public PhEntryDistMMF<T> nextEntryReuse() {
             checkNextKnn();
-            T value = iter2.next();
-            buffer.set(value);
+            pre.post(internalEntry.getKey(), buffer.key);
+            buffer.dist = internalEntry.dist();
+            buffer.set(iter2.next());
             findNextKnn();
             return buffer;
         }
@@ -817,13 +820,13 @@ public class PhTreeMultiMapF3<T> {
         /**
          * @return the key of the next entry
          */
-        public double[] nextKey() {
-            checkNextKnn();
-            double[] key = buffer.key.clone();
-            iter2.next();
-            findNextKnn();
-            return key;
-        }
+//        public double[] nextKey() {
+//            checkNextKnn();
+//            double[] key = buffer.key.clone();
+//            iter2.next();
+//            findNextKnn();
+//            return key;
+//        }
 
         @Override
         public T nextValue() {
