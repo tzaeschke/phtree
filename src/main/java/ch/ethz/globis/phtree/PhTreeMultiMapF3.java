@@ -705,37 +705,14 @@ public class PhTreeMultiMapF3<T> {
         }
     }
 
-    //    /**
-    //     * Replaces all entries at a given position with a new value.
-    //     * @see java.util.Map#replace(Object, Object)
-    //     * @param key      key
-    //     * @param newValue new value
-    //     * @return {@code true} if the value was replaced
-    //     */
-    //    public T replace(double[] key, T newValue) {
-    //        MutableRef<T> ref = new MutableRef<>();
-    //        MutableInt i = new MutableInt(0);
-    //        pht.computeIfPresent(pre(key), (doubles, list) -> {
-    //            ref.set(list.get(0));
-    //            i.set(list.size());
-    //            list.clear();
-    //            list.add(newValue);
-    //            return list;
-    //        });
-    //        size = size - i.get() + 1;
-    //        return ref.get();
-    //    }
-
     /**
      * Nearest neighbor query iterator class for floating point keys.
      *
      * @param <T> value type
      */
     public static class PhKnnQueryMMF<T> implements PhIteratorBase<T, PhEntryDistMMF<T>> {
-        private final long[] lCenter;
         private final PreProcessorPointF pre;
         private final PhEntryDistMMF<T> buffer;
-        private PhEntryDistMMF<T> bufferToReturn;
         private PhEntryDist<Object> internalEntry;
         private final PhKnnQuery<Object> iter;
         private final ArrayList<T> bufferList = new ArrayList<>();
@@ -746,35 +723,24 @@ public class PhTreeMultiMapF3<T> {
             this.pre = pre;
             this.buffer = new PhEntryDistMMF<>(new double[dims], null, Double.NaN);
             this.bufferList.add(null);
-            lCenter = new long[dims];
             resetInternal();
         }
 
         private void resetInternal() {
-            if (!iter.hasNext()) {
-                iter2 = null;
-                return; // empty result
-            }
-            internalEntry = iter.nextEntryReuse();
-//            pre.post(e.getKey(), buffer.key);
-//            buffer.dist = e.dist();
-            if (internalEntry.getValue() instanceof ArrayList) {
-                iter2 = ((ArrayList<T>) internalEntry.getValue()).iterator();
-            } else {
-                bufferList.set(0, (T) internalEntry.getValue());
-                iter2 = bufferList.iterator();
-            }
-            findNextKnn();
+            findNextInternal();
         }
 
         private void findNextKnn() {
             if (iter2.hasNext()) {
                 return;
             }
+            findNextInternal();
+        }
+
+        @SuppressWarnings("unchecked")
+        private void findNextInternal() {
             if (iter.hasNext()) {
                 internalEntry = iter.nextEntryReuse();
-//                pre.post(e.getKey(), buffer.key);
-//                buffer.dist = e.dist();
                 if (internalEntry.getValue() instanceof ArrayList) {
                     iter2 = ((ArrayList<T>) internalEntry.getValue()).iterator();
                 } else {
@@ -817,17 +783,6 @@ public class PhTreeMultiMapF3<T> {
             return buffer;
         }
 
-        /**
-         * @return the key of the next entry
-         */
-//        public double[] nextKey() {
-//            checkNextKnn();
-//            double[] key = buffer.key.clone();
-//            iter2.next();
-//            findNextKnn();
-//            return key;
-//        }
-
         @Override
         public T nextValue() {
             checkNextKnn();
@@ -851,7 +806,8 @@ public class PhTreeMultiMapF3<T> {
          * @param center new center point
          * @return this
          */
-        public PhKnnQueryMMF<T> reset(int nMin, PhDistance dist, double... center) {
+        public PhKnnQueryMMF<T> reset(int nMin, PhDistance dist, double[] center) {
+            long[] lCenter = new long[center.length];
             pre.pre(center, lCenter);
             iter.reset(nMin, dist, lCenter);
             resetInternal();
