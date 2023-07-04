@@ -270,11 +270,11 @@ public class TestMultiMapF3 {
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextDouble() * MAXV;
                 }
-                Collections.sort(list, (o1, o2) -> Double.compare(dist(o1.getKey(), v), dist(o2.getKey(), v)));
+                list.sort((o1, o2) -> Double.compare(dist(o1.getKey(), v), dist(o2.getKey(), v)));
                 List<PhEntryDistMMF<Integer>> nnList = toList(q.reset(10, PhDistanceF.THIS, v));
                 assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
                 for (int x = 0; x < 10; ++x) {
-                    assertEquals(list.get(x).dist(), nnList.get(x).dist());
+                    assertEquals(list.get(x).dist(), nnList.get(x).dist(), 0.0);
                     assertArrayEquals(list.get(x).getKey(), nnList.get(x).getKey(), 0.0);
                 }
 //                double[] nn = nnList.get(0);

@@ -538,24 +538,36 @@ public class PhTreeMultiMapF3<T> {
             resetInternal();
         }
 
+        private void resetInternal() {
+            if (!iter.hasNext()) {
+                iter2 = null;
+                return;
+            }
+            PhEntry<Object> e = iter.nextEntryReuse();
+            pre.post(e.getKey(), buffer.key);
+            if (e.getValue() instanceof ArrayList) {
+                iter2 = ((ArrayList<T>) e.getValue()).iterator();
+            } else {
+                bufferList.set(0, (T) e.getValue());
+                iter2 = bufferList.iterator();
+            }
+            findNext();
+        }
+
         private void findNext() {
             if (iter2.hasNext()) {
                 return;
             }
-            while (iter.hasNext()) {
+            if (iter.hasNext()) {
                 PhEntry<Object> e = iter.nextEntryReuse();
+                pre.post(e.getKey(), buffer.key);
                 if (e.getValue() instanceof ArrayList) {
                     iter2 = ((ArrayList<T>) e.getValue()).iterator();
-                    if (iter2.hasNext()) {
-                        pre.post(e.getKey(), buffer.key);
-                        return;
-                    }
                 } else {
                     bufferList.set(0, (T) e.getValue());
                     iter2 = bufferList.iterator(); // TODO try to avoid creating iterator here...  Use pos/index?
-                    pre.post(e.getKey(), buffer.key);
-                    return;
                 }
+                return;
             }
             iter2 = null; // end of iterator
         }
@@ -608,22 +620,6 @@ public class PhTreeMultiMapF3<T> {
         @Override
         public void remove() {
             throw new UnsupportedOperationException();
-        }
-
-        private void resetInternal() {
-            if (!iter.hasNext()) {
-                iter2 = null;
-                return;
-            }
-            PhEntry<Object> e = iter.nextEntryReuse();
-            pre.post(e.getKey(), buffer.key);
-            if (e.getValue() instanceof ArrayList) {
-                iter2 = ((ArrayList<T>) e.getValue()).iterator();
-            } else {
-                bufferList.set(0, (T) e.getValue());
-                iter2 = bufferList.iterator();
-            }
-            findNext();
         }
 
         protected PhIteratorMMF<T> reset() {
@@ -739,6 +735,8 @@ public class PhTreeMultiMapF3<T> {
         private final long[] lCenter;
         private final PreProcessorPointF pre;
         private final PhEntryDistMMF<T> buffer;
+        private PhEntryDistMMF<T> bufferToReturn;
+        private PhEntryDist<T> bufferInternalTree;
         private final PhKnnQuery<Object> iter;
         private final ArrayList<T> bufferList = new ArrayList<>();
         private Iterator<T> iter2 = null;
@@ -746,9 +744,9 @@ public class PhTreeMultiMapF3<T> {
         protected PhKnnQueryMMF(PhKnnQuery<Object> iter, int dims, PreProcessorPointF pre) {
             this.iter = iter;
             this.pre = pre;
+            this.buffer = new PhEntryDistMMF<>(new double[dims], null, Double.NaN);
             this.bufferList.add(null);
             lCenter = new long[dims];
-            buffer = new PhEntryDistMMF<>(new double[dims], null, Double.NaN);
             resetInternal();
         }
 
@@ -802,16 +800,17 @@ public class PhTreeMultiMapF3<T> {
         public PhEntryDistMMF<T> nextEntry() {
             checkNextKnn();
             T value = iter2.next();
+            PhEntryDistMMF<T> ret = new PhEntryDistMMF<>(buffer.key.clone(), value, buffer.dist);
             findNextKnn();
-            return new PhEntryDistMMF<>(buffer.key.clone(), value, buffer.dist);
+            return ret;
         }
 
         @Override
         public PhEntryDistMMF<T> nextEntryReuse() {
             checkNextKnn();
             T value = iter2.next();
-            findNextKnn();
             buffer.set(value);
+            findNextKnn();
             return buffer;
         }
 
