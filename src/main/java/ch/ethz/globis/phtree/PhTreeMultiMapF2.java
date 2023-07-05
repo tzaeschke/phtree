@@ -39,11 +39,12 @@ import java.util.function.Function;
  * While this multimap allows multiple identical key/value pairs, the API is optimized for the assumption that
  * key/value pairs are unique, i.e. either the key or the value of any given pair is different.
  * The implication is that API methods that have to match key/value paris, such as `putIfAbsent()` or `update()` will
- * process or return at most one existing pair or value. This does not affect query methods which will always return
- * all matching paris.
+ * process (or return) at most one existing pair or value. This does not affect query methods which will always return
+ * all matching pairs.
  * <p>
  * This PhTreeMultiMapF2 uses a different approach than PhTreeMultiMapF.
- * PhTreeMultiMapF2 stores a collection (list) at each coordinate in order to handle multiple entries per coordinate.
+ * PhTreeMultiMapF2 stores either directly a value per coordinate or, if more than one value needs to be stored,
+ * a collection (list) of value at a given coordinate.
  *
  * @param <T> The value type of the tree
  * @author ztilmann (Tilmann Zaeschke)
