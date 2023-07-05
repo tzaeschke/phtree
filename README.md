@@ -5,7 +5,7 @@
 The [PH-tree](https://tzaeschke.github.io/phtree-site/) is a multi-dimensional indexing and storage structure.
 By default, it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
 It supports kNN (k nearest neighbor) queries, range queries, window queries and fast update/move/reinsert of individual entries.
-The PH-Tree is a **map**, it allows only one entry per position. Multiple entries per position can be implemented by using IDs (see `PhTreeMultiMapF`) or by storing collections at each position (`PhTreeMultiMapF2`). 
+The PH-Tree is a **map**, it allows only one entry per position. A **multimap** with multiple entries per position can be implemented by using IDs (see `PhTreeMultiMapF`) or by storing collections at each position (`PhTreeMultiMapF2`). 
 [This document](https://github.com/tzaeschke/TinSpin/blob/master/doc/benchmark-2017-01/Diagrams.pdf) compares PH-Tree performance with other spatial indexes (Java only), made with [TinSpin](https://github.com/tzaeschke/TinSpin).
 
 Documents
@@ -31,7 +31,7 @@ In 2019 and 2020 development was kindly supported by [Improbable](https://improb
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.5.0</version>
+    <version>2.6.0</version>
 </dependency>
 ```
 
