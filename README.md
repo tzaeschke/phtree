@@ -5,7 +5,7 @@
 The [PH-tree](https://tzaeschke.github.io/phtree-site/) is a multi-dimensional indexing and storage structure.
 By default, it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
 It supports kNN (k nearest neighbor) queries, range queries, window queries and fast update/move/reinsert of individual entries.
-The PH-Tree is a **map**, it allows only one entry per position. Multiple entries per position can be implemented by using IDs (see `PhTreeMultiMap`) or by storing collections at each position. 
+The PH-Tree is a **map**, it allows only one entry per position. Multiple entries per position can be implemented by using IDs (see `PhTreeMultiMapF`) or by storing collections at each position (`PhTreeMultiMapF2`). 
 [This document](https://github.com/tzaeschke/TinSpin/blob/master/doc/benchmark-2017-01/Diagrams.pdf) compares PH-Tree performance with other spatial indexes (Java only), made with [TinSpin](https://github.com/tzaeschke/TinSpin).
 
 Documents
@@ -21,7 +21,7 @@ Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
 <!-- - The hypercube navigation is discussed in detail in [Efficient Z-Ordered Traversal of Hypercube Indexes](https://github.com/tzaeschke/phtree/blob/master/Z-Ordered_Hypercube_Navigation.pdf) (2017).
  -->
  
-Since 2019, development is kindly supported by [Improbable](https://improbable.io).
+In 2019 and 2020 development was kindly supported by [Improbable](https://improbable.io).
 
 **_Other spatial indexes can be found in the [TinSpin spatial index collection](https://github.com/tzaeschke/tinspin-indexes)._**
 
@@ -51,7 +51,7 @@ You can create GitHub Issues or contact me on [Discord](https://discord.gg/GNYjy
 
 ### 2020-04-30
 Release 2.5.0
-- Added convenience API for multi-map: `PhTreeMultiMapF`. This API emulates a PH-Tree that (unlike normal PH-Trees)
+- Added convenience API for multimap: `PhTreeMultiMapF`. This API emulates a PH-Tree that (unlike normal PH-Trees)
   support multiple entries for any coordinate. This is enabled by storing a unique identifier
   in an additional dimension.
   For performance reasons it is recommended to use small absolute values for IDs, such as 16bit or 32bit integers.
@@ -64,9 +64,9 @@ Release 2.5.0
 There are currently two main versions, the classic PH-Tree (called **PH1**, latest implementation v13) and the new PH-Tree (called **PH2**, latest implementation v16/v16HD).
 
 Note that the PH-Tree is a **map** that stores natively only one entry per key. To store multiple entries per key,
-please use a mutli-map wrapper such as:
-- `PhTreeMultiMapF`: a multimap which uses a unique ID as additional dimension (fastest option )
-- `PhTreeMultiMapF2` a multimap which stores a collection of values at each point (most convenient option)
+please use a multimap wrapper such as:
+- `PhTreeMultiMapF`: a multimap which uses a unique ID as additional dimension (original multimap). It is stringly recommended that IDs are integers smaller than 2^32 for 64bit coordinates or smaller than 16-20bit for 32bit coordinates.
+- `PhTreeMultiMapF2` a multimap which transparently stores a collection of values at a given point if (and only if) more than one value is associated with that point (new multimap, comparable performance with better usability)
 
 ### Advantages
 
