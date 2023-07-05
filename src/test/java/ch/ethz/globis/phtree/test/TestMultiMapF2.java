@@ -257,6 +257,7 @@ public class TestMultiMapF2 {
         final int N_DUPL = 3;
         final int NQ = 100;
         final int MAXV = 1000;
+        final int MIN_RESULT = 10;
         final Random R = new Random(0);
         final ArrayList<EntryDist<Integer>> list = new ArrayList<>();
         for (int d = 0; d < LOOP; d++) {
@@ -276,7 +277,7 @@ public class TestMultiMapF2 {
             }
             assertEquals(id, ind.size());
 
-            PhKnnQueryMMF<Integer> q = ind.nearestNeighbour(10, new double[DIM]);
+            PhKnnQueryMMF<Integer> q = ind.nearestNeighbour(MIN_RESULT, new double[DIM]);
             for (int i = 0; i < NQ; i++) {
                 double[] v = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
@@ -284,9 +285,9 @@ public class TestMultiMapF2 {
                 }
                 list.forEach(xx -> xx.dist = dist(v, xx.key));
                 list.sort((o1, o2) -> Double.compare(o1.dist, o2.dist));
-                List<PhEntryDistMMF<Integer>> nnList = toList(q.reset(10, PhDistanceF.THIS, v));
+                List<PhEntryDistMMF<Integer>> nnList = toList(q.reset(MIN_RESULT, PhDistanceF.THIS, v));
                 assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
-                for (int x = 0; x < 10; ++x) {
+                for (int x = 0; x < MIN_RESULT; ++x) {
                     assertEquals(list.get(x).dist, nnList.get(x).dist(), 0.0);
                     assertArrayEquals(list.get(x).key, nnList.get(x).getKey(), 0.0);
                 }
