@@ -3,9 +3,9 @@
 ![Java 8](https://github.com/tzaeschke/phtree/actions/workflows/build-java-8.yml/badge.svg)
 
 The [PH-tree](https://tzaeschke.github.io/phtree-site/) is a multi-dimensional indexing and storage structure.
-By default it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
+By default, it stores k-dimensional keys (points) consisting of k 64bit-integers. However, it can also be used to efficiently store floating point values and/or k-dimensional rectangles.
 It supports kNN (k nearest neighbor) queries, range queries, window queries and fast update/move/reinsert of individual entries.
-The PH-Tree is a **map**, it allows only one entry per position. Multiple entries per position can be implemented by using IDs (see `PhTreeMultiMap`) or by storing collections at each position. 
+The PH-Tree is a **map**, it allows only one entry per position. Multiple entries per position can be implemented by using IDs (see `PhTreeMultiMapF`) or by storing collections at each position (`PhTreeMultiMapF2`). 
 [This document](https://github.com/tzaeschke/TinSpin/blob/master/doc/benchmark-2017-01/Diagrams.pdf) compares PH-Tree performance with other spatial indexes (Java only), made with [TinSpin](https://github.com/tzaeschke/TinSpin).
 
 Documents
@@ -21,7 +21,7 @@ Proceedings of Intl. Conf. on Management of Data (SIGMOD), 2014
 <!-- - The hypercube navigation is discussed in detail in [Efficient Z-Ordered Traversal of Hypercube Indexes](https://github.com/tzaeschke/phtree/blob/master/Z-Ordered_Hypercube_Navigation.pdf) (2017).
  -->
  
-Since 2019, development is kindly supported by [Improbable](https://improbable.io).
+In 2019 and 2020 development was kindly supported by [Improbable](https://improbable.io).
 
 **_Other spatial indexes can be found in the [TinSpin spatial index collection](https://github.com/tzaeschke/tinspin-indexes)._**
 
@@ -46,95 +46,27 @@ You can create GitHub Issues or contact me on [Discord](https://discord.gg/GNYjy
 
 # News
 
+### 2023-06-26
+- Added new multimap: `PhTreeMultiMapF2`.
+
 ### 2020-04-30
 Release 2.5.0
-- Added convenience API for multi-map: `PhTreeMultiMapF`. This API emulates a PH-Tree that (unlike normal PH-Trees)
+- Added convenience API for multimap: `PhTreeMultiMapF`. This API emulates a PH-Tree that (unlike normal PH-Trees)
   support multiple entries for any coordinate. This is enabled by storing a unique identifier
   in an additional dimension.
   For performance reasons it is recommended to use small absolute values for IDs, such as 16bit or 32bit integers.
 
-### 2019-11-10
-Release 2.4.0
-- Added missing public API for filtered queries: `PhTree.query(min, max, filter)`
-
-### 2019-03-19
-Release 2.3.0
-- Added missing compute functions for `PhTreeF`, `PhTreeSolid` and `PhTreeSolidF`
-- Fixed bug in `compute()`/`computeIfPresent()` in V13
-
-### 2019-03-15
-Release 2.2.0
-- Added Java 8 Map API to V13 and V16 (`putIfAbsent()`, `compute()`, ...). Only `compute()` and `computeIfPresent()` are currently optimized.
-- Several minor speed improvements to V13 and V16, including reduced garbage creation.
-
-### 2019-03-08
-Released version 2.1.0 of the PH-Tree. 
-- Avoid 'synchronized' object pooling. Object pooling in V13, v16 and v16HD have been modified to be non-`synchronized`, instead each instance of the PhTree has its own pool. A a result, running several PhTree instances in parallel will slightly increase memory usage (due to several pools allocated), butt will completely avoid contention caused by `synchronized` pools. A `synchronized` version of V13 is still available as `v13SynchedPool`.
-
-### 2018-12-04
-Released version 2.0.2 of the PH-Tree. This release contains a minor fix and documentation updates.
-
-### 2018-05-30
-Released version 2.0.1 of the PH-Tree. This release contains some minor fixes and documentation updates.
-
-### 2018-05-29
-Released version 2.0.0 of the PH-Tree (partial reimplementation). There are three new versions:
-
-- v13 has a new much better kNN query then previous versions, but has otherwise only small improvements over 
-  the previous v11. v13 is the best version for less than 8 dimensions.
-- v16 and v16HD are reimplementations of the PH-Tree. The basic concept is still the same, except that the internal
-  structure of nodes is now a B+Tree instead of the previous AHC/LHC nodes. Advantages:
-  * Much simpler code.
-  * Insertion/removal performance scales much better with dimensionality.
-  * The v16HD version supports theoretically up to 2^31 dimensions.
-  * Downside: memory requirements have increased, they are now on par with R*Trees or kD-trees.
-  * Internal B+Tree structure (with configurable page sizes) makes it more suitable for disk based storage.
-  * **API Contract Change**: The PH-Tree now stores keys (long[]/double[]) internally. Modifying them
-  after storing them in the tree will make the tree invalid.
-- The `PhTree` factory class will automatically choose one of v13, v16 and v16HD, depending on the number of dimensions. 
-
-
-### 2017-09-17
-Released version 0.3.4 of the PH-tree
-
-- Bugfix: kNN distance returned '0' for PhTreeF.
-
-### 2017-03-05
-Released version 0.3.3 of the PH-tree
-
-- Some bugfixes.
-- Updated documentation.
-
-### 2016-09-09
-Released version 0.3.2 of the PH-tree
-
-- Added support for kNN nearest neighbor queries for rectangle data.
-- More API updates (javadoc and added missing methods).
-
-
-### 2016-08-01
-Released version 0.3.1 of the PH-tree
-
-- Unified object pool configuration
-- javadoc to compile with -Xlint:all
-
-### 2016-08-23
-Released version 0.3.0 of the PH-tree (internal version: v11). Features (partly available before, but not in the original version):
-
-- Major code refactoring
-- Restructuring of node data, subnodes and data are now in the same collection. This is faster and simplifies the code but requires slightly more memory
-- AHC vs LHC policy has changed to prefer faster (but larger) AHC nodes at the cost of memory. Set  `Node.AHC_LHC_BIAS = 1.0` for lowest memory requirements.
-- Dedicated reinsertion / update methods
-- Nearest neighbor queries (reimplemented since v8)
-- Support for rectangle data
-- Reduced garbage collection load: query iterators are reusable, returned entries are reusable, objects are pooled internally
-- Performance improvements and bug fixes
-- Available as maven artifact  
+--> [News Archive](NEWS_ARCHIVE.md)
 
 
 # Main Properties
 
 There are currently two main versions, the classic PH-Tree (called **PH1**, latest implementation v13) and the new PH-Tree (called **PH2**, latest implementation v16/v16HD).
+
+Note that the PH-Tree is a **map** that stores natively only one entry per key. To store multiple entries per key,
+please use a multimap wrapper such as:
+- `PhTreeMultiMapF`: a multimap which uses a unique ID as additional dimension (original multimap). It is stringly recommended that IDs are integers smaller than 2^32 for 64bit coordinates or smaller than 16-20bit for 32bit coordinates.
+- `PhTreeMultiMapF2` a multimap which transparently stores a collection of values at a given point if (and only if) more than one value is associated with that point (new multimap, comparable performance with better usability)
 
 ### Advantages
 
@@ -144,19 +76,20 @@ There are currently two main versions, the classic PH-Tree (called **PH1**, late
 - Scalability with size: The tree scales very with size especially with larger datasets with 1 million entries or more.
 - Scalability with dimension: Updates and 'contains()' scale almost horizontally with increasing dimensionality. Depending on the dataset, window queries may scale up to 20 dimensions or more. _k_NN (nearest neighbor) queries also scale well, much better than kD-trees, but can't quite compete with specialized solution such as CoverTree. 
 - Skewed data: The tree works very well with skewed datasets, it actually prefers skewed datasets over evenly distributed datasets. However, see below (Data Preprocessing) for an exception.
-- Stability: The tree never performs rebalancing, but imbalance is inherently limited so it is not a concern (maximum depth is 64, see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency, see also the section on concurrency below.
+- Stability: The tree never performs rebalancing, but imbalance is inherently limited, so it is not a concern (maximum depth is 64, see paper). The advantages are that any modification operation will never modify more than one node in the tree. This limits the possible CPU cost and IO cost of update operations. It also makes is suitable for concurrency, see also the section on concurrency below.
 - IO / persistence: The nodes of PH2 use internally B+Trees. These lend themselves to page base storage, at least for higher dimensions where nodes contain more entries.
 
 
 ### Disadvantages
 
-- The PH1 will not work with more then 62 dimensions. The PH2 supports up to 2^31 dimensions but at the cost of increased memory requiremts.
-- Performance/size: the tree generally performs less well with smaller datasets, is is best used with 1 million entries or more.
+- The PH1 will not work with more than 62 dimensions. The PH2 supports up to 2^31 dimensions but at the cost of increased memory requirements.
+- Performance/size: the tree generally performs less well with smaller datasets, it is best used with 1 million entries or more.
 - Performance/dimensionality: depending on the dataset, performance of window queries may degrade when using data with more than 30 dimensions. 
-- Data: The tree may degrade with extreme datasets, as described in the paper. However it will still perform better than traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
+- Data: The tree may degrade with extreme datasets, as described in the paper. However, it will still perform better than traditional KD-trees. Furthermore, the degradation can be avoided by preprocessing the data, see below.
 - Storage (PH1 only): The tree does not store references to the provided keys, instead it compresses the keys into in internal representation. As a result, when extracting keys (for example via queries), new objects (`long[]`) are created to carry the returned keys. This may cause load on the garbage collector if the keys are discarded afterwards. See the section about _iterators_ below on some strategies to avoid this problem. 
-- (= unexpected property) The PH-Tree is a **map**, it support only one entry at each position. Storing multiple entries per position
-  is possible by, for example, using the `PhTreeMultiMapF` or by storing a collectionh of value with `PhTreeF<List<YourClass>>` or similar. 
+- **(= unexpected property)** The PH-Tree is a **map**, it supports only one entry at each position. Storing multiple entries per position
+  is possible by, for example, using the `PhTreeMultiMapF` (which uses a unique ID as additional dimension) or 
+- `PhTreeMultiMapF2` (which stores a collection of values at each point). 
 
 ### Generally
 
@@ -226,7 +159,7 @@ __**Preprocessing and 32bit vs 64 bit**__
 
 There is little point in using 32bit instead of 64bit integer values, because prefix sharing takes care of unused leading bits.
 For floating point values, using a 32bit float instead of 64bit float should reduce memory usage
-somewhat. However it is usually better to convert floating point values to integer values by multiplying them with a constant. For example multiply by 10E6 to preserve 6 digit floating point precision.
+somewhat. However, it is usually better to convert floating point values to integer values by multiplying them with a constant. For example multiply by 10E6 to preserve 6 digit floating point precision.
 Also, chose the multiplier such that it is not higher than the precision requires.
 For example, if you have a precision of 6 digits after the decimal point, then multiply all values
 by 1,000,000 before casting the to (long) and adding them to the tree.
@@ -264,7 +197,7 @@ The `nextKey()` and `nextEntry()` always create new key objects or new key and a
 - During extraction, we can use the `PhQuery.nextEntryReuse()` method that is available in every iterator. It reuse `PhEntry` objects and key objects by resetting their content. Several calls to `nextEntryReuse()` may return the same object, but always with the appropriate content. The returned object is only valid until the next call to `nextEntryReuse()`.
 The disadvantage is that the key and `PhEntry` objects need to be copied if they are needed locally beyond the next call to `nextEntryReuse()`.
 
-Another way to reduce GC is to reuse the iterators when performing multiple queries. This can be done by calling `PhQuery.reset(..)`, which will abort the current query and reset the iterator to the first element that fits the min/max values provided in the `reset(..)` call. This can be useful because an iterator consists of more than hundred Java objects. In some scenarios this increased overall performance of about 20%.  
+Another way to reduce GC is to reuse the iterators when performing multiple queries. This can be done by calling `PhQuery.reset(..)`, which will abort the current query and reset the iterator to the first element that fits the min/max values provided in the `reset(..)` call. This can be useful because an iterator consists of more than a hundred Java objects. In some scenarios this increased overall performance of about 20%.  
 
 ### Iterators (PH2)
 
@@ -359,11 +292,11 @@ Any write access must be synchronized with any other concurrent write or read ac
 	}	
 ``` 
  
-It should be possible to allow even more fine grained access by also creating wrappers for the iterators, so that the read lock is only held during creation of the query and during each call to `next()`. Expected behavior: The query iterators may miss newly inserted entries or may return entries that have already been deleted. However, while this should work, it was never part of the current design and has not really been tested. If you find that it does not work (throws exception, missing entries that have not been modified, returns invalid data), let me know and I _may_ fix it if it doesn't impact general tree performance.
+It should be possible to allow even more fine-grained access by also creating wrappers for the iterators, so that the read lock is only held during creation of the query and during each call to `next()`. Expected behavior: The query iterators may miss newly inserted entries or may return entries that have already been deleted. However, while this should work, it was never part of the current design and has not really been tested. If you find that it does not work (throws exception, missing entries that have not been modified, returns invalid data), let me know and I _may_ fix it if it doesn't impact general tree performance.
  
 ### Research ###
  
-Generally, the PH-Tree should lends itself to concurrent implementations, because it is guaranteed that no call to `put` or `remove` will ever affect more than two nodes. In fact, only one node will ever be modified with possibly a second one added or removed.
+Generally, the PH-Tree should lend itself to concurrent implementations, because it is guaranteed that no call to `put` or `remove` will ever affect more than two nodes. In fact, only one node will ever be modified with possibly a second one added or removed.
 
 There is a Master Thesis that explores concurrent implementations (copy on write, node level locking, ...), see Section 6.2 in
 [Cluster-Computing and Parallelization for the Multi-Dimensional PH-Index](http://e-collection.library.ethz.ch/eserv/eth:47729/eth-47729-01.pdf).
@@ -384,12 +317,12 @@ Universitätsstrasse 6,
 8092 Zurich,
 Switzerland.
 
-Copyright 2016-2022 by Tilmann Zäschke,
+Copyright 2016-2023 by Tilmann Zäschke,
 zoodb@gmx.de.
 
 Copyright 2019-2020 by Improbable Worlds Limited
 
-The critbit tree (namespace `org.zoodb`) is copyright 2009-2018 by
+The critbit tree (namespace `org.zoodb`) is copyright 2009-2023 by
 Tilmann Zäschke,
 zoodb@gmx.de.
 The critbit tree (and other spatial indexes) are also separately available [here](https://github.com/tzaeschke/zoodb-indexes)

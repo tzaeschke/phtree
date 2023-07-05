@@ -12,10 +12,10 @@ package ch.ethz.globis.phtree.util;
  * @author ztilmann
  *
  */
-public class IntVar {
+public class MutableInt {
 	private int i;
 	
-	public IntVar(int i) {
+	public MutableInt(int i) {
 		this.i = i;
 	}
 	
@@ -29,5 +29,9 @@ public class IntVar {
 
 	public int get() {
 		return i;
+	}
+
+	public void set(int i) {
+		this.i = i;
 	}
 }
