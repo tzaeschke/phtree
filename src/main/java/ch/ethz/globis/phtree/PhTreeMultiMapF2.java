@@ -217,8 +217,8 @@ public class PhTreeMultiMapF2<T> {
     /**
      * @return an iterator over all elements in the tree
      */
-    public PhExtentMMF<T> queryExtent() {
-        return new PhExtentMMF<>(pht.queryExtent(), pht.getDim(), pre);
+    public PhExtentF<T> queryExtent() {
+        return new PhExtentF<>(pht.queryExtent(), pht.getDim(), pre);
     }
 
     /**
@@ -229,12 +229,12 @@ public class PhTreeMultiMapF2<T> {
      * @param max Maximum values
      * @return Result iterator.
      */
-    public PhQueryMMF<T> query(double[] min, double[] max) {
+    public PhQueryF<T> query(double[] min, double[] max) {
         long[] lMin = new long[min.length];
         long[] lMax = new long[max.length];
         pre.pre(min, lMin);
         pre.pre(max, lMax);
-        return new PhQueryMMF<>(pht.query(lMin, lMax), pht.getDim(), pre);
+        return new PhQueryF<>(pht.query(lMin, lMax), pht.getDim(), pre);
     }
 
     /**
@@ -642,10 +642,10 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhExtentMMF<T> extends PhIteratorF<T> {
+    public static class PhExtentF<T> extends PhIteratorF<T> {
         private final PhExtent<Object> iter;
 
-        protected PhExtentMMF(PhExtent<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhExtentF(PhExtent<Object> iter, int dims, PreProcessorPointF pre) {
             super(iter, dims, pre);
             this.iter = iter;
         }
@@ -656,7 +656,7 @@ public class PhTreeMultiMapF2<T> {
          * @return this
          */
         @Override
-        public PhExtentMMF<T> reset() {
+        public PhExtentF<T> reset() {
             iter.reset();
             super.reset();
             return this;
@@ -668,12 +668,12 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhQueryMMF<T> extends PhIteratorF<T> {
+    public static class PhQueryF<T> extends PhIteratorF<T> {
         private final long[] lMin;
         private final long[] lMax;
         private final PhQuery<Object> q;
 
-        protected PhQueryMMF(PhQuery<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhQueryF(PhQuery<Object> iter, int dims, PreProcessorPointF pre) {
             super(iter, dims, pre);
             q = iter;
             lMin = new long[dims];

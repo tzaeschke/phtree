@@ -4,6 +4,10 @@
 
 - Nothing yet
 
+## 2.6.2
+
+- Fix new API for `PhQUeryF`/`PhEntentF`. [#29](https://github.com/tzaeschke/phtree/pull/29)
+
 ## 2.6.1
 
 - Fix new API for `PhEntryF`/`PhEntryDistF`. [#28](https://github.com/tzaeschke/phtree/pull/28)
