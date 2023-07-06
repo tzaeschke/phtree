@@ -54,8 +54,8 @@ public class PhTreeMultiMapF2<T> {
     public static final int DEFAULT_SIZE = 2;
     private final PhTree<Object> pht;
     private final PreProcessorPointF pre;
-    private int size = 0;
     private final ObjectPool<ArrayList<T>> pool = ObjectPool.create(10, () -> new ArrayList<>(DEFAULT_SIZE));
+    private int size = 0;
 
     protected PhTreeMultiMapF2(int dim, PreProcessorPointF pre) {
         this.pht = PhTree.create(dim);
@@ -244,7 +244,7 @@ public class PhTreeMultiMapF2<T> {
      * @param center Center point
      * @return All entries with at most distance `dist` from `center`.
      */
-    public PhRangeQueryMMF<T> rangeQuery(double dist, double... center) {
+    public PhRangeQueryF<T> rangeQuery(double dist, double... center) {
         return rangeQuery(dist, PhDistanceF.THIS, center);
     }
 
@@ -256,14 +256,14 @@ public class PhTreeMultiMapF2<T> {
      * @param center       Center point
      * @return All entries with at most distance `dist` from `center`.
      */
-    public PhRangeQueryMMF<T> rangeQuery(double dist, PhDistance optionalDist, double... center) {
+    public PhRangeQueryF<T> rangeQuery(double dist, PhDistance optionalDist, double... center) {
         if (optionalDist == null) {
             optionalDist = PhDistanceF.THIS;
         }
         long[] lKey = new long[center.length];
         pre.pre(center, lKey);
         PhRangeQuery<Object> iter = pht.rangeQuery(dist, optionalDist, lKey);
-        return new PhRangeQueryMMF<>(iter, pht, pre);
+        return new PhRangeQueryF<>(iter, pht, pre);
     }
 
     public int getDim() {
@@ -278,11 +278,11 @@ public class PhTreeMultiMapF2<T> {
      * @param key  the center point
      * @return List of neighbours.
      */
-    public PhKnnQueryMMF<T> nearestNeighbour(int nMin, double... key) {
+    public PhKnnQueryF<T> nearestNeighbour(int nMin, double... key) {
         long[] lKey = new long[key.length];
         pre.pre(key, lKey);
         PhKnnQuery<Object> iter = pht.nearestNeighbour(nMin, PhDistanceF.THIS, null, lKey);
-        return new PhKnnQueryMMF<>(iter, pht.getDim(), pre);
+        return new PhKnnQueryF<>(iter, pht.getDim(), pre);
     }
 
     /**
@@ -295,11 +295,11 @@ public class PhTreeMultiMapF2<T> {
      * @param key  the center point
      * @return KNN query iterator.
      */
-    public PhKnnQueryMMF<T> nearestNeighbour(int nMin, PhDistance dist, double... key) {
+    public PhKnnQueryF<T> nearestNeighbour(int nMin, PhDistance dist, double... key) {
         long[] lKey = new long[key.length];
         pre.pre(key, lKey);
         PhKnnQuery<Object> iter = pht.nearestNeighbour(nMin, dist, null, lKey);
-        return new PhKnnQueryMMF<>(iter, pht.getDim(), pre);
+        return new PhKnnQueryF<>(iter, pht.getDim(), pre);
     }
 
     /**
@@ -537,7 +537,7 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhIteratorMMF<T> implements PhIteratorBase<T, PhEntryF<T>> {
+    public static class PhIteratorF<T> implements PhIteratorBase<T, PhEntryF<T>> {
         protected final PreProcessorPointF pre;
         private final PhIteratorBase<Object, ? extends PhEntry<Object>> iter;
         private final PhEntryF<T> buffer;
@@ -547,7 +547,7 @@ public class PhTreeMultiMapF2<T> {
         private ArrayList<T> currentList;
         private int pos = Integer.MAX_VALUE;
 
-        protected PhIteratorMMF(PhIteratorBase<Object, ? extends PhEntry<Object>> iter, int dims, PreProcessorPointF pre) {
+        protected PhIteratorF(PhIteratorBase<Object, ? extends PhEntry<Object>> iter, int dims, PreProcessorPointF pre) {
             this.iter = iter;
             this.pre = pre;
             this.buffer = new PhEntryF<>(new double[dims], null);
@@ -624,7 +624,7 @@ public class PhTreeMultiMapF2<T> {
             throw new UnsupportedOperationException();
         }
 
-        protected PhIteratorMMF<T> reset() {
+        protected PhIteratorF<T> reset() {
             pos = Integer.MAX_VALUE;
             findNextInternal();
             return this;
@@ -642,7 +642,7 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhExtentMMF<T> extends PhIteratorMMF<T> {
+    public static class PhExtentMMF<T> extends PhIteratorF<T> {
         private final PhExtent<Object> iter;
 
         protected PhExtentMMF(PhExtent<Object> iter, int dims, PreProcessorPointF pre) {
@@ -668,7 +668,7 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhQueryMMF<T> extends PhIteratorMMF<T> {
+    public static class PhQueryMMF<T> extends PhIteratorF<T> {
         private final long[] lMin;
         private final long[] lMax;
         private final PhQuery<Object> q;
@@ -699,7 +699,7 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhKnnQueryMMF<T> implements PhIteratorBase<T, PhEntryDistF<T>> {
+    public static class PhKnnQueryF<T> implements PhIteratorBase<T, PhEntryDistF<T>> {
         private final PreProcessorPointF pre;
         private final PhKnnQuery<Object> iter;
         private final PhEntryDistF<T> buffer;
@@ -708,7 +708,7 @@ public class PhTreeMultiMapF2<T> {
         private ArrayList<T> currentList;
         private int pos = Integer.MAX_VALUE;
 
-        protected PhKnnQueryMMF(PhKnnQuery<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhKnnQueryF(PhKnnQuery<Object> iter, int dims, PreProcessorPointF pre) {
             this.iter = iter;
             this.pre = pre;
             this.buffer = new PhEntryDistF<>(new double[dims], null, Double.NaN);
@@ -797,7 +797,7 @@ public class PhTreeMultiMapF2<T> {
          * @param center new center point
          * @return this
          */
-        public PhKnnQueryMMF<T> reset(int nMin, PhDistance dist, double[] center) {
+        public PhKnnQueryF<T> reset(int nMin, PhDistance dist, double[] center) {
             pos = Integer.MAX_VALUE;
             long[] lCenter = new long[center.length];
             pre.pre(center, lCenter);
@@ -812,11 +812,11 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhRangeQueryMMF<T> extends PhIteratorMMF<T> {
+    public static class PhRangeQueryF<T> extends PhIteratorF<T> {
         private final long[] lCenter;
         private final PhRangeQuery<Object> q;
 
-        protected PhRangeQueryMMF(PhRangeQuery<Object> iter, PhTree<Object> tree, PreProcessorPointF pre) {
+        protected PhRangeQueryF(PhRangeQuery<Object> iter, PhTree<Object> tree, PreProcessorPointF pre) {
             super(iter, tree.getDim(), pre);
             this.q = iter;
             this.lCenter = new long[tree.getDim()];
@@ -829,7 +829,7 @@ public class PhTreeMultiMapF2<T> {
          * @param center new center point
          * @return this
          */
-        public PhRangeQueryMMF<T> reset(double range, double... center) {
+        public PhRangeQueryF<T> reset(double range, double... center) {
             pre.pre(center, lCenter);
             q.reset(range, lCenter);
             super.reset();

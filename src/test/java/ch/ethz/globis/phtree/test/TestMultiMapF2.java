@@ -7,6 +7,7 @@
 package ch.ethz.globis.phtree.test;
 
 import ch.ethz.globis.phtree.PhDistanceF;
+import ch.ethz.globis.phtree.PhEntryDistF;
 import ch.ethz.globis.phtree.PhTreeMultiMapF2;
 import ch.ethz.globis.phtree.PhTreeMultiMapF2.*;
 import ch.ethz.globis.phtree.util.BitTools;
@@ -215,7 +216,7 @@ public class TestMultiMapF2 {
         idx.put(new double[]{1, 3}, new double[]{1, 3});
         idx.put(new double[]{3, 1}, new double[]{3, 1});
 
-        List<PhEntryDistMMF<double[]>> result = toList(idx.nearestNeighbour(0, 3, 3));
+        List<PhEntryDistF<double[]>> result = toList(idx.nearestNeighbour(0, 3, 3));
         assertTrue(result.isEmpty());
 
         result = toList(idx.nearestNeighbour(3, 2, 2));
@@ -235,18 +236,6 @@ public class TestMultiMapF2 {
         result = toList(idx.nearestNeighbour(1, 3, 1));
         assertTrue(1 <= result.size());
         check(result.get(0).getKey(), 3, 1);
-    }
-
-    private static class EntryDist<T> {
-        double[] key;
-        T value;
-        double dist;
-
-        public EntryDist(double[] key, T v, double dist) {
-            this.key = key;
-            this.value = v;
-            this.dist = dist;
-        }
     }
 
     @Test
@@ -271,13 +260,13 @@ public class TestMultiMapF2 {
                 }
                 for (int dupl = 0; dupl <= i % N_DUPL; dupl++) {
                     ind.put(v, id);
-                    list.add(new EntryDist<>(v,id, 0 ));
+                    list.add(new EntryDist<>(v, id, 0));
                     id++;
                 }
             }
             assertEquals(id, ind.size());
 
-            PhKnnQueryMMF<Integer> q = ind.nearestNeighbour(MIN_RESULT, new double[DIM]);
+            PhKnnQueryF<Integer> q = ind.nearestNeighbour(MIN_RESULT, new double[DIM]);
             for (int i = 0; i < NQ; i++) {
                 double[] v = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
@@ -285,7 +274,7 @@ public class TestMultiMapF2 {
                 }
                 list.forEach(xx -> xx.dist = dist(v, xx.key));
                 list.sort((o1, o2) -> Double.compare(o1.dist, o2.dist));
-                List<PhEntryDistMMF<Integer>> nnList = toList(q.reset(MIN_RESULT, PhDistanceF.THIS, v));
+                List<PhEntryDistF<Integer>> nnList = toList(q.reset(MIN_RESULT, PhDistanceF.THIS, v));
                 assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
                 for (int x = 0; x < MIN_RESULT; ++x) {
                     assertEquals(list.get(x).dist, nnList.get(x).dist(), 0.0);
@@ -386,14 +375,14 @@ public class TestMultiMapF2 {
         final Random R = new Random(0);
         for (int d = 0; d < LOOP; d++) {
             PhTreeMultiMapF2<Integer> ind = newTree(DIM);
-            PhRangeQueryMMF<Integer> q = ind.rangeQuery(1, PhDistanceF.THIS, new double[DIM]);
+            PhRangeQueryF<Integer> q = ind.rangeQuery(1, PhDistanceF.THIS, new double[DIM]);
             for (int i = 0; i < N; i++) {
                 double[] v = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextDouble() * MAXV;
                 }
-                ind.put(v, 2*i);
-                ind.put(v, 2*i + 1);
+                ind.put(v, 2 * i);
+                ind.put(v, 2 * i + 1);
             }
             for (int i = 0; i < NQ; i++) {
                 double[] v = new double[DIM];
@@ -411,7 +400,7 @@ public class TestMultiMapF2 {
 
     private ArrayList<double[]> rangeQuery(PhTreeMultiMapF2<?> tree, double range, double[] q) {
         ArrayList<double[]> points = new ArrayList<>();
-        PhIteratorMMF<?> i = tree.queryExtent();
+        PhIteratorF<?> i = tree.queryExtent();
         while (i.hasNext()) {
             double[] cand = i.nextEntry().getKey();
             double dNew = dist(q, cand);
@@ -454,7 +443,7 @@ public class TestMultiMapF2 {
         }
     }
 
-    private List<double[]> toList(PhRangeQueryMMF<?> q) {
+    private List<double[]> toList(PhRangeQueryF<?> q) {
         ArrayList<double[]> ret = new ArrayList<>();
         while (q.hasNext()) {
             ret.add(q.nextEntry().getKey());
@@ -462,14 +451,14 @@ public class TestMultiMapF2 {
         return ret;
     }
 
-    private <T> List<PhEntryDistMMF<T>> toList(PhKnnQueryMMF<T> q) {
-        ArrayList<PhEntryDistMMF<T>> ret = new ArrayList<>();
+    private <T> List<PhEntryDistF<T>> toList(PhKnnQueryF<T> q) {
+        ArrayList<PhEntryDistF<T>> ret = new ArrayList<>();
         while (q.hasNext()) {
             if (ret.size() % 2 == 0) {
                 ret.add(q.nextEntry());
             } else {
-                PhEntryDistMMF<T> e = q.nextEntryReuse();
-                ret.add(new PhEntryDistMMF<>(e.getKey().clone(), e.getValue(), e.dist()));
+                PhEntryDistF<T> e = q.nextEntryReuse();
+                ret.add(new PhEntryDistF<>(e.getKey().clone(), e.getValue(), e.dist()));
             }
         }
         return ret;
@@ -481,5 +470,17 @@ public class TestMultiMapF2 {
             l[i] = BitTools.toSortableLong(d[i]);
         }
         return Bits.toBinary(l);
+    }
+
+    private static class EntryDist<T> {
+        double[] key;
+        T value;
+        double dist;
+
+        public EntryDist(double[] key, T v, double dist) {
+            this.key = key;
+            this.value = v;
+            this.dist = dist;
+        }
     }
 }
