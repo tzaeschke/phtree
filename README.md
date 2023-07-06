@@ -31,7 +31,7 @@ In 2019 and 2020 development was kindly supported by [Improbable](https://improb
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.6.1</version>
+    <version>2.6.2</version>
 </dependency>
 ```
 
@@ -47,7 +47,7 @@ You can create GitHub Issues or contact me on [Discord](https://discord.gg/GNYjy
 # News
 
 ### 2023-06-26
-Release 2.6.0 / 2.6.1
+Release 2.6.0 / 2.6.1 / 2.6.2
 - Added new multimap: `PhTreeMultiMapF2`.
 
 ### 2020-04-30
