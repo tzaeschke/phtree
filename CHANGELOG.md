@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Nothing yet
+
+## 2.6.1
+
+- Fix new API for `PhEntryF`/`PhEntryDistF`. [#28](https://github.com/tzaeschke/phtree/pull/28)
+
+## 2.6.0
+
 - CHANGELOG.md [#26](https://github.com/tzaeschke/phtree/pull/26)
 - Added new multimap: PhTreeMultiMapF2. [#23](https://github.com/tzaeschke/phtree/pull/23)
 - Added CI with GitHub actions. [#25](https://github.com/tzaeschke/phtree/pull/25)

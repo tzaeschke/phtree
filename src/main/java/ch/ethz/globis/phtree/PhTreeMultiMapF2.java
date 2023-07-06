@@ -329,8 +329,8 @@ public class PhTreeMultiMapF2<T> {
      * @param max max values
      * @return List of query results
      */
-    public List<PhEntryMMF<T>> queryAll(double[] min, double[] max) {
-        return queryAll(min, max, Integer.MAX_VALUE, null, e -> new PhEntryMMF<>(PhMapperK.toDouble(e.getKey()), e.getValue()));
+    public List<PhEntryF<T>> queryAll(double[] min, double[] max) {
+        return queryAll(min, max, Integer.MAX_VALUE, null, e -> new PhEntryF<>(PhMapperK.toDouble(e.getKey()), e.getValue()));
     }
 
     /**
@@ -537,10 +537,10 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhIteratorMMF<T> implements PhIteratorBase<T, PhEntryMMF<T>> {
+    public static class PhIteratorMMF<T> implements PhIteratorBase<T, PhEntryF<T>> {
         protected final PreProcessorPointF pre;
         private final PhIteratorBase<Object, ? extends PhEntry<Object>> iter;
-        private final PhEntryMMF<T> buffer;
+        private final PhEntryF<T> buffer;
         // For storing non-list entries
         private final ArrayList<T> bufferList = new ArrayList<>();
         private PhEntry<Object> internalEntry;
@@ -550,7 +550,7 @@ public class PhTreeMultiMapF2<T> {
         protected PhIteratorMMF(PhIteratorBase<Object, ? extends PhEntry<Object>> iter, int dims, PreProcessorPointF pre) {
             this.iter = iter;
             this.pre = pre;
-            this.buffer = new PhEntryMMF<>(new double[dims], null);
+            this.buffer = new PhEntryF<>(new double[dims], null);
             this.bufferList.add(null); // empty entry
             findNextInternal();
         }
@@ -593,20 +593,20 @@ public class PhTreeMultiMapF2<T> {
         }
 
         @Override
-        public PhEntryMMF<T> nextEntry() {
+        public PhEntryF<T> nextEntry() {
             checkNext();
-            pre.post(internalEntry.getKey(), buffer.key);
-            buffer.value = getNextValue();
-            PhEntryMMF<T> ret = new PhEntryMMF<>(buffer.key.clone(), buffer.value);
+            pre.post(internalEntry.getKey(), buffer.getKey());
+            buffer.setValue(getNextValue());
+            PhEntryF<T> ret = new PhEntryF<>(buffer.getKey().clone(), buffer.getValue());
             findNext();
             return ret;
         }
 
         @Override
-        public PhEntryMMF<T> nextEntryReuse() {
+        public PhEntryF<T> nextEntryReuse() {
             checkNext();
-            pre.post(internalEntry.getKey(), buffer.key);
-            buffer.value = getNextValue();
+            pre.post(internalEntry.getKey(), buffer.getKey());
+            buffer.setValue(getNextValue());
             findNext();
             return buffer;
         }
@@ -699,10 +699,10 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhKnnQueryMMF<T> implements PhIteratorBase<T, PhEntryDistMMF<T>> {
+    public static class PhKnnQueryMMF<T> implements PhIteratorBase<T, PhEntryDistF<T>> {
         private final PreProcessorPointF pre;
         private final PhKnnQuery<Object> iter;
-        private final PhEntryDistMMF<T> buffer;
+        private final PhEntryDistF<T> buffer;
         private final ArrayList<T> bufferList = new ArrayList<>();
         private PhEntryDist<Object> internalEntry;
         private ArrayList<T> currentList;
@@ -711,7 +711,7 @@ public class PhTreeMultiMapF2<T> {
         protected PhKnnQueryMMF(PhKnnQuery<Object> iter, int dims, PreProcessorPointF pre) {
             this.iter = iter;
             this.pre = pre;
-            this.buffer = new PhEntryDistMMF<>(new double[dims], null, Double.NaN);
+            this.buffer = new PhEntryDistF<>(new double[dims], null, Double.NaN);
             this.bufferList.add(null);
             findNextInternal();
         }
@@ -754,22 +754,22 @@ public class PhTreeMultiMapF2<T> {
         }
 
         @Override
-        public PhEntryDistMMF<T> nextEntry() {
+        public PhEntryDistF<T> nextEntry() {
             checkNextKnn();
-            pre.post(internalEntry.getKey(), buffer.key);
-            buffer.dist = internalEntry.dist();
-            buffer.set(getNextValue());
-            PhEntryDistMMF<T> ret = new PhEntryDistMMF<>(buffer.key.clone(), buffer.value, buffer.dist);
+            pre.post(internalEntry.getKey(), buffer.getKey());
+            buffer.setDist(internalEntry.dist());
+            buffer.setValue(getNextValue());
+            PhEntryDistF<T> ret = new PhEntryDistF<>(buffer.getKey().clone(), buffer.getValue(), buffer.dist());
             findNextKnn();
             return ret;
         }
 
         @Override
-        public PhEntryDistMMF<T> nextEntryReuse() {
+        public PhEntryDistF<T> nextEntryReuse() {
             checkNextKnn();
-            pre.post(internalEntry.getKey(), buffer.key);
-            buffer.dist = internalEntry.dist();
-            buffer.set(getNextValue());
+            pre.post(internalEntry.getKey(), buffer.getKey());
+            buffer.setDist(internalEntry.dist());
+            buffer.setValue(getNextValue());
             findNextKnn();
             return buffer;
         }
@@ -834,71 +834,6 @@ public class PhTreeMultiMapF2<T> {
             q.reset(range, lCenter);
             super.reset();
             return this;
-        }
-    }
-
-    /**
-     * Entry class for Double entries.
-     *
-     * @param <T> value type of the entries
-     */
-    public static class PhEntryMMF<T> {
-        protected double[] key;
-        protected T value;
-
-        /**
-         * @param key   the key
-         * @param value the value
-         */
-        public PhEntryMMF(double[] key, T value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        public double[] getKey() {
-            return key;
-        }
-
-        public T getValue() {
-            return value;
-        }
-
-        public void setValue(T value) {
-            this.value = value;
-        }
-    }
-
-    /**
-     * Entry class for Double entries with distance information for nearest
-     * neighbour queries.
-     *
-     * @param <T> value type of the entries
-     */
-    public static class PhEntryDistMMF<T> extends PhEntryMMF<T> {
-        private double dist;
-
-        /**
-         * @param key   the key
-         * @param value the value
-         * @param dist  the distance to the center point
-         */
-        public PhEntryDistMMF(double[] key, T value, double dist) {
-            super(key, value);
-            this.dist = dist;
-        }
-
-        /**
-         * @param value new value
-         */
-        public void set(T value) {
-            this.value = value;
-        }
-
-        /**
-         * @return distance to center point of kNN query
-         */
-        public double dist() {
-            return dist;
         }
     }
 }

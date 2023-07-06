@@ -1,9 +1,19 @@
+API
+===
+- Change APIs to always use common PhEntryF and PhEntryDistF. -> PhTreeF + PhTreeMultiMapF
+- Compile with Java 17 or 20!!! -> Faster!
+
+Impl
+====
+- Simplify minMask/maxMask calculation. -> see issue tracker
+- Use min/max heap for kNN
 - Not optimal: all iterators locate the 'next' element before returning a current element (true?).
   This is inefficient because there a lot of iterators in a stack. Especially problematic when 
   returning nearest neighbor.
+  -> Consider different type of iterator that does not extent Iterator<T>???? E>g. w/o hasNext() ?
 - Not optimal: When reading NT-Nodes, the tree always applies valTemplate/hcPos etc to the result
   kdKey, even though the kdKey is already complete  
-- The node iterators should now the global min/maxRange to efficiently check kdKeys without
+- The node iterators should know the global min/maxRange to efficiently check kdKeys without
   popping out of the local iterators and then popping in again if it is a mismatch.
   
 - NodeIteratorFull: remove applying valTemplate from readingNt keys (for-loop in readValue).  
