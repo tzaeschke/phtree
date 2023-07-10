@@ -4,15 +4,19 @@
 
 - Nothing yet
 
-## 2.6.2
+## 2.6.3 - 2023-07-10
+
+- Fixed scope of JUnit dependency. [#30](https://github.com/tzaeschke/phtree/pull/30)
+
+## 2.6.2 - 2023-07-06
 
 - Fix new API for `PhQUeryF`/`PhEntentF`. [#29](https://github.com/tzaeschke/phtree/pull/29)
 
-## 2.6.1
+## 2.6.1 - 2023-07-06
 
 - Fix new API for `PhEntryF`/`PhEntryDistF`. [#28](https://github.com/tzaeschke/phtree/pull/28)
 
-## 2.6.0
+## 2.6.0 - 2023-07-05
 
 - CHANGELOG.md [#26](https://github.com/tzaeschke/phtree/pull/26)
 - Added new multimap: PhTreeMultiMapF2. [#23](https://github.com/tzaeschke/phtree/pull/23)
