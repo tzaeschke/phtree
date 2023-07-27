@@ -700,7 +700,8 @@ public class PhTree16<T> implements PhTree<T> {
 	@Override
 	public PhKnnQuery<T> nearestNeighbour(int nMin, PhDistance dist,
 			PhFilter dimsFilter, long... center) {
-		return new PhQueryKnnHS<>(this).reset(nMin, dist, center);
+		return new PhIteratorKnn<>(this, nMin, center, dist); // TODO filter?!?!
+		// return new PhQueryKnnHS<>(this).reset(nMin, dist, center);
 		//return new PhQueryKnnHSZ<T>(this).reset(nMin, dist, center);
 	}
 

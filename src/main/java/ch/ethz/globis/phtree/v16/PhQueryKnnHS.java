@@ -105,7 +105,7 @@ public class PhQueryKnnHS<T> implements PhKnnQuery<T> {
 		
 		
 		if (nMin <= 0 || pht.size() == 0) {
-			iterResult = Collections.<PhEntryDist<T>>emptyList().iterator();
+			iterResult = Collections.emptyIterator();
 			return this;
 		}
 		
