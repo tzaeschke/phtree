@@ -20,8 +20,6 @@
 package ch.ethz.globis.phtree.v13;
 
 import ch.ethz.globis.phtree.PhEntryDist;
-import ch.ethz.globis.phtree.v13.PhQueryKnnHS.KnnResultList;
-
 
 
 /**

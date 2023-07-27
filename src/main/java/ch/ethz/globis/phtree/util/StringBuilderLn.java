@@ -19,11 +19,15 @@ public class StringBuilderLn {
 	public void append(String str) {
 		sb.append(str);
 	}
-	
+
 	public void appendLn(String str) {
-		sb.append(str + NL);
+		sb.append(str).append(NL);
 	}
-	
+
+	public void appendLn() {
+		sb.append(NL);
+	}
+
 	@Override
 	public String toString() {
 		return sb.toString();
