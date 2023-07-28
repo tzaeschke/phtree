@@ -8,13 +8,10 @@
  */
 package ch.ethz.globis.phtree.v16;
 
-import ch.ethz.globis.phtree.PhDistance;
-import ch.ethz.globis.phtree.PhEntry;
-import ch.ethz.globis.phtree.PhEntryDist;
-import ch.ethz.globis.phtree.PhFilter;
+import ch.ethz.globis.phtree.*;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
-import ch.ethz.globis.phtree.util.MinHeap;
-import ch.ethz.globis.phtree.util.MinMaxHeap;
+import ch.ethz.globis.phtree.util.MinHeapPool;
+import ch.ethz.globis.phtree.util.MinMaxHeapPool;
 
 import java.util.NoSuchElementException;
 
@@ -41,8 +38,8 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
             return true;
         }
     };
-    MinHeap<NodeDistT> queueN = MinHeap.create((t1, t2) -> t1.dist < t2.dist);
-    MinMaxHeap<PhEntryDist<T>> queueV = MinMaxHeap.create((t1, t2) -> t1.dist() < t2.dist());
+    MinHeapPool<NodeDistT> queueN = MinHeapPool.create((t1, t2) -> t1.dist < t2.dist, NodeDistT::new);
+    MinMaxHeapPool<PhEntryDist<T>> queueV;
     double maxNodeDist = Double.POSITIVE_INFINITY;
     private PhEntryDist<T> resultFree;
     private PhEntryDist<T> resultToReturn;
@@ -56,6 +53,7 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
     PhIteratorKnn(PhTree16<T> pht, int minResults, long[] center, PhDistance distFn) {
         this.distFn = distFn;
         this.pht = pht;
+        this.queueV = MinMaxHeapPool.create((t1, t2) -> t1.dist() < t2.dist(), () -> new PhEntryDist<>(new long[pht.getDim()], null, 0));
         this.nodeIter  = new NodeIteratorFullNoGC<>();
         this.resultFree = new PhEntryDist<>(new long[pht.getDim()], null, 0);
         this.resultToReturn = new PhEntryDist<>(new long[pht.getDim()], null, 0);
@@ -134,8 +132,11 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                 PhEntryDist<T> result = queueV.peekMin();
                 queueV.popMin();
                 --remaining;
+                PhEntryDist<T> dummy = resultFree;
                 resultFree = resultToReturn;
-                resultToReturn = result;
+                //resultToReturn = result;
+                resultToReturn = dummy;
+                resultToReturn.setCopyKey(result.getKey(), result.getValue(), result.dist());
                 currentDistance = result.dist();  // TODO remove field?
                 return;
             } else {
@@ -156,13 +157,13 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                         Node sub = (Node) tempResult.getNodeInternal();
                         double dist = distToNode(tempResult.getKey(), sub.getPostLen() + 1);
                         if (dist <= maxNodeDist) {
-                            queueN.push(new NodeDistT(dist, sub));
+                            queueN.push(createEntry(dist, sub));
                         }
                     } else {
                         double d = distFn.dist(center, tempResult.getKey());
                         // Using '<=' allows dealing with infinite distances.
                         if (d <= maxNodeDist) {
-                            queueV.push(new PhEntryDist<>(tempResult, d));
+                            queueV.push(createEntry(tempResult.getKey(), tempResult.getValue(), d));
                             if (queueV.size() >= remaining) {
                                 if (queueV.size() > remaining) {
                                     queueV.popMax();
@@ -196,7 +197,7 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
 
     // TODO use this pool!
     private PhEntryDist<T> createEntry(long[] key, T val, double dist) {
-        return new PhEntryDist<>(key, val, dist);
+        return new PhEntryDist<>(key.clone(), val, dist);
 //        PhEntryDist<T> e = pool.remove(pool.size() - 1);
 //        e.setKeyInternal(key);
 //        e.set(val, dist);
@@ -204,11 +205,11 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
     }
 
     private NodeDistT createEntry(double dist, Node node) {
-        return new NodeDistT(dist, node);
-//        PhEntryDist<T> e = pool.remove(pool.size() - 1);
-//        e.setKeyInternal(key);
-//        e.set(val, dist);
-//        return e;
+        //return new NodeDistT(dist, node);
+        NodeDistT e = queueN.getObject();
+        e.node = node;
+        e.dist = dist;
+        return e;
     }
 
     private static class NodeDistT {
