@@ -16,7 +16,6 @@ import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 import ch.ethz.globis.phtree.util.MinHeap;
 import ch.ethz.globis.phtree.util.MinMaxHeap;
 
-import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
 /**
@@ -45,19 +44,22 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
     MinHeap<NodeDistT> queueN = MinHeap.create((t1, t2) -> t1.dist < t2.dist);
     MinMaxHeap<PhEntryDist<T>> queueV = MinMaxHeap.create((t1, t2) -> t1.dist() < t2.dist());
     double maxNodeDist = Double.POSITIVE_INFINITY;
+    private PhEntryDist<T> resultFree;
     private PhEntryDist<T> resultToReturn;
     private boolean isFinished = false;
     private int remaining;
     private long[] center;
     private double currentDistance;
     private final NodeIteratorFullNoGC<T> nodeIter;
+    private final PhEntry<T> tempResult;
 
     PhIteratorKnn(PhTree16<T> pht, int minResults, long[] center, PhDistance distFn) {
         this.distFn = distFn;
         this.pht = pht;
         this.nodeIter  = new NodeIteratorFullNoGC<>();
-        //this.resultFree = new PhEntryDist<>(new long[pht.getDim()], null, 0);
+        this.resultFree = new PhEntryDist<>(new long[pht.getDim()], null, 0);
         this.resultToReturn = new PhEntryDist<>(new long[pht.getDim()], null, 0);
+        this.tempResult = new PhEntry<>(new long[pht.getDim()], null);
         reset(minResults, distFn, center);
     }
 
@@ -132,6 +134,7 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                 PhEntryDist<T> result = queueV.peekMin();
                 queueV.popMin();
                 --remaining;
+                resultFree = resultToReturn;
                 resultToReturn = result;
                 currentDistance = result.dist();  // TODO remove field?
                 return;
@@ -147,21 +150,19 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                     continue;
                 }
 
-                PhEntry<T> result = new PhEntry<>(new long[center.length], null); // TODO pool?
                 nodeIter.init(node, filterFn);
-                //nodeIter.setValTemplate(top.prefix);
-                while (nodeIter.increment(result)) {
-                    if (result.hasNodeInternal()) {
-                        Node sub = (Node) result.getNodeInternal();
-                        double dist = distToNode(result.getKey(), sub.getPostLen() + 1);
+                while (nodeIter.increment(tempResult)) {
+                    if (tempResult.hasNodeInternal()) {
+                        Node sub = (Node) tempResult.getNodeInternal();
+                        double dist = distToNode(tempResult.getKey(), sub.getPostLen() + 1);
                         if (dist <= maxNodeDist) {
                             queueN.push(new NodeDistT(dist, sub));
                         }
                     } else {
-                        double d = distFn.dist(center, result.getKey());
+                        double d = distFn.dist(center, tempResult.getKey());
                         // Using '<=' allows dealing with infinite distances.
                         if (d <= maxNodeDist) {
-                            queueV.push(new PhEntryDist<>(result, d));
+                            queueV.push(new PhEntryDist<>(tempResult, d));
                             if (queueV.size() >= remaining) {
                                 if (queueV.size() > remaining) {
                                     queueV.popMax();
