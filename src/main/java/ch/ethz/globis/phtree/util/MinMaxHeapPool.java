@@ -25,6 +25,9 @@ import java.util.function.Supplier;
 /**
  * Min-max heap implementation based on:
  * <a href="https://en.wikipedia.org/wiki/Min-max_heap">https://en.wikipedia.org/wiki/Min-max_heap</a>
+ * <p>
+ * This heap also works as a pool for instances of T. Instances of T are never removed from the internal array.
+ * Calling getObject() will return the first unused instance of T (or create one if none is available).
  *
  * @param <T> Entry type
  */
@@ -261,6 +264,7 @@ public class MinMaxHeapPool<T> implements MinMaxHeapI.MinMaxHeapPoolI<T> {
             return;
         }
 
+        // size + 2, so we always can the last field for pooling
         if (size + 2 >= data.length) {
             data = Arrays.copyOf(data, data.length * 2);
         }
@@ -285,8 +289,7 @@ public class MinMaxHeapPool<T> implements MinMaxHeapI.MinMaxHeapPoolI<T> {
         if (size == 0) {
             return;
         }
-
-        // T value = data[end - 1];
+        // T value = data[end()];
         // data[1] = value;
         swap(1, end());
 

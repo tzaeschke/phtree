@@ -22,9 +22,11 @@ public interface MinMaxHeapI<T> {
     void push(T value);
 
     void popMin();
+
     void popMax();
 
     T peekMin();
+
     T peekMax();
 
     int size();
@@ -37,8 +39,8 @@ public interface MinMaxHeapI<T> {
         /**
          * If the MinMaxHeap supports pooling, this operation
          * return a new or pooled object.
-         * @return a new or pooled instance ot T.
-         * @throws UnsupportedOperationException if pooling is not supported
+         *
+         * @return a new or pooled instance of T.
          */
         T getObject();
     }

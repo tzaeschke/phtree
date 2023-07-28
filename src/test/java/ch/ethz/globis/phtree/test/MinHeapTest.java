@@ -14,7 +14,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */package ch.ethz.globis.phtree.test;
+ */
+package ch.ethz.globis.phtree.test;
 
 import ch.ethz.globis.phtree.util.MinHeap;
 import ch.ethz.globis.phtree.util.MinHeapI;
@@ -28,25 +29,6 @@ import static org.junit.Assert.*;
 public class MinHeapTest {
 
     private static final int SEEDS = 10; // 100 for benchmarking
-
-    private static class Entry implements Comparable<Entry> {
-
-        Entry(double d, int id) {
-            this.d = d;
-            this.id = id;
-        }
-        double d;
-        int id;
-        @Override
-        public int compareTo(Entry o) {
-            return Double.compare(d, o.d);
-        }
-
-        @Override
-        public String toString() {
-            return String.format("%.3f", d);
-        }
-    }
 
     private MinHeapI<Entry> create() {
         return MinHeap.create((o1, o2) -> o1.d < o2.d);
@@ -69,7 +51,7 @@ public class MinHeapTest {
         for (int i = 0; i < data.length; i++) {
             heap.push(data[i]);
             assertFalse(heap.isEmpty());
-            assertEquals(i+1, heap.size());
+            assertEquals(i + 1, heap.size());
             min = Math.min(min, data[i].d);
             max = Math.max(max, data[i].d);
             assertNotNull(heap.peekMin());
@@ -101,15 +83,35 @@ public class MinHeapTest {
 
         for (int i = 0; i < data.length; i++) {
 //            System.out.println("pop i=" + i);
- //           ((MinMaxHeapZ)heap).print();
+            //           ((MinMaxHeapZ)heap).print();
             assertFalse(heap.isEmpty());
             assertEquals(data.length - i, heap.size());
             assertEquals(data[i].d, heap.peekMin().d, 0.0);
-           // ((MinMaxHeapZ)heap).checkConsistency();
+            // ((MinMaxHeapZ)heap).checkConsistency();
             heap.popMin();
         }
         assertTrue(heap.isEmpty());
         assertEquals(0, heap.size());
+    }
+
+    private static class Entry implements Comparable<Entry> {
+
+        double d;
+        int id;
+        Entry(double d, int id) {
+            this.d = d;
+            this.id = id;
+        }
+
+        @Override
+        public int compareTo(Entry o) {
+            return Double.compare(d, o.d);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%.3f", d);
+        }
     }
 
 //    @Test
