@@ -32,4 +32,14 @@ public interface MinMaxHeapI<T> {
     boolean isEmpty();
 
     void clear();
+
+    interface MinMaxHeapPoolI<T> extends MinMaxHeapI<T> {
+        /**
+         * If the MinMaxHeap supports pooling, this operation
+         * return a new or pooled object.
+         * @return a new or pooled instance ot T.
+         * @throws UnsupportedOperationException if pooling is not supported
+         */
+        T getObject();
+    }
 }

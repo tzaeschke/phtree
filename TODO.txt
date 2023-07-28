@@ -2,6 +2,8 @@ API
 ===
 - Change APIs to always use common PhEntryF and PhEntryDistF. -> PhTreeF + PhTreeMultiMapF
 - Compile with Java 17 or 20!!! -> Faster!
+- Remove (kNN).nextKey(), it doesn't help much and behavior is unclear, does it need to clone the returned key?!?!?
+  -> consider removing kNN iterator.distance()  ... is that useful?
 
 Impl
 ====
