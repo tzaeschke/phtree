@@ -21,7 +21,7 @@ import java.util.NoSuchElementException;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
- *
+ * <p>
  * Implementation after Hjaltason and Samet (with some deviations: no MinDist or MaxDist used).
  * G. R. Hjaltason and H. Samet., "Distance browsing in spatial databases.", ACM TODS 24(2):265--318. 1999
  *
@@ -45,7 +45,6 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
     MinHeap<NodeDistT> queueN = MinHeap.create((t1, t2) -> t1.dist < t2.dist);
     MinMaxHeap<PhEntryDist<T>> queueV = MinMaxHeap.create((t1, t2) -> t1.dist() < t2.dist());
     double maxNodeDist = Double.POSITIVE_INFINITY;
-    private PhEntryDist<T> resultFree;
     private PhEntryDist<T> resultToReturn;
     private boolean isFinished = false;
     private int remaining;
@@ -57,7 +56,7 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
         this.distFn = distFn;
         this.pht = pht;
         this.nodeIter  = new NodeIteratorFullNoGC<>();
-        this.resultFree = new PhEntryDist<>(new long[pht.getDim()], null, 0);
+        //this.resultFree = new PhEntryDist<>(new long[pht.getDim()], null, 0);
         this.resultToReturn = new PhEntryDist<>(new long[pht.getDim()], null, 0);
         reset(minResults, distFn, center);
     }
@@ -78,14 +77,14 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
         queueN.clear();
         queueV.clear();
 
-        queueN.push(new NodeDistT(0, root, new long[pht.getDim()]));
+        queueN.push(createEntry(0, root));
         findNextElement();
         return this;
     }
 
     @Override
     public long[] nextKey() {
-        return nextEntryReuse().getKey();
+        return nextEntryReuse().getKey().clone();
     }
 
     @Override
@@ -110,7 +109,7 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
 
     @Override
     public boolean hasNext() {
-        return !isFinished; // TODO remove flag?
+        return !isFinished;
     }
 
     @Override
@@ -133,7 +132,6 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                 PhEntryDist<T> result = queueV.peekMin();
                 queueV.popMin();
                 --remaining;
-                resultFree = resultToReturn;
                 resultToReturn = result;
                 currentDistance = result.dist();  // TODO remove field?
                 return;
@@ -157,7 +155,7 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                         Node sub = (Node) result.getNodeInternal();
                         double dist = distToNode(result.getKey(), sub.getPostLen() + 1);
                         if (dist <= maxNodeDist) {
-                            queueN.push(new NodeDistT(dist, sub, result.getKey()));
+                            queueN.push(new NodeDistT(dist, sub));
                         }
                     } else {
                         double d = distFn.dist(center, result.getKey());
@@ -196,26 +194,33 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
     }
 
     // TODO use this pool!
-    private static <T> PhEntryDist<T> createEntry(ArrayList<PhEntryDist<T>> pool,
-                                                  long[] key, T val, double dist) {
-        if (pool.isEmpty()) {
-            return new PhEntryDist<>(key, val, dist);
-        }
-        PhEntryDist<T> e = pool.remove(pool.size() - 1);
-        e.setKeyInternal(key);
-        e.set(val, dist);
-        return e;
+    private PhEntryDist<T> createEntry(long[] key, T val, double dist) {
+        return new PhEntryDist<>(key, val, dist);
+//        PhEntryDist<T> e = pool.remove(pool.size() - 1);
+//        e.setKeyInternal(key);
+//        e.set(val, dist);
+//        return e;
+    }
+
+    private NodeDistT createEntry(double dist, Node node) {
+        return new NodeDistT(dist, node);
+//        PhEntryDist<T> e = pool.remove(pool.size() - 1);
+//        e.setKeyInternal(key);
+//        e.set(val, dist);
+//        return e;
     }
 
     private static class NodeDistT {
         double dist;
         Node node;
-        long[] prefix;
 
-        public NodeDistT(double dist, Node node, long[] prefix) {
+        public NodeDistT() {
+            dist = -1;
+        }
+
+        public NodeDistT(double dist, Node node) {
             this.dist = dist;
             this.node = node;
-            this.prefix = prefix;
         }
     }
 }

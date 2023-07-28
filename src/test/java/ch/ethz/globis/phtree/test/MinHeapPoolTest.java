@@ -29,7 +29,7 @@ import static org.junit.Assert.*;
 
 public class MinHeapPoolTest {
 
-    private static final int SEEDS = 100; // 100 for benchmarking
+    private static final int SEEDS = 10; // 100 for benchmarking
 
     private MinHeapPoolI<Entry> create() {
         return MinHeapPool.create((o1, o2) -> o1.d < o2.d, Entry::new);
