@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+## 2.8.0 - 2023-07-29
+ 
 - Proper kNN implementation with MinMaxHeaps [#33](https://github.com/tzaeschke/phtree/pull/33)
+
+## 2.7.0 - 2023-07-29
+
+- Nothing
 
 ## 2.6.3 - 2023-07-10
 
