@@ -136,10 +136,9 @@ public class MinHeapPool<T> implements MinHeapI.MinHeapPoolI<T> {
 
     private void pushUpMin(int index, T value) {
         while (hasParent(index) && less.less(value, data[parent(index)])) {
-            data[index] = data[parent(index)];
+            swap(index, parent(index));
             index = parent(index);
         }
-        data[index] = value;
     }
 
     private int end() {
@@ -160,12 +159,14 @@ public class MinHeapPool<T> implements MinHeapI.MinHeapPoolI<T> {
         }
 
         size++;
+        data[size] = value;
         pushUp(size, value);
     }
 
     @Override
     public T getObject() {
         T obj = data[end()];
+        data[end()] = null;
         return obj != null ? obj : supplyFn.get();
     }
 

@@ -218,38 +218,36 @@ public class MinMaxHeapPool<T> implements MinMaxHeapI.MinMaxHeapPoolI<T> {
         }
     }
 
-    private void pushUp(int index, T value) {
+    private void pushUp(int index) {
         if (isMinLevel(index)) {
-            if (!less.less(value, data[parent(index)])) {
-                data[index] = data[parent(index)];
-                pushUpMax(parent(index), value);
+            if (!less.less(data[index], data[parent(index)])) {
+                swap(index, parent(index));
+                pushUpMax(parent(index));
             } else {
-                pushUpMin(index, value);
+                pushUpMin(index);
             }
         } else {
-            if (less.less(value, data[parent(index)])) {
-                data[index] = data[parent(index)];
-                pushUpMin(parent(index), value);
+            if (less.less(data[index], data[parent(index)])) {
+                swap(index, parent(index));
+                pushUpMin(parent(index));
             } else {
-                pushUpMax(index, value);
+                pushUpMax(index);
             }
         }
     }
 
-    private void pushUpMin(int index, T value) {
-        while (hasGrandparent(index) && less.less(value, data[grandparent(index)])) {
-            data[index] = data[grandparent(index)];
+    private void pushUpMin(int index) {
+        while (hasGrandparent(index) && less.less(data[index], data[grandparent(index)])) {
+            swap(index, grandparent(index));
             index = grandparent(index);
         }
-        data[index] = value;
     }
 
-    private void pushUpMax(int index, T value) {
-        while (hasGrandparent(index) && !less.less(value, data[grandparent(index)])) {
-            data[index] = data[grandparent(index)];
+    private void pushUpMax(int index) {
+        while (hasGrandparent(index) && !less.less(data[index], data[grandparent(index)])) {
+            swap(index, grandparent(index));
             index = grandparent(index);
         }
-        data[index] = value;
     }
 
     private int end() {
@@ -270,7 +268,8 @@ public class MinMaxHeapPool<T> implements MinMaxHeapI.MinMaxHeapPoolI<T> {
         }
 
         size++;
-        pushUp(size, value);
+        data[size] = value;
+        pushUp(size);
     }
 
     @Override
@@ -285,14 +284,11 @@ public class MinMaxHeapPool<T> implements MinMaxHeapI.MinMaxHeapPoolI<T> {
             throw new NoSuchElementException();
         }
         size--;
-
         if (size == 0) {
             return;
         }
-        // T value = data[end()];
-        // data[1] = value;
+        // Replace first element with last element
         swap(1, end());
-
         pushDown(1);
     }
 
@@ -316,11 +312,9 @@ public class MinMaxHeapPool<T> implements MinMaxHeapI.MinMaxHeapPoolI<T> {
         }
 
         int end = end();
-        //T value = data[end - 1];
-        //data[max] = value;
+        // Replace "max" element with last element
         swap(max, end - 1);
         size--;
-
         pushDown(max);
     }
 

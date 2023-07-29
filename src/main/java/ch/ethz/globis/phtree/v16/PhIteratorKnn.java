@@ -8,9 +8,11 @@
  */
 package ch.ethz.globis.phtree.v16;
 
-import ch.ethz.globis.phtree.*;
+import ch.ethz.globis.phtree.PhDistance;
+import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.PhEntryDist;
+import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
-import ch.ethz.globis.phtree.util.MinHeapPool;
 import ch.ethz.globis.phtree.util.MinMaxHeapPool;
 
 import java.util.NoSuchElementException;
@@ -26,8 +28,7 @@ import java.util.NoSuchElementException;
 public class PhIteratorKnn<T> implements PhKnnQuery<T> {
 
     private final PhTree16<T> pht;
-    private PhDistance distFn;
-    private PhFilter filterFn = new PhFilter() {
+    private final PhFilter filterFn = new PhFilter() {
         @Override
         public boolean isValid(long[] key) {
             return true;
@@ -38,23 +39,24 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
             return true;
         }
     };
-    MinHeapPool<NodeDistT> queueN = MinHeapPool.create((t1, t2) -> t1.dist < t2.dist, NodeDistT::new);
+    private final NodeIteratorFullNoGC<T> nodeIter;
+    private final PhEntry<T> tempResult;
+    MinMaxHeapPool<NodeDistT> queueN = MinMaxHeapPool.create((t1, t2) -> t1.dist < t2.dist, NodeDistT::new);
     MinMaxHeapPool<PhEntryDist<T>> queueV;
     double maxNodeDist = Double.POSITIVE_INFINITY;
+    private PhDistance distFn;
     private PhEntryDist<T> resultFree;
     private PhEntryDist<T> resultToReturn;
     private boolean isFinished = false;
     private int remaining;
     private long[] center;
     private double currentDistance;
-    private final NodeIteratorFullNoGC<T> nodeIter;
-    private final PhEntry<T> tempResult;
 
     PhIteratorKnn(PhTree16<T> pht, int minResults, long[] center, PhDistance distFn) {
         this.distFn = distFn;
         this.pht = pht;
         this.queueV = MinMaxHeapPool.create((t1, t2) -> t1.dist() < t2.dist(), () -> new PhEntryDist<>(new long[pht.getDim()], null, 0));
-        this.nodeIter  = new NodeIteratorFullNoGC<>();
+        this.nodeIter = new NodeIteratorFullNoGC<>();
         this.resultFree = new PhEntryDist<>(new long[pht.getDim()], null, 0);
         this.resultToReturn = new PhEntryDist<>(new long[pht.getDim()], null, 0);
         this.tempResult = new PhEntry<>(new long[pht.getDim()], null);
@@ -134,10 +136,9 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                 --remaining;
                 PhEntryDist<T> dummy = resultFree;
                 resultFree = resultToReturn;
-                //resultToReturn = result;
                 resultToReturn = dummy;
                 resultToReturn.setCopyKey(result.getKey(), result.getValue(), result.dist());
-                currentDistance = result.dist();  // TODO remove field?
+                currentDistance = result.dist();
                 return;
             } else {
                 // inner node
@@ -189,23 +190,19 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
             //otherwise return v itself (assume possible distance=0)
             long min = prefix[i] & maskMin;
             long max = prefix[i] | maskMax;
-            buf[i] = min > center[i] ? min : (max < center[i] ? max : center[i]);
+            buf[i] = min > center[i] ? min : (Math.min(max, center[i]));
         }
 
         return distFn.dist(center, buf);
     }
 
-    // TODO use this pool!
     private PhEntryDist<T> createEntry(long[] key, T val, double dist) {
-        return new PhEntryDist<>(key.clone(), val, dist);
-//        PhEntryDist<T> e = pool.remove(pool.size() - 1);
-//        e.setKeyInternal(key);
-//        e.set(val, dist);
-//        return e;
+        PhEntryDist<T> e = queueV.getObject();
+        e.setCopyKey(key, val, dist);
+        return e;
     }
 
     private NodeDistT createEntry(double dist, Node node) {
-        //return new NodeDistT(dist, node);
         NodeDistT e = queueN.getObject();
         e.node = node;
         e.dist = dist;
@@ -215,15 +212,6 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
     private static class NodeDistT {
         double dist;
         Node node;
-
-        public NodeDistT() {
-            dist = -1;
-        }
-
-        public NodeDistT(double dist, Node node) {
-            this.dist = dist;
-            this.node = node;
-        }
     }
 }
 

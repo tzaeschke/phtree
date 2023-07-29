@@ -13,15 +13,13 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
-import ch.ethz.globis.phtree.util.MinHeap;
-import ch.ethz.globis.phtree.util.MinMaxHeap;
+import ch.ethz.globis.phtree.util.MinMaxHeapPool;
 
-import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
 /**
  * kNN query implementation that uses preprocessors and distance functions.
- *
+ * <p>
  * Implementation after Hjaltason and Samet (with some deviations: no MinDist or MaxDist used).
  * G. R. Hjaltason and H. Samet., "Distance browsing in spatial databases.", ACM TODS 24(2):265--318. 1999
  *
@@ -30,8 +28,7 @@ import java.util.NoSuchElementException;
 public class PhIteratorKnn<T> implements PhKnnQuery<T> {
 
     private final PhTree16HD<T> pht;
-    private PhDistance distFn;
-    private PhFilter filterFn = new PhFilter() {
+    private final PhFilter filterFn = new PhFilter() {
         @Override
         public boolean isValid(long[] key) {
             return true;
@@ -42,23 +39,27 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
             return true;
         }
     };
-    MinHeap<NodeDistT> queueN = MinHeap.create((t1, t2) -> t1.dist < t2.dist);
-    MinMaxHeap<PhEntryDist<T>> queueV = MinMaxHeap.create((t1, t2) -> t1.dist() < t2.dist());
+    private final NodeIteratorFullNoGC<T> nodeIter;
+    private final PhEntry<T> tempResult;
+    MinMaxHeapPool<NodeDistT> queueN = MinMaxHeapPool.create((t1, t2) -> t1.dist < t2.dist, NodeDistT::new);
+    MinMaxHeapPool<PhEntryDist<T>> queueV;
     double maxNodeDist = Double.POSITIVE_INFINITY;
+    private PhDistance distFn;
     private PhEntryDist<T> resultFree;
     private PhEntryDist<T> resultToReturn;
     private boolean isFinished = false;
     private int remaining;
     private long[] center;
     private double currentDistance;
-    private final NodeIteratorFullNoGC<T> nodeIter;
 
     PhIteratorKnn(PhTree16HD<T> pht, int minResults, long[] center, PhDistance distFn) {
         this.distFn = distFn;
         this.pht = pht;
-        this.nodeIter  = new NodeIteratorFullNoGC<>();
+        this.queueV = MinMaxHeapPool.create((t1, t2) -> t1.dist() < t2.dist(), () -> new PhEntryDist<>(new long[pht.getDim()], null, 0));
+        this.nodeIter = new NodeIteratorFullNoGC<>();
         this.resultFree = new PhEntryDist<>(new long[pht.getDim()], null, 0);
         this.resultToReturn = new PhEntryDist<>(new long[pht.getDim()], null, 0);
+        this.tempResult = new PhEntry<>(new long[pht.getDim()], null);
         reset(minResults, distFn, center);
     }
 
@@ -78,14 +79,14 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
         queueN.clear();
         queueV.clear();
 
-        queueN.push(new NodeDistT(0, root, new long[pht.getDim()]));
+        queueN.push(createEntry(0, root));
         findNextElement();
         return this;
     }
 
     @Override
     public long[] nextKey() {
-        return nextEntryReuse().getKey();
+        return nextEntryReuse().getKey().clone();
     }
 
     @Override
@@ -110,7 +111,7 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
 
     @Override
     public boolean hasNext() {
-        return !isFinished; // TODO remove flag?
+        return !isFinished;
     }
 
     @Override
@@ -133,9 +134,11 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                 PhEntryDist<T> result = queueV.peekMin();
                 queueV.popMin();
                 --remaining;
+                PhEntryDist<T> dummy = resultFree;
                 resultFree = resultToReturn;
-                resultToReturn = result;
-                currentDistance = result.dist();  // TODO remove field?
+                resultToReturn = dummy;
+                resultToReturn.setCopyKey(result.getKey(), result.getValue(), result.dist());
+                currentDistance = result.dist();
                 return;
             } else {
                 // inner node
@@ -149,21 +152,19 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
                     continue;
                 }
 
-                PhEntry<T> result = new PhEntry<>(new long[center.length], null); // TODO pool?
                 nodeIter.init(node, filterFn);
-                //nodeIter.setValTemplate(top.prefix);
-                while (nodeIter.increment(result)) {
-                    if (result.hasNodeInternal()) {
-                        Node sub = (Node) result.getNodeInternal();
-                        double dist = distToNode(result.getKey(), sub.getPostLen() + 1);
+                while (nodeIter.increment(tempResult)) {
+                    if (tempResult.hasNodeInternal()) {
+                        Node sub = (Node) tempResult.getNodeInternal();
+                        double dist = distToNode(tempResult.getKey(), sub.getPostLen() + 1);
                         if (dist <= maxNodeDist) {
-                            queueN.push(new NodeDistT(dist, sub, result.getKey()));
+                            queueN.push(createEntry(dist, sub));
                         }
                     } else {
-                        double d = distFn.dist(center, result.getKey());
+                        double d = distFn.dist(center, tempResult.getKey());
                         // Using '<=' allows dealing with infinite distances.
                         if (d <= maxNodeDist) {
-                            queueV.push(new PhEntryDist<>(result, d));
+                            queueV.push(createEntry(tempResult.getKey(), tempResult.getValue(), d));
                             if (queueV.size() >= remaining) {
                                 if (queueV.size() > remaining) {
                                     queueV.popMax();
@@ -189,34 +190,28 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
             //otherwise return v itself (assume possible distance=0)
             long min = prefix[i] & maskMin;
             long max = prefix[i] | maskMax;
-            buf[i] = min > center[i] ? min : (max < center[i] ? max : center[i]);
+            buf[i] = min > center[i] ? min : (Math.min(max, center[i]));
         }
 
         return distFn.dist(center, buf);
     }
 
-    // TODO use this pool!
-    private static <T> PhEntryDist<T> createEntry(ArrayList<PhEntryDist<T>> pool,
-                                                  long[] key, T val, double dist) {
-        if (pool.isEmpty()) {
-            return new PhEntryDist<>(key, val, dist);
-        }
-        PhEntryDist<T> e = pool.remove(pool.size() - 1);
-        e.setKeyInternal(key);
-        e.set(val, dist);
+    private PhEntryDist<T> createEntry(long[] key, T val, double dist) {
+        PhEntryDist<T> e = queueV.getObject();
+        e.setCopyKey(key, val, dist);
+        return e;
+    }
+
+    private NodeDistT createEntry(double dist, Node node) {
+        NodeDistT e = queueN.getObject();
+        e.node = node;
+        e.dist = dist;
         return e;
     }
 
     private static class NodeDistT {
         double dist;
         Node node;
-        long[] prefix;
-
-        public NodeDistT(double dist, Node node, long[] prefix) {
-            this.dist = dist;
-            this.node = node;
-            this.prefix = prefix;
-        }
     }
 }
 
