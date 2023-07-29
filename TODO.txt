@@ -2,11 +2,15 @@ API
 ===
 - Change APIs to always use common PhEntryF and PhEntryDistF. -> PhTreeF + PhTreeMultiMapF
 - Compile with Java 17 or 20!!! -> Faster!
+- Remove (kNN).nextKey(), it doesn't help much and behavior is unclear, does it need to clone the returned key?!?!?
+  -> consider removing kNN iterator.distance()  ... is that useful?
 
 Impl
 ====
 - Simplify minMask/maxMask calculation. -> see issue tracker
 - Use min/max heap for kNN
+- v13 NodeIteratorNoGC has WAY to many fields. Remove valTemplate, rangeMin, range<ax, dim, ...
+- v13 Clean up mess with infixLEnStored vs infixLen
 - Not optimal: all iterators locate the 'next' element before returning a current element (true?).
   This is inefficient because there a lot of iterators in a stack. Especially problematic when 
   returning nearest neighbor.

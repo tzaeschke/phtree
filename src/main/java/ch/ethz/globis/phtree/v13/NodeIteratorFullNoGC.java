@@ -173,4 +173,11 @@ public class NodeIteratorFullNoGC<T> {
 		reinit(node, checker);
 	}
 
+	long[] getValTemplate() {
+		return valTemplate;
+	}
+
+	void setValTemplate(long[] newValTemplate) {
+		System.arraycopy(newValTemplate, 0, valTemplate, 0, valTemplate.length);
+	}
 }
