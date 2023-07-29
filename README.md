@@ -31,7 +31,7 @@ In 2019 and 2020 development was kindly supported by [Improbable](https://improb
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.6.3</version>
+    <version>2.8.0</version>
 </dependency>
 ```
 
@@ -45,6 +45,10 @@ There are several C++ implementations available:
 You can create GitHub Issues or contact me on [Discord](https://discord.gg/GNYjyyYq).
 
 # News
+
+### 2023-07-29
+Release 2.8.0  (2.7.0 was a dud)
+- Use MinMaxHeap for kNN in v13, v16 and v16HD.
 
 ### 2023-06-26
 Release 2.6.0 / 2.6.1 / 2.6.2 / 2.6.3
