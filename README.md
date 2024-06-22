@@ -31,7 +31,7 @@ In 2019 and 2020 development was kindly supported by [Improbable](https://improb
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.8.0</version>
+    <version>2.8.1</version>
 </dependency>
 ```
 
@@ -45,6 +45,11 @@ There are several C++ implementations available:
 You can create GitHub Issues or contact me on [Discord](https://discord.gg/GNYjyyYq).
 
 # News
+
+### 2024-06-22
+Release 2.8.1
+- Fixed NPE problem with getStats() on empty tree
+- Fixed warning and refreshed dependencies
 
 ### 2023-07-29
 Release 2.8.0  (2.7.0 was a dud)
