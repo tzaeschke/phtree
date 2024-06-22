@@ -65,7 +65,7 @@
   	 		<plugin>
       			<groupId>org.apache.maven.plugins</groupId>
       			<artifactId>maven-javadoc-plugin</artifactId>
-      			<version>3.5.0</version>
+      			<version>3.6.3</version>
       			<executions>
         			<execution>
 	          			<id>attach-javadocs</id>
@@ -106,7 +106,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<version>3.0.0</version>
+				<version>3.2.5</version>
 				<configuration>
 					<argLine>${argLine} -Xmx512m</argLine>
 					<printSummary>true</printSummary>
@@ -165,7 +165,7 @@
 			<plugin>
   				<groupId>org.jacoco</groupId>
   				<artifactId>jacoco-maven-plugin</artifactId>
-  				<version>0.8.10</version>
+  				<version>0.8.11</version>
   				<executions>
     				<execution>
       					<goals>
