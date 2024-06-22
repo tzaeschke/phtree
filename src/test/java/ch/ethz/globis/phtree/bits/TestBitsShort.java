@@ -430,14 +430,14 @@ public class TestBitsShort {
 	private void check(short[] t, long ... ints) {
 		for (int i = 0; i < ints.length; i++) {
 			assertEquals("i=" + i + " | " + BitsShort.toBinary(ints, 16) + " / " + 
-					BitsShort.toBinary(t), (short)ints[i], (short)t[i]);
+					BitsShort.toBinary(t), (short)ints[i], t[i]);
 		}
 	}
 
 	private void check(short[] t, short[] s) {
 		for (int i = 0; i < s.length; i++) {
 			assertEquals("i=" + i + " | " + BitsShort.toBinary(s) + " / " + 
-					BitsShort.toBinary(t), (short)s[i], (short)t[i]);
+					BitsShort.toBinary(t), s[i], t[i]);
 		}
 	}
 

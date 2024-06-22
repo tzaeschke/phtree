@@ -350,7 +350,7 @@ public class TestBitsByte {
 	private void check(byte[] t, long ... ints) {
 		for (int i = 0; i < ints.length; i++) {
 			assertEquals("i=" + i + " " + Bits.toBinary(ints, 8) + " / " + 
-					BitsByte.toBinary(t), (byte)ints[i], (byte)t[i]);
+					BitsByte.toBinary(t), (byte)ints[i], t[i]);
 		}
 	}
 
