@@ -170,6 +170,9 @@ public class PhTree16<T> implements PhTree<T> {
 
 	@Override
 	public PhTreeStats getStats() {
+		if (getRoot() == null) {
+			return new PhTreeStats(DEPTH_64);
+		}
 		return getStats(0, getRoot(), new PhTreeStats(DEPTH_64));
 	}
 

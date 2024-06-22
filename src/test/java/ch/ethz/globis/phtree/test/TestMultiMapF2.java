@@ -12,6 +12,7 @@ import ch.ethz.globis.phtree.PhTreeMultiMapF2;
 import ch.ethz.globis.phtree.PhTreeMultiMapF2.*;
 import ch.ethz.globis.phtree.util.BitTools;
 import ch.ethz.globis.phtree.util.Bits;
+import ch.ethz.globis.phtree.util.PhTreeStats;
 import org.junit.Test;
 
 import java.util.*;
@@ -121,8 +122,8 @@ public class TestMultiMapF2 {
                         break;
                     case 1: {
                         final int id2 = id;
-                        assertEquals(id2, (int) idx.computeIfAbsent(v, id2, (v2) -> id2));
-                        assertNull(idx.computeIfAbsent(v, id2, (v2) -> id2));
+                        assertEquals(id2, (int) idx.computeIfAbsent(v, id2, v2 -> id2));
+                        assertNull(idx.computeIfAbsent(v, id2, v2 -> id2));
                         break;
                     }
                     case 2:
@@ -226,15 +227,15 @@ public class TestMultiMapF2 {
         assertTrue(3 <= result.size());
 
         result = toList(idx.nearestNeighbour(1, 1, 1));
-        assertTrue(1 <= result.size());
+        assertFalse(result.isEmpty());
         check(result.get(0).getKey(), 1, 1);
 
         result = toList(idx.nearestNeighbour(1, 1, 3));
-        assertTrue(1 <= result.size());
+        assertFalse(result.isEmpty());
         check(result.get(0).getKey(), 1, 3);
 
         result = toList(idx.nearestNeighbour(1, 3, 1));
-        assertTrue(1 <= result.size());
+        assertFalse(result.isEmpty());
         check(result.get(0).getKey(), 3, 1);
     }
 
@@ -273,7 +274,7 @@ public class TestMultiMapF2 {
                     v[j] = R.nextDouble() * MAXV;
                 }
                 list.forEach(xx -> xx.dist = dist(v, xx.key));
-                list.sort((o1, o2) -> Double.compare(o1.dist, o2.dist));
+                list.sort(Comparator.comparingDouble(o -> o.dist));
                 List<PhEntryDistF<Integer>> nnList = toList(q.reset(MIN_RESULT, PhDistanceF.THIS, v));
                 assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
                 for (int x = 0; x < MIN_RESULT; ++x) {
@@ -482,5 +483,18 @@ public class TestMultiMapF2 {
             this.value = v;
             this.dist = dist;
         }
+    }
+
+    @Test
+    public void testEmptyTreeStats() {
+        testEmptyTreeStats(2);
+        testEmptyTreeStats(60);
+        testEmptyTreeStats(600);
+    }
+
+    private void testEmptyTreeStats(int dim) {
+        PhTreeMultiMapF2<Integer> ind = newTree(dim);
+        PhTreeStats stats = ind.getStats();
+        assertEquals(0, stats.nNodes);
     }
 }

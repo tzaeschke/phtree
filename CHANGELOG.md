@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- getStats() for empty trees fails. [#36](https://github.com/tzaeschke/phtree/pull/36)
+
 ## 2.8.0 - 2023-07-29
  
 - Proper kNN implementation with MinMaxHeaps [#33](https://github.com/tzaeschke/phtree/pull/33)
