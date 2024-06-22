@@ -487,8 +487,9 @@ class Node<T> {
 
 	/**
 	 * Compare two post-fixes. Takes as parameter not the position but the post-offset-bits.
-	 * @param pob
-	 * @param key
+	 * @param offsPostKey offsPostKey
+	 * @param hcPos hcPos
+	 * @param key key
 	 * @return true, if the post-fixes match
 	 */
 	boolean postEqualsPOB(int offsPostKey, long hcPos, long[] key) {
@@ -953,10 +954,12 @@ class Node<T> {
 
 	/**
 	 * Get post-fix.
-	 * @param offsPostKey
-	 * @param key
-	 * @param range After the method call, this contains the postfix if the postfix matches the
-	 * range. Otherwise it contains only part of the postfix.
+	 * @param offsPostKey offsPostKey
+	 * @param hcPos hcPos
+	 * @param key key
+	 * @param rangeMin After the method call, this contains the postfix if the postfix matches
+	 *                 the range. Otherwise it contains only part of the postfix.
+	 * @param rangeMax rangeMax
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 * @Deprecated Use next method instead.
 	 */
@@ -984,10 +987,12 @@ class Node<T> {
 
 	/**
 	 * Get post-fix.
-	 * @param offsPostKey
-	 * @param key
-	 * @param range After the method call, this contains the postfix if the postfix matches the
+	 * @param offsPostKey offsPostKey
+	 * @param hcPos hcPos
+	 * @param e entry
+	 * @param rangeMin After the method call, this contains the postfix if the postfix matches the
 	 * range. Otherwise it contains only part of the postfix.
+	 * @param rangeMax rangeMax
 	 * @return NodeEntry if the postfix matches the range, otherwise null.
 	 */
 	boolean getPostPOB(int offsPostKey, long hcPos, PhEntry<T> e, 
@@ -1041,10 +1046,15 @@ class Node<T> {
 
 	/**
 	 * Get post-fix.
-	 * @param offsPostKey
-	 * @param key
-	 * @param range After the method call, this contains the postfix if the postfix matches the
-	 * range. Otherwise it contains only part of the postfix.
+	 * @param offsPostKey offsPostKey
+	 * @param hcPos hcPos
+	 * @param DIM dim
+	 * @param valTemplate valTemplate
+	 * @param rangeMin After the method call, this contains the postfix if the postfix matches
+	 *                 the range. Otherwise it contains only part of the postfix.
+	 * @param rangeMax rangeMax
+	 * @param minToCheck minToCheck
+	 * @param maxToCheck maxToCheck
 	 * @return true, if the postfix matches the range.
 	 */
 	@SuppressWarnings("unchecked")
@@ -1430,14 +1440,6 @@ class Node<T> {
 		return HC_BITS;//   +   DIM+1   +   DIM+1;
 	}
 
-	/**
-	 * 
-	 * @param offs
-	 * @param pos
-	 * @param DIM
-	 * @param bufSubCnt use -1 to have it calculated by this method
-	 * @return
-	 */
 	private int offs2ValPos(int offs, long pos, int DIM) {
 		if (isPostHC()) {
 			return (int) pos;
@@ -1453,8 +1455,8 @@ class Node<T> {
 
 	/**
 	 * 
-	 * @param pos
-	 * @param DIM
+	 * @param pos position
+	 * @param DIM dim
 	 * @return 		The position (in bits) of the postfix VALUE. For LHC, the key is stored 
 	 * 				directly before the value.
 	 */

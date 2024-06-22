@@ -2004,7 +2004,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		/**
 		 * Full comparison on the parameter. Assigns the parameter to 'nextKey' if comparison
 		 * fits.
-		 * @param keyTemplate keyTemplate
+		 * @param keyOrigTemplate keyOrigTemplate
 		 * @return Whether we have a match or not
 		 */
 		private boolean checkMatchOrigKDFullIntoNextVal(long[] keyOrigTemplate, V value) {
@@ -2092,11 +2092,11 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		}
 		
 		/**
-		 * 
-		 * @param src Interleaved src array
+		 * QUESTIONS: TZ: hack: I fixed the javadoc errors without checking if the javadoc is correct!
+		 * @param srcVal Interleaved(?) src array
 		 * @param posFirstBit First bit to be transferred
 		 * @param stopBit Stop bit (last bit to be transferred + 1)
-		 * @param dst Non-interleaved destination array
+		 * @param dstVal Non-interleaved(?) destination array
 		 */
 		private void readAndSplit(long[] srcVal, int posFirstBit, long stopBit, long[] dstVal) {
 			long maskSrc = 0x8000000000000000L >>> (posFirstBit & 0x3F);

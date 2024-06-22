@@ -333,9 +333,9 @@ public class CritBit64<V> implements Iterable<V> {
 	}
 
 	/**
-	 * 
+	 * @param posDiff posDIff
 	 * @param v key
-	 * @param startPos start position
+	 * @param prefix prefix
 	 * @return True if the prefix matches the value or if no prefix is defined
 	 */
 	private boolean doesPrefixMatch(int posDiff, long v, long prefix) {

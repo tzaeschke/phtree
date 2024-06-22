@@ -96,14 +96,9 @@ public class NodeIteratorListReuse<T, R> {
 
 		/**
 		 * 
-		 * @param node
-		 * @param DIM
-		 * @param valTemplate A null indicates that no values are to be extracted.
+		 * @param node node
 		 * @param lower The minimum HC-Pos that a value should have.
-		 * @param upper
-		 * @param minValue The minimum value that any found value should have. If the found value is
-		 *  lower, the search continues.
-		 * @param maxValue
+		 * @param upper The maximum HC-Pos that a value should have.
 		 */
 		void reinitAndRun(Node<T> node, long lower, long upper) {
 			this.node = node;

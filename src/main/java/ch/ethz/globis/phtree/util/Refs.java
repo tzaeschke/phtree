@@ -141,7 +141,7 @@ public class Refs {
      * @return Same array or expanded array.
      * @param <T> array type
      */
-    @Deprecated
+    // TODO remove? was @Deprecated
     public static <T> T[] arrayEnsureSize(T[] oldA, int requiredSize) {
     	if (isCapacitySufficient(oldA, requiredSize)) {
     		return oldA;
@@ -178,8 +178,8 @@ public class Refs {
     private static <T> boolean isCapacitySufficient(T[] a, int requiredSize) {
     	return a.length >= requiredSize;
     }
-    
-    @Deprecated
+
+	// TODO remove? was @Deprecated
     @SuppressWarnings("unchecked")
 	public static <T> T[] arrayTrim(T[] oldA, int requiredSize) {
     	int reqSize = calcArraySize(requiredSize);
@@ -192,7 +192,7 @@ public class Refs {
     	return newA;
     }
 
-    @Deprecated
+	// TODO remove? was @Deprecated
 	public static <T> void insertAtPos(T[] values, int pos, T value) {
 		copyRight(values, pos, values, pos+1, values.length-pos-1);
 		values[pos] = value;
@@ -217,8 +217,8 @@ public class Refs {
 		copyRight(values, pos, dst, pos+1, requiredSize-1-pos);
 		return dst;
 	}
-	
-	@Deprecated
+
+	// TODO remove? was @Deprecated
 	public static <T> void removeAtPos(T[] values, int pos) {
 		if (pos < values.length-1) {
 			copyLeft(values, pos+1, values, pos, values.length-pos-1);
