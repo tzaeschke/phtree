@@ -11,6 +11,7 @@ import java.util.List;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.v11.nt.NtIteratorMask;
 
 /**
@@ -31,7 +32,8 @@ public class NodeIteratorListReuse<T, R> {
 	
 	private class PhIteratorStack {
 		@SuppressWarnings("unchecked")
-		private final NodeIterator[] stack = new NodeIteratorListReuse.NodeIterator[64];
+		private final NodeIterator[] stack =
+				Refs.newArray(NodeIteratorListReuse.NodeIterator.class, 64);
 		private int size = 0;
 
 

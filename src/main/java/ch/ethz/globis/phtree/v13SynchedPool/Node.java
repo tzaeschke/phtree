@@ -146,7 +146,7 @@ public class Node {
 		return new PhEntry<>(key, value);
 	}
 	
-	private void discardNode(PhTree13SP tree) {
+	private void discardNode() {
 		Bits.arrayReplace(ba, null);
 		Refs.arrayReplace(values, null);
 		entryCnt = 0;
@@ -539,7 +539,7 @@ public class Node {
 			parent.replaceSubWithPost(pinInParent, posInParent, newPost, val2);
 		}
 
-		discardNode(tree);
+		discardNode();
 		return valueToDelete;
 	}
 
@@ -575,7 +575,7 @@ public class Node {
 			parent.replaceSubWithPost(pinInParent, posInParent, nte.getKdKey(), nte.getValue());
 		}
 
-		discardNode(tree);
+		discardNode();
 	}
 
 	/**

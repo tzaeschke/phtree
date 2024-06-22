@@ -8,6 +8,7 @@ package ch.ethz.globis.phtree.v8;
 
 import java.util.ArrayList;
 
+import ch.ethz.globis.phtree.util.Refs;
 import org.zoodb.index.critbit.CritBit64.Entry;
 import org.zoodb.index.critbit.CritBit64.QueryIteratorMask;
 
@@ -34,7 +35,8 @@ public class NodeIteratorListReuse<T, R> {
 	
 	public class PhIteratorStack {
 		@SuppressWarnings("unchecked")
-		private final NodeIterator[] stack = new NodeIteratorListReuse.NodeIterator[64];
+		private final NodeIterator[] stack =
+				Refs.newArray(NodeIteratorListReuse.NodeIterator.class, 64);
 		private int size = 0;
 
 

@@ -19,54 +19,54 @@ package org.zoodb.index.critbit;
 
 /**
  * CritBit is a multi-dimensional OR arbitrary length crit-bit tree.
- * 
+ * <p>
  * Cribit trees are very space efficient due to prefix-sharing and suitable for
  * multi-dimensional data with low dimensionality (e.g. less than 10 dimensions or so).
  * They are also stable, that means unlike kD-trees or quadtrees they do not require
  * rebalancing, this makes update performance much more predictable.
- * 
+ * <p>
  * There is 1 1D-version and a kD-version (kD: k-dimensional).
  * The 1D version supports keys with arbitrary length (e.g. 256bit), the kD-version
  * supports k-dimensional keys with a maximum length of 64 bit per dimension. 
- * 
+ * <p>
  * Both tree versions use internally the same methods, except for the range queries.
  * For range queries, the 1D version interprets the parameters as one minimum and one
  * maximum value. For kD queries, the parameters are interpreted as arrays of
  * minimum and maximum values (i.e. the low left and upper right 
  * corner of a query (hyper-)rectangle). 
- * 
+ * <p>
  * All method ending with 'KD' are for k-dimensional use of the tree, all other methods are for
  * 1-dimensional use. Exceptions are the size(), printTree() and similar methods, which work  for
  * all dimensions. 
- * 
+ * <p>
  * In order to store floating point values, please convert them to 'long' with
  * BitTools.toSortableLong(...), also when supplying query parameters.
  * Extracted values can be converted back with BitTools.toDouble() or toFloat().
- * 
+ * <p>
  * Version 1.3.5 
  * - Fixed rare problem with postfix creation. This solves a problem
  *   with kd-queries and slightly reduces memory consumption.
- * 
+ * <p>
  * Version 1.3.2
  * - Added QueryIterator.reset()
- * 
+ * <p>
  * Version 1.3.1
  * - Fixed issue #3 where iterators won't work with 'null' as values.
- * 
+ * <p>
  * Version 1.2.2  
  *  - Moved tests to tst folder
- *
+ * <p>
  * Version 1.2.1  
  *  - Replaced compare() with isEqual() where possible
  *  - Simplified compare(), doesInfixMatch()
  *  - Removed unused arguments
- * 
+ * <p>
  * Version 1.2  
  *  - Added iterator() to iterate over all entries
- * 
+ * <p>
  * Version 1.1  
  *  - Slight performance improvements in mergeLong() and  readAndSplit()
- * 
+ * <p>
  * Version 1.0  
  *  - Initial release
  * 
@@ -136,7 +136,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 			throw new IllegalArgumentException("Illegal bit width: " + width);
 		}
 		// SINGLE_DIM ensures that DIM is never used in this case.
-		return new CritBit<V>(width, SINGLE_DIM);
+		return new CritBit<>(width, SINGLE_DIM);
 	}
 	
 	/**
@@ -154,7 +154,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		if (dim < 1) {
 			throw new IllegalArgumentException("Illegal dimension count: " + dim);
 		}
-		return new CritBit<V>(width, dim);
+		return new CritBit<>(width, dim);
 	}
 	
 	/**
@@ -200,7 +200,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 				if (posDiff < n.posDiff && posDiff != -1) {
 					long[] subInfix = extractInfix(currentPrefix, posDiff+1, n.posDiff-1);
 					//new sub-node
-					Node<V> newSub = new Node<V>(posDiff+1, n.loPost, n.loVal, n.hiPost, n.hiVal, 
+					Node<V> newSub = new Node<>(posDiff+1, n.loPost, n.loVal, n.hiPost, n.hiVal,
 							subInfix, n.posDiff);
 					newSub.hi = n.hi;
 					newSub.lo = n.lo;
@@ -365,8 +365,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	
 	/**
 	 * Creates a postfix starting at posDiff+1.
-	 * @param val
-	 * @param posDiff
+	 * @param val val
+	 * @param posDiff posDiff
 	 * @return the postfix.
 	 */
 	private long[] createPostFix(long[] val, int posDiff) {
@@ -391,9 +391,9 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		long[] p2 = createPostFix(k2, posDiff);
 		//if (isABitwiseSmallerB(v1, v2)) {
 		if (BitTools.getBit(k2, posDiff)) {
-			return new Node<V>(posFirstBit, p1, val1, p2, val2, infix, posDiff);
+			return new Node<>(posFirstBit, p1, val1, p2, val2, infix, posDiff);
 		} else {
-			return new Node<V>(posFirstBit, p2, val2, p1, val1, infix, posDiff);
+			return new Node<>(posFirstBit, p2, val2, p1, val1, infix, posDiff);
 		}
 	}
 	
@@ -439,9 +439,9 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	}
 
 	/**
-	 * 
+	 * @param n node
 	 * @param v key 
-	 * @param startPos start position
+	 * @param currentVal currentVal
 	 * @return True if the infix matches the value or if no infix is defined
 	 */
 	private boolean doesInfixMatch(Node<V> n, long[] v, long[] currentVal) {
@@ -736,7 +736,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	@Override
 	public FullIterator<V> iterator() {
 		checkDim0(); 
-		return new FullIterator<V>(this, DEPTH);
+		return new FullIterator<>(this, DEPTH);
 	}
 	
 	public static class FullIterator<V> implements Iterator<V> {
@@ -752,10 +752,10 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		private int stackTop = -1;
 
 		@SuppressWarnings("unchecked")
-		public FullIterator(CritBit<V> cb, int DEPTH) {
-			this.stack = new Node[DEPTH];
-			this.readHigherNext = new byte[DEPTH];  // default = false
-			int intArrayLen = (DEPTH+63) >>> 6;
+		public FullIterator(CritBit<V> cb, int depth) {
+			this.stack = (Node[]) new Object[depth];
+			this.readHigherNext = new byte[depth];  // default = false
+			int intArrayLen = (depth+63) >>> 6;
 			this.valIntTemplate = new long[intArrayLen];
 
 			if (cb.rootKey != null) {
@@ -821,8 +821,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		/**
 		 * Full comparison on the parameter. Assigns the parameter to 'nextVal' if comparison
 		 * fits.
-		 * @param keyTemplate
-		 * @param value
+		 * @param keyTemplate keyTemplate
+		 * @param value value
 		 */
 		private void readNextVal(long[] keyTemplate, V value) {
 			nextValue = value;
@@ -857,7 +857,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 			if (!hasNext()) {
 				throw new NoSuchElementException();
 			}
-			Entry<V> ret = new Entry<V>(nextKey, nextValue);
+			Entry<V> ret = new Entry<>(nextKey, nextValue);
 			findNext();
 			return ret;
 		}
@@ -872,7 +872,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	@Override
 	public QueryIterator<V> query(long[] min, long[] max) {
 		checkDim0(); 
-		return new QueryIterator<V>(this, min, max);
+		return new QueryIterator<>(this, min, max);
 	}
 	
 	public static class QueryIterator<V> implements Iterator<V> {
@@ -889,12 +889,13 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		private static final byte RETURN_TO_PARENT = 2;
 		private final byte[] readHigherNext;
 		private int stackTop = -1;
-		private final boolean[] loEnclosed, hiEnclosed;
+		private final boolean[] loEnclosed;
+		private final boolean[] hiEnclosed;
 
 		@SuppressWarnings("unchecked")
 		QueryIterator(CritBit<V> cb, long[] minOrig, long[] maxOrig) {
 			this.cb = cb;
-			this.stack = new Node[cb.DEPTH];
+			this.stack = (Node[]) new Object[cb.DEPTH];
 			this.readHigherNext = new byte[cb.DEPTH];  // default = false
 			int intArrayLen = (cb.DEPTH+63) >>> 6;
 			this.valIntTemplate = new long[intArrayLen];
@@ -981,7 +982,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 		/**
 		 * Comparison on the post-fix. Assigns the parameter to 'nextVal' if comparison fits.
-		 * @param keyTemplate
+		 * @param keyTemplate keyTemplate
 		 * @return Whether we have a match or not
 		 */
 		private boolean checkMatchIntoNextVal(long[] keyTemplate, int startBit, V value) {
@@ -1094,7 +1095,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 			if (!hasNext()) {
 				throw new NoSuchElementException();
 			}
-			Entry<V> ret = new Entry<V>(nextKey, nextValue);
+			Entry<V> ret = new Entry<>(nextKey, nextValue);
 			findNext();
 			return ret;
 		}
@@ -1127,15 +1128,15 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		private final long MAX_MASK;
 
 		@SuppressWarnings("unchecked")
-		public QueryIteratorWithMask(CritBit<V> cb, long[] minOrig, long[] maxOrig, int DIM) {
+		public QueryIteratorWithMask(CritBit<V> cb, long[] minOrig, long[] maxOrig, int dim) {
 			this.cb = cb;
-			this.stack = new Node[cb.DEPTH];
+			this.stack = (Node[]) new Object[cb.DEPTH];
 			this.readHigherNext = new byte[cb.DEPTH];  // default = false
 			int intArrayLen = (cb.DEPTH+63) >>> 6;
 			this.valIntTemplate = new long[intArrayLen];
 			this.domMaskLo = new long[intArrayLen];
 			this.domMaskHi = new long[intArrayLen];
-			this.MAX_MASK = ~((-1L) << DIM);
+			this.MAX_MASK = ~((-1L) << dim);
 			reset(minOrig, maxOrig);
 		}
 
@@ -1222,7 +1223,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 		/**
 		 * Comparison on the post-fix. Assigns the parameter to 'nextVal' if comparison fits.
-		 * @param keyTemplate
+		 * @param keyTemplate keyTemplate
 		 * @return Whether we have a match or not
 		 */
 		private boolean checkMatchIntoNextVal(long[] keyTemplate, int startBit, V value) {
@@ -1449,7 +1450,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 			if (!hasNext()) {
 				throw new NoSuchElementException();
 			}
-			Entry<V> ret = new Entry<V>(nextKey, nextValue);
+			Entry<V> ret = new Entry<>(nextKey, nextValue);
 			findNext();
 			return ret;
 		}
@@ -1488,7 +1489,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		 */
 		public CheckEmptyWithMask(CritBit<?> cb, int dims) {
 			this.cb = cb;
-			this.stack = new Node[cb.DEPTH];
+			this.stack = (Node[]) new Object[cb.DEPTH];
 			this.readHigherNext = new byte[cb.DEPTH];  // default = false
 			int intArrayLen = (cb.DEPTH+63) >>> 6;
 			this.valIntTemplate = new long[intArrayLen];
@@ -1585,7 +1586,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 		/**
 		 * Comparison on the post-fix. Assigns the parameter to 'nextVal' if comparison fits.
-		 * @param keyTemplate
+		 * @param keyTemplate keyTemplate
 		 * @return Whether we have a match or not
 		 */
 		private boolean checkMatchIntoNextVal(long[] keyTemplate, int startBit) {
@@ -1885,7 +1886,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 	public QueryIteratorKD<V> queryKD(long[] min, long[] max) {
 		checkDIM(min);
 		checkDIM(max);
-		return new QueryIteratorKD<V>(this, min, max, DIM, DEPTH);
+		return new QueryIteratorKD<>(this, min, max, DIM, DEPTH);
 	}
 	
 	public static class QueryIteratorKD<V> implements Iterator<V> {
@@ -1908,16 +1909,16 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		private int stackTop = -1;
 
 		@SuppressWarnings("unchecked")
-		public QueryIteratorKD(CritBit<V> cb, long[] minOrig, long[] maxOrig, int DIM, int DEPTH) {
-			this.stack = new Node[DIM*DEPTH];
-			this.readHigherNext = new byte[DIM*DEPTH];  // default = false
-			this.keyOrigTemplate = new long[DIM];
+		public QueryIteratorKD(CritBit<V> cb, long[] minOrig, long[] maxOrig, int dim, int depth) {
+			this.stack = (Node[]) new Object[dim*depth];
+			this.readHigherNext = new byte[dim*depth];  // default = false
+			this.keyOrigTemplate = new long[dim];
 			this.minOrig = minOrig;
 			this.maxOrig = maxOrig;
-			this.DIM = DIM;
-			this.DIM_INV_16 = 1 + ((1<<16)+1)/DIM;
-			this.DEPTH = DEPTH;
-			this.DEPTH_OFFS = 64-DEPTH;  //the shift local to any Long
+			this.DIM = dim;
+			this.DIM_INV_16 = 1 + ((1<<16)+1)/dim;
+			this.DEPTH = depth;
+			this.DEPTH_OFFS = 64-depth;  //the shift local to any Long
 
 			if (cb.rootKey != null) {
 				readPostFixAndSplit(cb.rootKey, 0, keyOrigTemplate);
@@ -2003,7 +2004,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		/**
 		 * Full comparison on the parameter. Assigns the parameter to 'nextKey' if comparison
 		 * fits.
-		 * @param keyTemplate
+		 * @param keyTemplate keyTemplate
 		 * @return Whether we have a match or not
 		 */
 		private boolean checkMatchOrigKDFullIntoNextVal(long[] keyOrigTemplate, V value) {
@@ -2075,9 +2076,8 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		
 		/**
 		 * 
-		 * @param n
-		 * @param infixStart The bit-position of the first infix bits relative to the whole value
-		 * @param currentPrefix
+		 * @param n node
+		 * @param currentPrefixOrig currentPrefixOrig
 		 */
 		private <T> void readAndSplitInfix(Node<T> n, long[] currentPrefixOrig) {
 			if (n.infix == null) {
@@ -2126,7 +2126,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		/**
 		 * Calculate the common minimum depth across all dimensions.
 		 * This is equal to {@code floor(posDirstBit/DIM)}.
-		 * @param posFirstBit
+		 * @param posFirstBit posFirstBit
 		 * @return depth across dims.
 		 */
 		private int getDepthAcrossDims(int posFirstBit) {
@@ -2162,7 +2162,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 			if (!hasNext()) {
 				throw new NoSuchElementException();
 			}
-			Entry<V> ret = new Entry<V>(nextKey, nextValue);
+			Entry<V> ret = new Entry<>(nextKey, nextValue);
 			findNext();
 			return ret;
 		}

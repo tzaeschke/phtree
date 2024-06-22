@@ -11,6 +11,7 @@ package ch.ethz.globis.phtree.v13SynchedPool;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
+import ch.ethz.globis.phtree.util.Refs;
 
 import java.util.NoSuchElementException;
 
@@ -34,7 +35,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 
 		@SuppressWarnings("unchecked")
 		public PhIteratorStack() {
-			stack = new NodeIteratorFullNoGC[PhTree13SP.DEPTH_64];
+			stack = Refs.newArray(NodeIteratorFullNoGC.class, PhTree13SP.DEPTH_64);
 		}
 
 		public boolean isEmpty() {

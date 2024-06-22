@@ -304,7 +304,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 			this.center = center;
 			maxDistance = Double.MAX_VALUE;
 			if (data == null) {
-				data = new PhEntryDist[newSize];
+				data = (PhEntryDist[]) new Object[newSize];
 				distData = new double[newSize];
 				for (int i = 0; i < data.length; i++) {
 					data[i] = createEntry();

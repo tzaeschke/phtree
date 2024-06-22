@@ -12,6 +12,7 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
 import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.util.Refs;
 
 /**
  * This PhIterator uses a loop instead of recursion in findNextElement();. 
@@ -33,7 +34,7 @@ public final class PhIteratorNoGC<T> implements PhQuery<T> {
 		
 		@SuppressWarnings("unchecked")
 		public PhIteratorStack() {
-			stack = new NodeIteratorNoGC[PhTree11.DEPTH_64];
+			stack = Refs.newArray(NodeIteratorNoGC.class, PhTree11.DEPTH_64);
 		}
 
 		public boolean isEmpty() {

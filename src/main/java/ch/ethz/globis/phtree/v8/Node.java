@@ -78,11 +78,11 @@ class Node<T> {
 	protected Node(Node<T> original, int dim) {
         if (original.subNRef != null) {
             int size = original.subNRef.length;
-            this.subNRef = new Node[size];
+            this.subNRef = (Node[]) new Object[size];
             System.arraycopy(original.subNRef, 0, this.subNRef, 0, size);
         }
         if (original.values != null) {
-            this.values = (T[]) original.values.clone();
+            this.values = original.values.clone();
         }
         if (original.ba != null) {
             this.ba = new long[original.ba.length];
@@ -283,7 +283,7 @@ class Node<T> {
 		}
 
 		if (subNRef == null) {
-			subNRef = new Node[2];
+			subNRef = Refs.newArray(Node.class, 2);
 		}
 
 		//decide here whether to use hyper-cube or linear representation
@@ -298,7 +298,7 @@ class Node<T> {
 		//switch to normal array (full hyper-cube) if applicable.
 		if (DIM<=31 && (REF_BITS+SIK_WIDTH(DIM))*(subNRef.length+1L) >= REF_BITS*(1L<<DIM)) {
 			//migrate to full array!
-			Node<T>[] na = new Node[1<<DIM];
+			Node<T>[] na = Refs.newArray(Node.class, 1<<DIM);
 			for (int i = 0; i < bufSubCount; i++) {
 				int posOld = (int) Bits.readArray(ba, subOffsBits + i*SIK_WIDTH(DIM), SIK_WIDTH(DIM));
 				na[posOld] = subNRef[i];
@@ -328,7 +328,7 @@ class Node<T> {
 		if (subNRef.length < bufSubCount+1) {
 			int newLen = bufSubCount+1;
 			newLen = (newLen&1)==0 ? newLen : newLen+1; //ensure multiples of two
-			Node<T>[] na2 = new Node[newLen];
+			Node<T>[] na2 = Refs.newArray(Node.class, newLen);
 			System.arraycopy(subNRef, 0, na2, 0, start);
 			System.arraycopy(subNRef, start, na2, start+1, len);
 			subNRef = na2;
@@ -409,7 +409,7 @@ class Node<T> {
 			int prePostBits_SubLHC = getBitPos_PostIndex(DIM);
 			int bia2Size = calcArraySizeTotalBits(bufPostCnt, DIM);
 			long[] bia2 = Bits.arrayCreate(bia2Size);
-			Node<T>[] sa2 = new Node[bufSubCnt];
+			Node<T>[] sa2 = Refs.newArray(Node.class, bufSubCnt);
 			int preSubBits = getBitPos_SubNodeIndex(DIM);
 			//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
 			Bits.copyBitsLeft(ba, 0, bia2, 0, preSubBits);
@@ -460,7 +460,7 @@ class Node<T> {
 				int newLen = bufSubCnt-1;
 				newLen = (newLen&1)==0 ? newLen : newLen+1; //ensure multiples of two
 				if (newLen > 0) {
-					Node<T>[] na2 = new Node[newLen];
+					Node<T>[] na2 = Refs.newArray(Node.class, newLen);
 					System.arraycopy(subNRef, 0, na2, 0, p2);
 					System.arraycopy(subNRef, p2+1, na2, p2, len);
 					subNRef = na2;
@@ -589,6 +589,7 @@ class Node<T> {
 	 * @param offsPostKey POB: Post offset bits from getPostOffsetBits(...)
 	 * @param key
 	 */
+	@SuppressWarnings("deprecated")
 	void addPostPOB(long pos, int offsPostKey, long[] key, T value) {
 		final int DIM = key.length;
 		final int bufSubCnt = getSubCount();
@@ -614,7 +615,7 @@ class Node<T> {
 
 		//switch representation (HC <-> Linear)?
 		//+1 bit for null/not-null flag
-		long sizeHC = (long) ((DIM * postLen + PINN_HC_WIDTH) * (1L << DIM)); 
+		long sizeHC = (DIM * postLen + PINN_HC_WIDTH) * (1L << DIM);
 		//+DIM because every index entry needs DIM bits
 		long sizeLin = (DIM * postLen + PIK_WIDTH(DIM)) * (bufPostCnt+1L);
 		if (!isPostHC() && (DIM<=31) && (sizeLin >= sizeHC)) {
@@ -773,8 +774,6 @@ class Node<T> {
 
 	/**
 	 * 
-	 * @param bufSubCnt
-	 * @param bufPostCnt
 	 * @param DIM
 	 * @param posToRemove
 	 * @param removeSub Remove sub or post?
@@ -815,7 +814,7 @@ class Node<T> {
 		//switch to normal array (full hyper-cube) if applicable.
 		if (DIM<=31 && (REF_BITS+SIK_WIDTH(DIM))*newSubCnt >= REF_BITS*(1L<<DIM)) {
 			//migrate to full HC array
-			Node<T>[] na = new Node[1<<DIM];
+			Node<T>[] na = Refs.newArray(Node.class, 1<<DIM);
 			CBIterator<NodeEntry<T>> it = ind.iterator();
 			while (it.hasNext()) {
 				Entry<NodeEntry<T>> e = it.nextEntry();
@@ -830,7 +829,7 @@ class Node<T> {
 			setSubHC( false );
 			int bia2Size = calcArraySizeTotalBits(newPostCnt, DIM);
 			long[] bia2 = Bits.arrayCreate(bia2Size);
-			Node<T>[] sa2 = new Node[newSubCnt];
+			Node<T>[] sa2 = Refs.newArray(Node.class, newSubCnt);
 			int preSubBits = getBitPos_SubNodeIndex(DIM);
 			//Copy only bits that are relevant. Otherwise we might mess up the not-null table!
 			Bits.copyBitsLeft(ba, 0, bia2, 0, preSubBits);
@@ -1048,6 +1047,7 @@ class Node<T> {
 	 * range. Otherwise it contains only part of the postfix.
 	 * @return true, if the postfix matches the range.
 	 */
+	@SuppressWarnings("unchecked")
 	PhEntry<T> getPostPOB(int offsPostKey, long hcPos, int DIM, long[] valTemplate,
 			long[] rangeMin, long[] rangeMax, int[] minToCheck, int[] maxToCheck) {
 		if (DEBUG && ind != null) {
@@ -1120,6 +1120,7 @@ class Node<T> {
 	/**
 	 * Same as above, but without checks.
 	 */
+	@SuppressWarnings("unchecked")
 	PhEntry<T> getPostPOBNoCheck(int offsPostKey, long hcPos, int DIM, long[] valTemplate,
 			long[] rangeMin, long[] rangeMax) {
 		if (DEBUG && ind != null) {
@@ -1209,6 +1210,7 @@ class Node<T> {
 	}
 
 
+	@SuppressWarnings("deprecated")
 	T removePostPOB(long pos, int offsPostKey, final int DIM) {
 		final int bufPostCnt = getPostCount();
 		final int bufSubCnt = getSubCount();

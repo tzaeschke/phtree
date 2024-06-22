@@ -55,6 +55,8 @@ package org.zoodb.index.critbit;
  * 
  * @author Tilmann Zaeschke
  */
+import ch.ethz.globis.phtree.util.Refs;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -533,7 +535,7 @@ public class CritBit64<V> implements Iterable<V> {
 
 		@SuppressWarnings("unchecked")
 		public CBIterator() {
-			this.stack = new Node[DEPTH];
+			this.stack = Refs.newArray(Node.class, DEPTH);
 			this.readHigherNext = new byte[DEPTH];  // default = false
 		}
 		
@@ -664,7 +666,7 @@ public class CritBit64<V> implements Iterable<V> {
 
 		@SuppressWarnings("unchecked")
 		public QueryIterator() {
-			this.stack = new Node[DEPTH];
+			this.stack = (Node[]) new Object[DEPTH];
 			this.readHigherNext = new byte[DEPTH];  // default = false
 			this.prefixes = new long[DEPTH];
 		}
@@ -844,7 +846,7 @@ public class CritBit64<V> implements Iterable<V> {
 
 		@SuppressWarnings("unchecked")
 		public QueryIteratorMask() {
-			this.stack = new Node[DEPTH];
+			this.stack = Refs.newArray(Node.class, DEPTH);
 			this.readHigherNext = new byte[DEPTH];  // default = false
 			this.prefixes = new long[DEPTH];
 		}

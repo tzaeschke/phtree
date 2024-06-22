@@ -9,6 +9,7 @@ package ch.ethz.globis.phtree.util;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.lang.reflect.Array;
 import java.util.Arrays;
 
 import ch.ethz.globis.phtree.PhTreeHelper;
@@ -300,5 +301,14 @@ public class Refs {
 		}
 		return ret;
 	}
-	
+
+	@SuppressWarnings("unchecked")
+	public static <T> T[] newArray(int size) {
+		return (T[]) new Object[size];
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> T[] newArray(Class<T> c, int size) {
+		return (T[]) Array.newInstance(c, size);
+	}
 }

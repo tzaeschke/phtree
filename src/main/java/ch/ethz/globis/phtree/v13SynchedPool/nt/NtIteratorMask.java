@@ -11,6 +11,7 @@ package ch.ethz.globis.phtree.v13SynchedPool.nt;
 import ch.ethz.globis.pht64kd.MaxKTreeI;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
+import ch.ethz.globis.phtree.util.Refs;
 
 import java.util.NoSuchElementException;
 
@@ -36,7 +37,7 @@ public final class NtIteratorMask<T> implements PhIterator64<T> {
 		
 		@SuppressWarnings("unchecked")
 		public PhIteratorStack(int depth) {
-			stack = new NtNodeIteratorMask[depth];
+			stack = Refs.newArray(NtNodeIteratorMask.class, depth);
 		}
 
 		public boolean isEmpty() {

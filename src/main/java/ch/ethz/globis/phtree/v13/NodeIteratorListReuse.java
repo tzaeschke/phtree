@@ -22,6 +22,7 @@ package ch.ethz.globis.phtree.v13;
 import java.util.List;
 
 import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.util.Refs;
 
 /**
  * A NodeIterator that returns a list instead of an Iterator AND reuses the NodeIterator.
@@ -41,7 +42,8 @@ public class NodeIteratorListReuse<T, R> {
 	
 	private class PhIteratorStack {
 		@SuppressWarnings("unchecked")
-		private final NodeIterator[] stack = new NodeIteratorListReuse.NodeIterator[64];
+		private final NodeIterator[] stack =
+				Refs.newArray(NodeIteratorListReuse.NodeIterator.class,64);
 		private int size = 0;
 
 

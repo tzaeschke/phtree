@@ -64,7 +64,7 @@ public class PhIteratorKnn<T> implements PhKnnQuery<T> {
     }
 
     @Override
-    public PhKnnQuery<T> reset(int minResults, PhDistance distFn, long[] center) {
+    public PhKnnQuery<T> reset(int minResults, PhDistance distFn, long ... center) {
         this.center = center;
         this.distFn = distFn == null ? this.distFn : distFn;
         this.currentDistance = Double.MAX_VALUE;

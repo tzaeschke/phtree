@@ -42,7 +42,7 @@ public class NodeIteratorListReuse<T, R> {
 	
 	private class PhIteratorStack {
 		@SuppressWarnings("unchecked")
-		private final NodeIterator[] stack = new NodeIteratorListReuse.NodeIterator[64];
+		private final NodeIterator[] stack = (NodeIteratorListReuse.NodeIterator[]) new Object[64];
 		private int size = 0;
 
 

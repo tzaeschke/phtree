@@ -71,6 +71,7 @@ public abstract class TestUtil {
 	 * Do we need this?
 	 * @deprecated do not use
 	 */
+	@Deprecated
 	public static void afterTest() {
 		getInstance().afterTest();
 	}
@@ -80,6 +81,7 @@ public abstract class TestUtil {
 	 * Do we need this?
 	 * @deprecated do not use
 	 */
+	@Deprecated
 	public static void beforeClass() {
 		getInstance().beforeClass();
 	}
@@ -88,6 +90,7 @@ public abstract class TestUtil {
 	 * Do we need this?
 	 * @deprecated do not use
 	 */
+	@Deprecated
 	public static void afterClass() {
 		getInstance().afterClass();
 	}
@@ -97,6 +100,7 @@ public abstract class TestUtil {
 	 * Do we need this?
 	 * @deprecated do not use
 	 */
+	@Deprecated
 	public static void beforeSuite() {
 		getInstance().beforeSuite();
 	}

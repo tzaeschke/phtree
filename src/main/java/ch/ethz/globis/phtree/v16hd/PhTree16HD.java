@@ -47,48 +47,48 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTPool;
 
 /**
  * n-dimensional index (quad-/oct-/n-tree).
- * 
+ * <p>
  * Version 16: BST-only, directly integrated with Node
- * 
+ * <p>
  * Version 15: BST-Only
- * 
+ * <p>
  * Version 14: Removed NT (nested tree) and replaced it with hierarchical table.
- * 
+ * <p>
  * Version 13: Based on Version 11. Some optimizations, for example store HC-Pos in postFix.
- * 
+ * <p>
  * Version 12: This was an attempt at a persistent version.
- * 
+ * <p>
  * Version 11: Use of NtTree for Nodes
  *             'null' values are replaced by NULL, this allows removal of AHC-exists bitmap
  *             Removal of recursion (and reimplementation) for get/insert/delete/update 
- * 
+ * <p>
  * Version 10b: Moved infix into parent node.
- * 
+ * <p>
  * Version 10: Store sub-nodes and postfixes in a common structure (one list/HC of key, one array)
  *             Advantages: much easier iteration through node, replacement of sub/post during 
  *             updates w/o bit shifting, can check infix without accessing sub-node (good for I/O).
- * 
+ * <p>
  * Version 8b: Extended array pooling to all arrays
- * 
+ * <p>
  * Version 8: Use 64bit depth everywhere. This should simplify a number of methods, especially
  *            regarding negative values.
- * 
+ * <p>
  * Version 7: Uses PhEntry to store/return keys.
- *
+ * <p>
  * Version 5: moved postCnt/subCnt into node.
- *
+ * <p>
  * Version 4: Using long[] instead of int[]
- *
+ * <p>
  * Version 3: This includes values for each key.
- *
+ * <p>
  * Storage:
  * - classic: One node per combination of bits. Unused nodes can be cut off.
  * - use prefix-truncation: a node may contain a series of unique bit combinations
- *
+ * <p>
  * Hypercube: expanded byte array that contains 2^DIM references to sub-nodes (and posts, depending 
  * on implementation)
  * Linearization: Storing Hypercube as paired array of index / non_null_reference 
- *
+ * <p>
  * See also : T. Zaeschke, C. Zimmerli, M.C. Norrie; 
  * "The PH-Tree -- A Space-Efficient Storage Structure and Multi-Dimensional Index", 
  * (SIGMOD 2014)

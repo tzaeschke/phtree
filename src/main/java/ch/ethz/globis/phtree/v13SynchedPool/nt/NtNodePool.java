@@ -9,6 +9,7 @@
 package ch.ethz.globis.phtree.v13SynchedPool.nt;
 
 import ch.ethz.globis.phtree.PhTreeHelper;
+import ch.ethz.globis.phtree.util.Refs;
 
 /**
  * Manipulation methods and pool for NtNodes.
@@ -16,9 +17,9 @@ import ch.ethz.globis.phtree.PhTreeHelper;
  * @author ztilmann
  */
 public class NtNodePool {
-	
+
 	private static final NtNode<?>[] POOL =
-			new NtNode[PhTreeHelper.MAX_OBJECT_POOL_SIZE];
+			Refs.newArray(NtNode.class, PhTreeHelper.MAX_OBJECT_POOL_SIZE);
 	private static int poolSize;
 	/** Nodes currently used outside the pool. */
 	private static int activeNodes = 0;
