@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- getStats() for empty trees fails. [#34](https://github.com/tzaeschke/phtree/pull/34)
+- getStats() for empty trees fails. [#36](https://github.com/tzaeschke/phtree/pull/36)
 
 ## 2.8.0 - 2023-07-29
  
