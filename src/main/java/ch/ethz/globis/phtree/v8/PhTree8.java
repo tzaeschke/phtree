@@ -155,6 +155,9 @@ public class PhTree8<T> implements PhTree<T> {
 
 	@Override
 	public PhTreeStats getStats() {
+		if (getRoot() == null) {
+			return new PhTreeStats(DEPTH_64);
+		}
 		return getQuality(0, getRoot(), new PhTreeStats(DEPTH_64));
 	}
 

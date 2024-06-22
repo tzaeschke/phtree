@@ -36,7 +36,7 @@ public class TestNT {
 		//lookup
 		for (int i = 0; i < N; i++) {
 			int x = ht.get(i, out);
-			assertEquals("i=" + i, i+100, (int) x);
+			assertEquals("i=" + i, i+100, x);
 			//if (i%1000 == 0) System.out.println("lu=" + i);
 		}
 		

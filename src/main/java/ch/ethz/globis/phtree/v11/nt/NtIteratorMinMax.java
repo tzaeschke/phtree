@@ -11,6 +11,7 @@ import java.util.NoSuchElementException;
 import ch.ethz.globis.pht64kd.MaxKTreeI;
 import ch.ethz.globis.pht64kd.MaxKTreeI.NtEntry;
 import ch.ethz.globis.pht64kd.MaxKTreeI.PhIterator64;
+import ch.ethz.globis.phtree.util.Refs;
 
 
 /**
@@ -34,7 +35,7 @@ public final class NtIteratorMinMax<T> implements PhIterator64<T> {
 		
 		@SuppressWarnings("unchecked")
 		public PhIteratorStack(int depth) {
-			stack = new NtNodeIteratorMinMax[depth];
+			stack = Refs.newArray(NtNodeIteratorMinMax.class, depth);
 		}
 
 		public boolean isEmpty() {

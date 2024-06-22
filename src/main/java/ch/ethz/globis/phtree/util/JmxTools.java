@@ -212,7 +212,8 @@ public class JmxTools {
 		totalDiff += mi.diff;
 		totalTime += mi.duration;
 	}
-	
+
+	@SuppressWarnings("unchecked")
 	public static void gcCheck() {
 		try {
 			MBeanServer server = ManagementFactory.getPlatformMBeanServer();

@@ -12,6 +12,7 @@ import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTreeHelper;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
+import ch.ethz.globis.phtree.util.Refs;
 
 /**
  * This PhIterator uses a loop instead of recursion in findNextElement();. 
@@ -33,7 +34,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 		
 		@SuppressWarnings("unchecked")
 		public PhIteratorStack() {
-			stack = new NodeIteratorFullNoGC[PhTree8.DEPTH_64];
+			stack = Refs.newArray(NodeIteratorFullNoGC.class, PhTree8.DEPTH_64);
 		}
 
 		public boolean isEmpty() {

@@ -169,7 +169,7 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 		long[] lLow = new long[lower.length << 1];
 		pre.pre(lower, lower, lLow);
 		pre.pre(upper, upper, lUpp);
-		return new PHREntryIterator((PhIteratorNV) pht.query(lLow, lUpp), DIM);
+		return new PHREntryIterator(pht.query(lLow, lUpp), DIM);
 	}
 	
 	/**
@@ -183,7 +183,7 @@ public class PhTreeNVSolidF implements Iterable<PhTreeNVSolidF.PHREntry> {
 		long[] lLow = new long[lower.length << 1];
 		pre.pre(MIN, lower, lLow);
 		pre.pre(upper, MAX, lUpp);
-		return new PHREntryIterator((PhIteratorNV) pht.query(lLow, lUpp), DIM);
+		return new PHREntryIterator(pht.query(lLow, lUpp), DIM);
 	}
 	
 	public class PHREntryIterator implements Iterator<PHREntry> {

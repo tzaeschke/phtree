@@ -34,7 +34,7 @@ public class PhTreeVProxy extends PhTreeNV {
 	}
 	
 	public PhTreeVProxy(PhTree<Object> tree) {
-		this.tree = (PhTree<Object>) tree;
+		this.tree = tree;
 	}
 	
 	@Override

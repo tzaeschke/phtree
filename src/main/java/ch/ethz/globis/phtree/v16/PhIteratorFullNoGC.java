@@ -24,6 +24,7 @@ import java.util.NoSuchElementException;
 import ch.ethz.globis.phtree.PhEntry;
 import ch.ethz.globis.phtree.PhFilter;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
+import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.util.unsynced.LongArrayOps;
 
 /**
@@ -46,7 +47,7 @@ public final class PhIteratorFullNoGC<T> implements PhExtent<T> {
 		
 		@SuppressWarnings("unchecked")
 		PhIteratorStack() {
-			stack = new NodeIteratorFullNoGC[PhTree16.DEPTH_64];
+			stack = Refs.newArray(NodeIteratorFullNoGC.class, PhTree16.DEPTH_64);
 		}
 
 		public boolean isEmpty() {

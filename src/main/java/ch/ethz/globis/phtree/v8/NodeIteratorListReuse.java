@@ -8,6 +8,7 @@ package ch.ethz.globis.phtree.v8;
 
 import java.util.ArrayList;
 
+import ch.ethz.globis.phtree.util.Refs;
 import org.zoodb.index.critbit.CritBit64.Entry;
 import org.zoodb.index.critbit.CritBit64.QueryIteratorMask;
 
@@ -34,7 +35,8 @@ public class NodeIteratorListReuse<T, R> {
 	
 	public class PhIteratorStack {
 		@SuppressWarnings("unchecked")
-		private final NodeIterator[] stack = new NodeIteratorListReuse.NodeIterator[64];
+		private final NodeIterator[] stack =
+				Refs.newArray(NodeIteratorListReuse.NodeIterator.class, 64);
 		private int size = 0;
 
 
@@ -94,14 +96,9 @@ public class NodeIteratorListReuse<T, R> {
 
 		/**
 		 * 
-		 * @param node
-		 * @param DIM
-		 * @param valTemplate A null indicates that no values are to be extracted.
+		 * @param node node
 		 * @param lower The minimum HC-Pos that a value should have.
-		 * @param upper
-		 * @param minValue The minimum value that any found value should have. If the found value is
-		 *  lower, the search continues.
-		 * @param maxValue
+		 * @param upper The maximum HC-Pos that a value should have.
 		 */
 		void reinitAndRun(Node<T> node, long lower, long upper) {
 			this.node = node;

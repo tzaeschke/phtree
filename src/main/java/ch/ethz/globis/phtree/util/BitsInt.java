@@ -168,7 +168,7 @@ public class BitsInt {
 			ba[dstByteStart] = (ba[dstByteStart] & ~mask0) |
 					(Integer.rotateRight(ba[srcByteStart], localShift) & mask0);
 			//write second part
-			int mask1 = (int) mask0 >>> -srcLocalStart; //(UNIT_BITS-srcLocalStart);
+			int mask1 = mask0 >>> -srcLocalStart; //(UNIT_BITS-srcLocalStart);
 			ba[dstByteStart] = (ba[dstByteStart] & ~mask1) | ((buf1 >>> localShift) & mask1);
 		} else {
 			//write first part
@@ -359,7 +359,7 @@ public class BitsInt {
 				//TODO? if (localEnd==0) localEnd==32;
 				int leftMask = (int) (dstLocalEnd==0 ? UNIT_0xFF : ~(UNIT_0xFF >>> dstLocalEnd)); // e.g. 1111.1110
 				int rightMask = (int) (UNIT_0xFF >>> (dstLocalEnd-srcLocalEnd));
-				int maskPost = (int) leftMask & rightMask;
+				int maskPost = leftMask & rightMask;
 				//TODO
 				//TODO local mask should go from dstLocalStart to dstLocalEnd only.
 				//TODO
