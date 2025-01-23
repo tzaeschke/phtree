@@ -70,14 +70,14 @@ public class BitsByte {
                 bitsToWrite -= bitsToIgnore;
             }
             //erase bits
-            ba[pA] &= ~eraseMask;
+            ba[pA] &= (byte) ~eraseMask;
 
             int toShift = entryLen - (bitsWritten + startBit);
             long infTemp = toShift > 0 ? val >>> toShift : val << (-toShift);
             //this cuts of any leading bits
             long maskToCutOfHeadingBits = (1L << startBit) - 1L;
             infTemp &= maskToCutOfHeadingBits;
-            ba[pA] |= infTemp;
+            ba[pA] |= (byte) infTemp;
             bitsWritten += bitsToWrite; //may have been less, but in that case we quit anyway
             startBit = UNIT_BITS;
             pA++;
@@ -214,14 +214,14 @@ public class BitsByte {
             buf2 >>>= bitsInBuffer-bitsToWriteThisRound; 
             if (DBG) System.out.println("buf2=" + toBinary(buf2));  //TODO
         	
-        	trg[ptA] &= eraseMask;  //TODO can we just assign buf2 here????
+        	trg[ptA] &= (byte) eraseMask;  //TODO can we just assign buf2 here????
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
         	
         	buf2 &= UNIT_0xFF; //TODO cut of heading bits??? Why?
             if (DBG) System.out.println("buf2=" + toBinary(buf2));  //TODO
 
          	startBitT = UNIT_BITS;
-            trg[ptA] |= buf2;
+            trg[ptA] |= (byte) buf2;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
             
             //from now on, always delete everything
@@ -259,10 +259,10 @@ public class BitsByte {
             }
             //erase bits
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
-            trg[ptA] &= eraseMask;
+            trg[ptA] &= (byte) eraseMask;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
 
-    		trg[ptA] |= buf;
+    		trg[ptA] |= (byte) buf;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
     	}
     }
@@ -303,8 +303,8 @@ public class BitsByte {
             	eraseMask >>>= (endBitT+1-len);
         		buf >>>= endBitT-endBitS;
         		buf &= ~eraseMask;
-        		trg[ptA] &= eraseMask;
-        		trg[ptA] |= buf;
+        		trg[ptA] &= (byte) eraseMask;
+        		trg[ptA] |= (byte) buf;
         		return; //?
         	} else {
         		
@@ -333,7 +333,7 @@ public class BitsByte {
         int eraseMask = (1 << startBitT) - 1;
         eraseMask = ~eraseMask;  // 00 for all bit that need overwriting.
         if (DBG) System.out.println("em=" + toBinary(eraseMask));  //TODO
-        int bitsToWriteThisRound = startBitT < len ? startBitT : len;
+        int bitsToWriteThisRound = Math.min(startBitT, len);
     	
     	//main loop - traverses everything but the last byte
         boolean readingFinished = false;
@@ -376,14 +376,14 @@ public class BitsByte {
             buf2 >>>= bitsInBuffer-bitsToWriteThisRound; 
             if (DBG) System.out.println("buf2=" + toBinary(buf2));  //TODO
         	
-        	trg[ptA] &= eraseMask;  //TODO can we just assign buf2 here????
+        	trg[ptA] &= (byte) eraseMask;  //TODO can we just assign buf2 here????
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
         	
         	buf2 &= UNIT_0xFF; //TODO cut of heading bits??? Why?
             if (DBG) System.out.println("buf2=" + toBinary(buf2));  //TODO
 
          	startBitT = UNIT_BITS;
-            trg[ptA] |= buf2;
+            trg[ptA] |= (byte) buf2;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
             
             //from now on, always delete everything
@@ -421,10 +421,10 @@ public class BitsByte {
             }
             //erase bits
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
-            trg[ptA] &= eraseMask;
+            trg[ptA] &= (byte) eraseMask;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
 
-    		trg[ptA] |= buf;
+    		trg[ptA] |= (byte) buf;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
     	}
     }
@@ -448,9 +448,9 @@ public class BitsByte {
         //last three bit [0..7]
         posBit &= UNIT_0x07;
         if (b) {
-            ba[pA] |= (1L << (UNIT_BITS-1-posBit));
+            ba[pA] |= (byte) (1L << (UNIT_BITS-1-posBit));
         } else {
-            ba[pA] &= (~(1L << (UNIT_BITS-1-posBit)));
+            ba[pA] &= (byte) ~(1L << (UNIT_BITS-1-posBit));
         }
 	}
 
@@ -500,7 +500,7 @@ public class BitsByte {
     	final int DEPTH = 32;
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < DEPTH; i++) {
-            long mask = (1l << (long)(DEPTH-i-1));
+            long mask = (1L << (DEPTH-i-1));
             if ((l & mask) != 0) { sb.append("1"); } else { sb.append("0"); }
             if (i%8==0) sb.append('.');
         }

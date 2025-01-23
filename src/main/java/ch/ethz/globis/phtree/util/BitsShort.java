@@ -26,7 +26,7 @@ public class BitsShort {
     static int statAExpand = 0;
     static int statATrim = 0;
     static int statOldRightShift = 0;
-    static int statOldRightShiftTime = 0;
+    static long statOldRightShiftTime = 0;
     
 	/**
      * 
@@ -77,14 +77,14 @@ public class BitsShort {
                 bitsToWrite -= bitsToIgnore;
             }
             //erase bits
-            ba[pA] &= ~eraseMask;
+            ba[pA] &= (short) ~eraseMask;
 
             int toShift = entryLen - (bitsWritten + startBit);
             long infTemp = toShift > 0 ? val >>> toShift : val << (-toShift);
             //this cuts of any leading bits
             long maskToCutOfHeadingBits = (1L << startBit) - 1L;
             infTemp &= maskToCutOfHeadingBits;
-            ba[pA] |= infTemp;
+            ba[pA] |= (short) infTemp;
             bitsWritten += bitsToWrite; //may have been less, but in that case we quit anyway
             startBit = UNIT_BITS;
             pA++;
@@ -236,7 +236,7 @@ public class BitsShort {
         long eraseMask = (1L << startBitT) - 1L;
         eraseMask = ~eraseMask;  // 00 for all bit that need overwriting.
         if (DBG) System.out.println("em=" + toBinary(eraseMask));  //TODO
-        int bitsToWriteThisRound = startBitT < len ? startBitT : len;
+        int bitsToWriteThisRound = Math.min(startBitT, len);
     	
     	//main loop - traverses everything but the last byte
         boolean readingFinished = false;
@@ -279,18 +279,18 @@ public class BitsShort {
             buf2 >>>= bitsInBuffer-bitsToWriteThisRound; 
         	if (bitsToWriteThisRound > bitsInBuffer) {
         		buf2 = buf << (bitsToWriteThisRound-bitsInBuffer);
-        		eraseMask = ~((~0)<<(bitsToWriteThisRound-bitsInBuffer));
+        		eraseMask = ~((~0L)<<(bitsToWriteThisRound-bitsInBuffer));
         	}
             if (DBG) System.out.println("buf2=" + toBinary(buf2));  //TODO
         	
-        	trg[ptA] &= eraseMask;  //TODO can we just assign buf2 here????
+        	trg[ptA] &= (short) eraseMask;  //TODO can we just assign buf2 here????
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
         	
         	buf2 &= UNIT_0xFF; //TODO cut of heading bits??? Why?
             if (DBG) System.out.println("buf2=" + toBinary(buf2));  //TODO
 
          	startBitT = UNIT_BITS;
-            trg[ptA] |= buf2;
+            trg[ptA] |= (short) buf2;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
             
             //from now on, always delete everything
@@ -328,10 +328,10 @@ public class BitsShort {
             }
             //erase bits
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
-            trg[ptA] &= eraseMask;
+            trg[ptA] &= (short) eraseMask;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
 
-    		trg[ptA] |= buf;
+    		trg[ptA] |= (short) buf;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
     	}
     }
@@ -372,8 +372,8 @@ public class BitsShort {
             	eraseMask >>>= (endBitT+1-len);
         		buf >>>= endBitT-endBitS;
         		buf &= ~eraseMask;
-        		trg[ptA] &= eraseMask;
-        		trg[ptA] |= buf;
+        		trg[ptA] &= (short) eraseMask;
+        		trg[ptA] |= (short) buf;
         		return; //?
         	} else {
         		
@@ -445,14 +445,14 @@ public class BitsShort {
             buf2 >>>= bitsInBuffer-bitsToWriteThisRound; 
             if (DBG) System.out.println("buf2=" + toBinary(buf2));  //TODO
         	
-        	trg[ptA] &= eraseMask;  //TODO can we just assign buf2 here????
+        	trg[ptA] &= (short) eraseMask;  //TODO can we just assign buf2 here????
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
         	
         	buf2 &= UNIT_0xFF; //TODO cut of heading bits??? Why?
             if (DBG) System.out.println("buf2=" + toBinary(buf2));  //TODO
 
          	startBitT = UNIT_BITS;
-            trg[ptA] |= buf2;
+            trg[ptA] |= (short) buf2;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
             
             //from now on, always delete everything
@@ -490,10 +490,10 @@ public class BitsShort {
             }
             //erase bits
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
-            trg[ptA] &= eraseMask;
+            trg[ptA] &= (short) eraseMask;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
 
-    		trg[ptA] |= buf;
+    		trg[ptA] |= (short) buf;
             if (DBG) System.out.println("trg=" + toBinary(trg));  //TODO
     	}
     }
@@ -517,9 +517,9 @@ public class BitsShort {
         //last three bit [0..7]
         posBit &= UNIT_0x07;
         if (b) {
-            ba[pA] |= (1L << (UNIT_BITS-1-posBit));
+            ba[pA] |= (short) (1L << (UNIT_BITS-1-posBit));
         } else {
-            ba[pA] &= (~(1L << (UNIT_BITS-1-posBit)));
+            ba[pA] &= (short) ~(1L << (UNIT_BITS-1-posBit));
         }
 	}
 
@@ -643,10 +643,9 @@ public class BitsShort {
         StringBuilder sb = new StringBuilder();
         //long mask = DEPTH < 64 ? (1<<(DEPTH-1)) : 0x8000000000000000L;
         for (int i = 0; i < DEPTH; i++) {
-            long mask = (1l << (long)(DEPTH-i-1));
+            long mask = (1L << (DEPTH-i-1));
             if ((l & mask) != 0) { sb.append("1"); } else { sb.append("0"); }
             if ((i+1)%8==0 && (i+1)<DEPTH) sb.append('.');
-        	mask >>>= 1;
         }
         return sb.toString();
     }
