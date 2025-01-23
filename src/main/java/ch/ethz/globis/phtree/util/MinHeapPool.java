@@ -73,7 +73,7 @@ public class MinHeapPool<T> implements MinHeapI.MinHeapPoolI<T> {
      * @param <T> The entry type. Must implement {@code Comparable<T>}.
      */
     public static <T extends Comparable<T>> MinHeapPool<T> create(Supplier<T> supplyFn) {
-        return new MinHeapPool<>(DEFAULT_SIZE, new LessWrapper<>(Comparable::compareTo), supplyFn);
+        return new MinHeapPool<>(DEFAULT_SIZE, new LessWrapper<>(Comparable<T>::compareTo), supplyFn);
     }
 
     /**

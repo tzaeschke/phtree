@@ -65,7 +65,7 @@ public class MinHeap<T> implements MinHeapI<T> {
      * @param <T> The entry type. Must implement {@code Comparable<T>}.
      */
     public static <T extends Comparable<T>> MinHeap<T> create() {
-        return new MinHeap<>(DEFAULT_SIZE, new LessWrapper<>(Comparable::compareTo));
+        return new MinHeap<>(DEFAULT_SIZE, new LessWrapper<>(Comparable<T>::compareTo));
     }
 
     /**

@@ -57,7 +57,7 @@ public class MinMaxHeapPool<T> implements MinMaxHeapI.MinMaxHeapPoolI<T> {
      * @return A new MinMaxHeap
      */
     public static <T extends Comparable<T>> MinMaxHeapPool<T> create(Supplier<T> supplyFn) {
-        return new MinMaxHeapPool<>(DEFAULT_SIZE, new LessWrapper<>(Comparable::compareTo), supplyFn);
+        return new MinMaxHeapPool<>(DEFAULT_SIZE, new LessWrapper<>(Comparable<T>::compareTo), supplyFn);
     }
 
     /**
