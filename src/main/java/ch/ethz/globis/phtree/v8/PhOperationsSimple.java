@@ -27,11 +27,11 @@ import ch.ethz.globis.phtree.v8.PhTree8.NodeEntry;
  *
  * @param <T> value type
  */
-public class PhOperationsSimple<T> implements PhOperations<T> {
+public final class PhOperationsSimple<T> implements PhOperations<T> {
 
-    protected static final int NO_INSERT_REQUIRED = Integer.MAX_VALUE;
+    private static final int NO_INSERT_REQUIRED = Integer.MAX_VALUE;
 
-    protected PhTree8<T> tree;
+    private PhTree8<T> tree;
 
     PhOperationsSimple() {}
 

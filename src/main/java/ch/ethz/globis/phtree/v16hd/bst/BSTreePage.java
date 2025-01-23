@@ -37,7 +37,7 @@ public class BSTreePage {
 	private long[][] keys;
 	private BSTEntry[] values;
 	/** number of keys. There are nEntries+1 subPages in any leaf page. */
-	private short nEntries;
+	private int nEntries;
 
 	private boolean isLeaf;
 	private BSTreePage[] subPages;
@@ -509,7 +509,7 @@ public class BSTreePage {
 		}
 	}
 
-	public short getNKeys() {
+	public int getNKeys() {
 		return nEntries;
 	}
 	

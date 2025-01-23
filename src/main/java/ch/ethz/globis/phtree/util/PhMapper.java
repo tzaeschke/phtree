@@ -7,8 +7,6 @@
 package ch.ethz.globis.phtree.util;
 
 
-import java.io.Serializable;
-
 import ch.ethz.globis.phtree.PhEntry;
 
 /**
@@ -23,7 +21,7 @@ import ch.ethz.globis.phtree.PhEntry;
  * @param <R> Result type
  */
 @FunctionalInterface
-public interface PhMapper<T, R> extends Serializable {
+public interface PhMapper<T, R> {
 	
     public static final long serialVersionUID = 1L;
 

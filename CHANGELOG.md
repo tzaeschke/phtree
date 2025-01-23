@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-- Fixed ClassCastExceptionin HD tree.
+- Remove some more warnings reported by JDK 21.
+  [#42](https://github.com/tzaeschke/phtree/pull/42)
+  - Removed `Serializable` interface from `PhFilter` 
+- Fixed ClassCastException HD tree.
   [#40](https://github.com/tzaeschke/phtree/pull/40)
 - getStats() for empty trees fails. [#36](https://github.com/tzaeschke/phtree/pull/36)
 - Fix some warnings. [#37](https://github.com/tzaeschke/phtree/pull/37)

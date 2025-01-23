@@ -58,7 +58,7 @@ import ch.ethz.globis.phtree.util.StringBuilderLn;
  * @param <T> The value type of the tree 
  *
  */
-public class PhTree8<T> implements PhTree<T> {
+public final class PhTree8<T> implements PhTree<T> {
 
 	//Enable HC incrementer / iteration
 	static final boolean HCI_ENABLED = true; 

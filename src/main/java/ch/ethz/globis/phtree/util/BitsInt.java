@@ -27,7 +27,7 @@ public class BitsInt {
     static int statAExpand = 0;
     static int statATrim = 0;
     static int statOldRightShift = 0;
-    static int statOldRightShiftTime = 0;
+    static long statOldRightShiftTime = 0;
     
 	/**
      * 
@@ -88,14 +88,14 @@ public class BitsInt {
                 bitsToWrite -= bitsToIgnore;
             }
             //erase bits
-            ba[pA] &= ~eraseMask;
+            ba[pA] &= (int) ~eraseMask;
 
             int toShift = entryLen - (bitsWritten + startBit);
             long infTemp = toShift > 0 ? val >>> toShift : val << (-toShift);
             //this cuts off any leading bits
             long maskToCutOfHeadingBits = (1L << startBit) - 1L;
             infTemp &= maskToCutOfHeadingBits;
-            ba[pA] |= infTemp;
+            ba[pA] |= (int) infTemp;
             bitsWritten += bitsToWrite; //may have been less, but in that case we quit anyway
             startBit = UNIT_BITS;
             pA++;
@@ -273,7 +273,7 @@ public class BitsInt {
 			dstByteStart++;
 			ba[dstByteStart] = ba[srcByteStart] << localShift;
 			//nullify remaining bits for following writes (unnecessary if loop is skipped)
-			ba[dstByteStart] &= UNIT_0xFF << (UNIT_BITS-dstLocalStart);
+			ba[dstByteStart] &= (int) (UNIT_0xFF << (UNIT_BITS-dstLocalStart));
 		}
 		
 		if (localShift > 0) {
@@ -327,14 +327,14 @@ public class BitsInt {
 			//write first part
 			dst[dstByteStart] &= ~mask0;
 			dst[dstByteStart] |= Integer.rotateLeft(buf0, localShift) & mask0;
-			dst[dstByteStart] &= UNIT_0xFF << localShift;
+			dst[dstByteStart] &= (int) (UNIT_0xFF << localShift);
 		} else {
 			dst[dstByteStart] &= ~mask0;
 			dst[dstByteStart] |= Integer.rotateLeft(buf0, localShift) & mask0;
 			dstByteStart++;
 			dst[dstByteStart] = buf0 << localShift;
 			//nullify remaining bits for following writes (unnecessary if loop is skipped)
-			dst[dstByteStart] &= UNIT_0xFF << (UNIT_BITS-dstLocalStart);
+			dst[dstByteStart] &= (int) (UNIT_0xFF << (UNIT_BITS-dstLocalStart));
 		}
 
 		if (srcByteEnd > srcByteStart) {
@@ -370,7 +370,7 @@ public class BitsInt {
 				//write first part
 				dst[dstByteStart] &= ~maskPost;
 				dst[dstByteStart] |= Integer.rotateLeft(buf1, localShift) & maskPost;
-				dst[dstByteStart] &= UNIT_0xFF << localShift;
+				dst[dstByteStart] &= (int) (UNIT_0xFF << localShift);
 			} else {
 				int leftMask = (int) ~(UNIT_0xFF >>> dstLocalEnd); // e.g. 1111.1110
 				int rightMask = (int) (UNIT_0xFF >>> (dstLocalEnd-srcLocalEnd+UNIT_BITS));
@@ -468,15 +468,15 @@ public class BitsInt {
             buf2 >>>= bitsInBuffer-bitsToWriteThisRound; 
         	if (bitsToWriteThisRound > bitsInBuffer) {
         		buf2 = buf << (bitsToWriteThisRound-bitsInBuffer);
-        		eraseMask = ~((~0)<<(bitsToWriteThisRound-bitsInBuffer));
+        		eraseMask = ~((~0L)<<(bitsToWriteThisRound-bitsInBuffer));
         	}
         	
-        	trg[ptA] &= eraseMask;  
+        	trg[ptA] &= (int) eraseMask;
         	
         	buf2 &= UNIT_0xFF; // cut of heading bits
 
          	startBitT = UNIT_BITS;
-            trg[ptA] |= buf2;
+            trg[ptA] |= (int) buf2;
             
             //from now on, always delete everything
             eraseMask = 0;
@@ -492,11 +492,11 @@ public class BitsInt {
             	buf2 = buf;
                 buf2 >>>= bitsInBuffer-bitsToWriteThisRound; 
             	
-            	trg[ptA] &= eraseMask;  
+            	trg[ptA] &= (int) eraseMask;
             	
             	buf2 &= UNIT_0xFF; // cut of heading bits
 
-                trg[ptA] |= buf2;
+                trg[ptA] |= (int) buf2;
                 
                 bitsWritten += bitsToWriteThisRound;
                 bitsInBuffer -= bitsToWriteThisRound;
@@ -525,9 +525,9 @@ public class BitsInt {
         		buf <<= (UNIT_BITS-bitsToWrite);
             }
             //erase bits
-            trg[ptA] &= eraseMask;
+            trg[ptA] &= (int) eraseMask;
 
-    		trg[ptA] |= buf;
+    		trg[ptA] |= (int) buf;
     	}
     }
 
@@ -556,9 +556,9 @@ public class BitsInt {
         //last three bit [0..7]
         posBit &= UNIT_0x1F;
         if (b) {
-            ba[pA] |= (1L << (UNIT_BITS-1-posBit));
+            ba[pA] |= (int) (1L << (UNIT_BITS-1-posBit));
         } else {
-            ba[pA] &= (~(1L << (UNIT_BITS-1-posBit)));
+            ba[pA] &= (int) ~(1L << (UNIT_BITS-1-posBit));
         }
 	}
 
@@ -683,7 +683,6 @@ public class BitsInt {
             long mask = (1l << (long)(DEPTH-i-1));
             if ((l & mask) != 0) { sb.append("1"); } else { sb.append("0"); }
             if ((i+1)%8==0 && (i+1)<DEPTH) sb.append('.');
-        	mask >>>= 1;
         }
         return sb.toString();
     }

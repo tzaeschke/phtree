@@ -72,6 +72,9 @@ package org.zoodb.index.critbit;
  * 
  * @author Tilmann Zaeschke
  */
+import ch.ethz.globis.phtree.util.Refs;
+
+import java.sql.Ref;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -1107,7 +1110,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 
 	}
 	
-	public static class QueryIteratorWithMask<V> implements Iterator<V> {
+	public static final class QueryIteratorWithMask<V> implements Iterator<V> {
 		private final CritBit<V> cb;
 		private final long[] valIntTemplate;
 		private long[] minOrig;
@@ -1130,7 +1133,7 @@ public class CritBit<V> implements CritBit1D<V>, CritBitKD<V> {
 		@SuppressWarnings("unchecked")
 		public QueryIteratorWithMask(CritBit<V> cb, long[] minOrig, long[] maxOrig, int dim) {
 			this.cb = cb;
-			this.stack = (Node[]) new Object[cb.DEPTH];
+			this.stack = Refs.newArray(Node.class, cb.DEPTH);
 			this.readHigherNext = new byte[cb.DEPTH];  // default = false
 			int intArrayLen = (cb.DEPTH+63) >>> 6;
 			this.valIntTemplate = new long[intArrayLen];
