@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+- Fixed ClassCastExceptionin HD tree.
+  [#40](https://github.com/tzaeschke/phtree/pull/40)
 - getStats() for empty trees fails. [#36](https://github.com/tzaeschke/phtree/pull/36)
 - Fix some warnings. [#37](https://github.com/tzaeschke/phtree/pull/37)
-- UPdated some dependencies. [#38](https://github.com/tzaeschke/phtree/pull/38)
+- Updated some dependencies. [#38](https://github.com/tzaeschke/phtree/pull/38)
 
 ## 2.8.0 - 2023-07-29
  

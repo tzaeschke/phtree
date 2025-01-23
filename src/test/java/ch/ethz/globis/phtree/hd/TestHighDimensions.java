@@ -13,8 +13,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
+import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.PhEntryDist;
 import org.junit.Test;
 
 import ch.ethz.globis.phtree.PhTree;
@@ -32,6 +35,9 @@ public class TestHighDimensions {
 	
 	
     private PhTree<long[]> create(int dim) {
+        return TestUtil.newTreeHD(dim);
+    }
+    private PhTree<Integer> createInt(int dim) {
         return TestUtil.newTreeHD(dim);
     }
 
@@ -247,5 +253,97 @@ public class TestHighDimensions {
             }
             assertTrue(n2 < n);
         }
+    }
+
+    @Test
+    public void smokeTest() {
+        final int N = 1000;
+        for (int DIM : DIMS) {
+            smokeTest(N, DIM, 0);
+        }
+    }
+
+    private void smokeTest(int N, int DIM, long SEED) {
+        Random R = new Random(SEED);
+        PhTree<Integer> ind = createInt(DIM);
+        long[][] keys = new long[N][DIM];
+        for (int i = 0; i < N; i++) {
+            for (int d = 0; d < DIM; d++) {
+                keys[i][d] = R.nextInt(); //INT!
+            }
+            if (ind.contains(keys[i])) {
+                i--;
+                continue;
+            }
+            //build
+            assertNull(ind.put(keys[i], i));
+            //System.out.println("key=" + Bits.toBinary(keys[i], 64));
+            //System.out.println(ind);
+            assertTrue("i="+ i, ind.contains(keys[i]));
+            assertEquals(i, (int)ind.get(keys[i]));
+        }
+
+
+        //first check
+        for (int i = 0; i < N; i++) {
+            assertTrue(ind.contains(keys[i]));
+            assertEquals(i, (int)ind.get(keys[i]));
+        }
+
+        //update
+        for (int i = 0; i < N; i++) {
+            assertEquals(i, (int)ind.put(keys[i], -i));
+            assertTrue(ind.contains(keys[i]));
+            assertEquals(-i, (int)ind.get(keys[i]));
+        }
+
+        //check again
+        for (int i = 0; i < N; i++) {
+            assertTrue(ind.contains(keys[i]));
+            assertEquals(-i, (int)ind.get(keys[i]));
+        }
+
+        // query
+        for (int i = 0; i < N; i++) {
+            PhTree.PhQuery<Integer> q = ind.query(keys[i], keys[i]);
+            assertTrue(q.hasNext());
+            assertEquals(-i, (int)q.next());
+            assertFalse(q.hasNext());
+        }
+
+        // query all
+        for (int i = 0; i < N; i++) {
+            List<PhEntry<Integer>> q = ind.queryAll(keys[i], keys[i]);
+            assertEquals(1, q.size());
+            assertEquals(-i, (int)q.get(0).getValue());
+        }
+
+        // extent
+        PhTree.PhExtent<Integer> extent = ind.queryExtent();
+        int nExtent = 0;
+        while (extent.hasNext()) {
+            extent.next();
+            nExtent++;
+        }
+
+        // query kNN
+        for (int i = 0; i < N; i++) {
+            PhTree.PhKnnQuery<Integer> q = ind.nearestNeighbour(1, keys[i]);
+            assertTrue(q.hasNext());
+            PhEntryDist<Integer> e = q.nextEntryReuse();
+            assertEquals(-i, (int)e.getValue());
+            assertEquals(0, e.dist(), 0);
+        }
+
+        //delete
+        for (int i = 0; i < N; i++) {
+            //System.out.println("Removing: " + Bits.toBinary(keys[i], 64));
+            //System.out.println("Tree: \n" + ind);
+            assertEquals(-i, (int)ind.remove(keys[i]));
+            assertFalse(ind.contains(keys[i]));
+            assertNull(ind.get(keys[i]));
+        }
+
+        assertEquals(0, ind.size());
     }
 }

@@ -37,11 +37,11 @@ public class PhDistanceL implements PhDistance {
 		//   would be absolutely precise and unlikely to overflow.
 		//The dl*dl can be done as 'double', which is always safe.
 		for (int i = 0; i < v1.length; i++) {
-			//double dl = (double)v1[i] - (double)v2[i];
-			long dl = Math.subtractExact(v1[i], v2[i]);
-			d += Math.multiplyExact(dl, dl);
-//			double dl = Math.subtractExact(v1[i], v2[i]);
-//			d += dl*dl;
+			double dl = (double)v1[i] - (double)v2[i];
+			// long dl = Math.subtractExact(v1[i], v2[i]);
+			// d += Math.multiplyExact(dl, dl);
+			// double dl = Math.subtractExact(v1[i], v2[i]);
+			d += dl*dl;
 		}
 		return Math.sqrt(d);
 	}
