@@ -7,8 +7,6 @@
 package ch.ethz.globis.phtree.util;
 
 
-import java.io.Serializable;
-
 /**
  * A mapping function that maps long[] / T to a desired output format.
  *
@@ -20,9 +18,7 @@ import java.io.Serializable;
  * @param <R> Result type
  */
 @FunctionalInterface
-public interface PhMapperKey<R> extends Serializable{
-
-    public static final long serialVersionUID = 1L;
+public interface PhMapperKey<R> {
 
     static PhMapperKey<long[]> LONG_ARRAY() { 
 		return ((point) -> (point)); 

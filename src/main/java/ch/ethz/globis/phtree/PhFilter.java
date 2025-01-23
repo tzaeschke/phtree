@@ -6,7 +6,6 @@
  */
 package ch.ethz.globis.phtree;
 
-import java.io.Serializable;
 
 /**
  * Interface for PhIterator filters. A checker is continuously checked 
@@ -18,7 +17,7 @@ import java.io.Serializable;
  * @author Tilmann Zäschke
  *
  */
-public interface PhFilter extends Serializable {
+public interface PhFilter {
 
 	/**
 	 * 

@@ -201,10 +201,11 @@ public class PhTree13<T> implements PhTree<T> {
 		}
 		//check space
 		int baS = node.calcArraySizeTotalBits(node.getEntryCount(), dims);
+		int baS1 = baS;
 		baS = Bits.calcArraySize(baS);
 		if (baS < node.ba().length) {
-			System.err.println("Array too large: " + node.ba().length + " - " + baS + " = " + 
-					(node.ba().length - baS));
+			System.err.println("Array too large: " + node.ba().length + " - " + baS + " = " +
+					(node.ba().length - baS) + " # baS1=" + baS1);
 		}
 		stats.nTotalChildren += nChildren;
 		

@@ -290,7 +290,7 @@ public class JmxTools {
 				}
 			}
 			MemoryMXBean mb = ManagementFactory.getMemoryMXBean();
-			System.out.println("M-Bean: pfc=" + mb.getObjectPendingFinalizationCount() + 
+			System.out.println("M-Bean: pfc=deprecated" + // mb.getObjectPendingFinalizationCount() +
 					"  heap=" + mb.getHeapMemoryUsage() + "  non-heap=" + mb.getNonHeapMemoryUsage());
 			for (MemoryPoolMXBean b: ManagementFactory.getMemoryPoolMXBeans()) {
 				System.out.println("MP-Bean: " + b.getName() + "  " + b.getType() + "  peak=" + b.getPeakUsage());

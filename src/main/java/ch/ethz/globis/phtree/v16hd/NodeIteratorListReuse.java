@@ -42,7 +42,8 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
 public class NodeIteratorListReuse<T, R> {
 	
 	private class PhIteratorStack {
-		private final NodeIterator[] stack = Refs.newArray(NodeIteratorListReuse.NodeIterator.class, 64);
+		@SuppressWarnings("unchecked")
+		private final NodeIterator[] stack = Refs.newArray(NodeIterator.class, 64);
 		private int size = 0;
 
 

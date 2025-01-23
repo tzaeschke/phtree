@@ -358,7 +358,7 @@ public class NodeIteratorNoGC<T> {
 				currentPos++;  //pos w/o bit-offset
 			} else {
 				currentPos = maskLower; //initial value
-				currentOffsetPostKey += maskLower*Node.PINN_HC_WIDTH;  //pos with bit-offset
+				currentOffsetPostKey += (int) (maskLower*Node.PINN_HC_WIDTH);  //pos with bit-offset
 			}
 			if (currentPos >= (1<<DIM)) {
 				isPostFinished = true;
