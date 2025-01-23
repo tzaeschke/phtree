@@ -14,6 +14,7 @@ import ch.ethz.globis.phtree.PhEntryDist;
 import ch.ethz.globis.phtree.PhFilterDistance;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
+import ch.ethz.globis.phtree.util.Refs;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -304,7 +305,7 @@ public class PhQueryKnnMbbPPList<T> implements PhKnnQuery<T> {
 			this.center = center;
 			maxDistance = Double.MAX_VALUE;
 			if (data == null) {
-				data = (PhEntryDist[]) new Object[newSize];
+				data = Refs.newArray(PhEntryDist.class, newSize);
 				distData = new double[newSize];
 				for (int i = 0; i < data.length; i++) {
 					data[i] = createEntry();

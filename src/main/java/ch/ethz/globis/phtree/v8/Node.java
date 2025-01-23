@@ -78,7 +78,7 @@ class Node<T> {
 	protected Node(Node<T> original, int dim) {
         if (original.subNRef != null) {
             int size = original.subNRef.length;
-            this.subNRef = (Node[]) new Object[size];
+            this.subNRef = Refs.newArray(Node.class, size);
             System.arraycopy(original.subNRef, 0, this.subNRef, 0, size);
         }
         if (original.values != null) {

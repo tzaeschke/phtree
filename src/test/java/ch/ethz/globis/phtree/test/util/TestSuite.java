@@ -18,6 +18,7 @@ import ch.ethz.globis.phtree.bits.TestBitsToolsSplitMergeVarLong;
 import ch.ethz.globis.phtree.bits.TestIncSuccessor;
 import ch.ethz.globis.phtree.bits.TestIncrementor;
 import ch.ethz.globis.phtree.bits.TestTranspose;
+import ch.ethz.globis.phtree.hd.TestHighDimensions;
 import ch.ethz.globis.phtree.test.*;
 
 import org.junit.AfterClass;

@@ -21,6 +21,7 @@ package ch.ethz.globis.phtree.v16hd;
 import java.util.List;
 
 import ch.ethz.globis.phtree.PhEntry;
+import ch.ethz.globis.phtree.util.Refs;
 import ch.ethz.globis.phtree.v16hd.Node.BSTEntry;
 import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
 
@@ -41,8 +42,7 @@ import ch.ethz.globis.phtree.v16hd.bst.BSTIteratorMask;
 public class NodeIteratorListReuse<T, R> {
 	
 	private class PhIteratorStack {
-		@SuppressWarnings("unchecked")
-		private final NodeIterator[] stack = (NodeIteratorListReuse.NodeIterator[]) new Object[64];
+		private final NodeIterator[] stack = Refs.newArray(NodeIteratorListReuse.NodeIterator.class, 64);
 		private int size = 0;
 
 
