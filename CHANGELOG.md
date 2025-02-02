@@ -2,12 +2,19 @@
 
 ## Unreleased
 
+- Nothing yet
+
+## 2.8.2 - 2025-02-02
+
 - Add maven profile for release
 - Remove some more warnings reported by JDK 21.
   [#42](https://github.com/tzaeschke/phtree/pull/42)
   - Removed `Serializable` interface from `PhFilter` 
 - Fixed ClassCastException HD tree.
   [#40](https://github.com/tzaeschke/phtree/pull/40)
+
+## 2.8.1 - 2024-06-22
+
 - getStats() for empty trees fails. [#36](https://github.com/tzaeschke/phtree/pull/36)
 - Fix some warnings. [#37](https://github.com/tzaeschke/phtree/pull/37)
 - Updated some dependencies. [#38](https://github.com/tzaeschke/phtree/pull/38)

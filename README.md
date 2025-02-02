@@ -31,7 +31,7 @@ In 2019 and 2020 development was kindly supported by [Improbable](https://improb
 <dependency>
     <groupId>ch.ethz.globis.phtree</groupId>
     <artifactId>phtree</artifactId>
-    <version>2.8.1</version>
+    <version>2.8.2</version>
 </dependency>
 ```
 
@@ -45,6 +45,11 @@ There are several C++ implementations available:
 You can create GitHub Issues or contact me on [Discord](https://discord.gg/GNYjyyYq).
 
 # News
+
+### 2025-02-02
+Release 2.8.2 ([CHANGELOG](CHANGELOG.md))
+- Fixed ClassCastException HD tree [#40](https://github.com/tzaeschke/phtree/pull/40)
+- Fixed warning and refreshed dependencies; maven changes
 
 ### 2024-06-22
 Release 2.8.1
