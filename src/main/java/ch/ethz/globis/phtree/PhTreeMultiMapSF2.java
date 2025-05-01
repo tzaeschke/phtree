@@ -50,22 +50,43 @@ import java.util.function.Function;
  * @param <T> The value type of the tree
  * @author ztilmann (Tilmann Zaeschke)
  */
-public class PhTreeSolidMultiMapF2<T> {
+public class PhTreeMultiMapSF2<T> {
+
+    @FunctionalInterface
+    public interface ComputeFn<V> {
+        V apply(double[] lower, double[] upper);
+    }
+
+    @FunctionalInterface
+    public interface ComputeVFn<V> {
+        V apply(double[] lower, double[] upper, V value);
+    }
 
     public static final int DEFAULT_SIZE = 2;
+    private final int dims;
     private final PhTree<Object> pht;
     private final PreProcessorRangeF pre;
+    private final double[] qMIN;
+    private final double[] qMAX;
     private final ObjectPool<ArrayList<T>> pool = ObjectPool.create(10, () -> new ArrayList<>(DEFAULT_SIZE));
     private int size = 0;
 
-    protected PhTreeSolidMultiMapF2(int dim, PreProcessorRangeF pre) {
-        this.pht = PhTree.create(dim);
-        this.pre = pre;
+    protected PhTreeMultiMapSF2(int dim, PreProcessorRangeF pre) {
+        this (PhTree.create(dim * 2), pre);
     }
 
-    protected PhTreeSolidMultiMapF2(PhTree<Object> tree) {
+    protected PhTreeMultiMapSF2(PhTree<Object> tree, PreProcessorRangeF pre) {
+        this.dims = tree.getDim()/2;
+        if (dims*2 != tree.getDim()) {
+            throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");
+        }
         this.pht = tree;
-        this.pre = new PreProcessorRangeF.IEEE(tree.getDim());
+        this.pre = pre;
+        //this.dist = new PhDistanceSFCenterDist(pre, dims);
+        qMIN = new double[dims];
+        Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
+        qMAX = new double[dims];
+        Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
     }
 
     /**
@@ -75,8 +96,8 @@ public class PhTreeSolidMultiMapF2<T> {
      * @param <T> value type of the tree
      * @return PhTreeMultiMapF2
      */
-    public static <T> PhTreeSolidMultiMapF2<T> create(int dim) {
-        return new PhTreeSolidMultiMapF2<>(dim, new PreProcessorRangeF.IEEE(dim));
+    public static <T> PhTreeMultiMapSF2<T> create(int dim) {
+        return new PhTreeMultiMapSF2<>(dim, new PreProcessorRangeF.IEEE(dim));
     }
 
     /**
@@ -88,8 +109,8 @@ public class PhTreeSolidMultiMapF2<T> {
      * @param <T> value type of the tree
      * @return PhTreeMultiMapF2
      */
-    public static <T> PhTreeSolidMultiMapF2<T> create(int dim, PreProcessorRangeF pre) {
-        return new PhTreeSolidMultiMapF2<>(dim, pre);
+    public static <T> PhTreeMultiMapSF2<T> create(int dim, PreProcessorRangeF pre) {
+        return new PhTreeMultiMapSF2<>(dim, pre);
     }
 
     /**
@@ -108,9 +129,7 @@ public class PhTreeSolidMultiMapF2<T> {
      * @return `true` (this implementation allows duplicate key/value entries)
      */
     public boolean put(double[] lower, double[] upper, T value) {
-        long[] lVal = new long[lower.length*2];
-        pre.pre(lower, upper, lVal);
-        pht.compute(lVal, (keyInternal, entry) -> {
+        pht.compute(pre(lower, upper), (keyInternal, entry) -> {
             if (entry == null) {
                 return value;
             }
@@ -136,9 +155,7 @@ public class PhTreeSolidMultiMapF2<T> {
      * @return true if the entry was found
      */
     public boolean contains(double[] lower, double[] upper, T value) {
-        long[] lVal = new long[lower.length*2];
-        pre.pre(lower, upper, lVal);
-        Object v = pht.get(lVal);
+        Object v = pht.get(pre(lower, upper));
         if (v != null) {
             if (v instanceof ArrayList) {
                 return asList(v).contains(value);
@@ -148,22 +165,23 @@ public class PhTreeSolidMultiMapF2<T> {
         return false;
     }
 
-//    /**
-//     * @param key the key
-//     * @return the value associated with the key or 'null' if the key was not found
-//     */
-//    @SuppressWarnings("unchecked")
-//    public Iterable<T> get(double[] key) {
-//        Object v = pht.get(pre(key));
-//        if (v instanceof ArrayList) {
-//            return (Iterable<T>) v;
-//        } else if (v == null) {
-//            return Collections.emptyList();
-//        }
-//        ArrayList<T> list = new ArrayList<>(1);
-//        list.add(asT(v));
-//        return list;
-//    }
+    /**
+     * @param lower lower left corner
+     * @param upper upper right corner
+     * @return the value associated with the key or 'null' if the key was not found
+     */
+    @SuppressWarnings("unchecked")
+    public Iterable<T> get(double[] lower, double[] upper) {
+        Object v = pht.get(pre(lower, upper));
+        if (v instanceof ArrayList) {
+            return (Iterable<T>) v;
+        } else if (v == null) {
+            return Collections.emptyList();
+        }
+        ArrayList<T> list = new ArrayList<>(1);
+        list.add(asT(v));
+        return list;
+    }
 
     /**
      * Removes all values that exactly match lower/upper.
@@ -174,9 +192,7 @@ public class PhTreeSolidMultiMapF2<T> {
      * @see PhTree#remove(long...)
      */
     public Iterable<T> remove(double[] lower, double[] upper) {
-        long[] lVal = new long[lower.length*2];
-        pre.pre(lower, upper, lVal);
-        Object v = pht.remove(lVal);
+        Object v = pht.remove(pre(lower, upper));
         if (v instanceof ArrayList) {
             ArrayList<T> list = asList(v);
             size -= list.size();
@@ -199,10 +215,8 @@ public class PhTreeSolidMultiMapF2<T> {
      * @see Map#remove(Object, Object)
      */
     public boolean remove(double[] lower, double[] upper, T value) {
-        long[] lVal = new long[lower.length*2];
-        pre.pre(lower, upper, lVal);
         MutableInt i = new MutableInt(0);
-        pht.computeIfPresent(lVal, (keyInternal, entry) -> {
+        pht.computeIfPresent(pre(lower, upper), (keyInternal, entry) -> {
             if (entry == null) {
                 return null;
             }
@@ -237,6 +251,23 @@ public class PhTreeSolidMultiMapF2<T> {
         return new PhExtentF<>(pht.queryExtent(), pht.getDim(), pre);
     }
 
+    /**
+     * @param e an entry that describes the query rectangle
+     * @return a query iterator
+     * @see #queryInclude(double[], double[])
+     */
+    public PhQuerySF<T> queryInclude(PhEntrySF<T> e) {
+        return queryInclude(e.lower(), e.upper());
+    }
+
+    /**
+     * @param e an entry that describes the query rectangle
+     * @return a query iterator
+     * @see #queryIntersect(double[], double[])
+     */
+    public PhQuerySF<T> queryIntersect(PhEntrySF<T> e) {
+        return queryIntersect(e.lower(), e.upper());
+    }
 
     /**
      * Query for all bodies that are fully included in the query rectangle.
@@ -244,12 +275,12 @@ public class PhTreeSolidMultiMapF2<T> {
      * @param upper 'upper right' corner of query rectangle
      * @return Iterator over all matching elements.
      */
-    public PhTreeSolidF.PhQuerySF<T> queryInclude(double[] lower, double[] upper) {
+    public PhQuerySF<T> queryInclude(double[] lower, double[] upper) {
         long[] lUpp = new long[lower.length << 1];
         long[] lLow = new long[lower.length << 1];
         pre.pre(lower, lower, lLow);
         pre.pre(upper, upper, lUpp);
-        return new PhTreeSolidF.PhQuerySF<>(pht.query(lLow, lUpp), dims, pre, false);
+        return new PhQuerySF<>(pht.query(lLow, lUpp), dims, pre, false);
     }
 
     /**
@@ -258,7 +289,7 @@ public class PhTreeSolidMultiMapF2<T> {
      * @param upper 'upper right' corner of query rectangle
      * @return Iterator over all matching elements.
      */
-    public PhTreeSolidF.PhQuerySF<T> queryIntersect(double[] lower, double[] upper) {
+    public PhQuerySF<T> queryIntersect(double[] lower, double[] upper) {
         long[] lUpp = new long[lower.length << 1];
         long[] lLow = new long[lower.length << 1];
         pre.pre(qMIN, lower, lLow);
@@ -331,7 +362,7 @@ public class PhTreeSolidMultiMapF2<T> {
     }
 
     public int getDim() {
-        return pht.getDim();
+        return pht.getDim() / 2;
     }
 
     /**
@@ -370,16 +401,18 @@ public class PhTreeSolidMultiMapF2<T> {
      * Update the key of an entry. Update may fail if the old key does not exist, or
      * if the new key already exists.
      *
-     * @param oldKey old key
+     * @param oldLower old lower left corner
+     * @param oldUpper old upper right corner
      * @param value  value
-     * @param newKey new key
+     * @param newLower new lower left corner
+     * @param newUpper new upper right corner
      * @return the value (can be {@code null}) associated with the updated key if
      * the key could be updated, otherwise {@code null}.
      */
-    public boolean update(double[] oldKey, T value, double[] newKey) {
+    public boolean update(double[] oldLower, double[] oldUpper, T value, double[] newLower, double[] newUpper) {
         // TODO OPTIMIZE
-        if (remove(oldKey, value)) {
-            put(newKey, value);
+        if (remove(oldLower, oldUpper, value)) {
+            put(newLower, newUpper, value);
             return true;
         }
         return false;
@@ -398,7 +431,7 @@ public class PhTreeSolidMultiMapF2<T> {
     }
 
     /**
-     * Same as {@link PhTreeSolidMultiMapF2#queryAll(double[], double[])}, except that it
+     * Same as {@link PhTreeMultiMapSF2#queryAll(double[], double[])}, except that it
      * also accepts a limit for the result size, a filter and a mapper.
      *
      * @param min        min key
@@ -446,7 +479,7 @@ public class PhTreeSolidMultiMapF2<T> {
     /**
      * @return the preprocessor of this tree.
      */
-    public PreProcessorPointF getPreprocessor() {
+    public PreProcessorRangeF getPreprocessor() {
         return pre;
     }
 
@@ -470,72 +503,77 @@ public class PhTreeSolidMultiMapF2<T> {
     /**
      * Insert key/value if key/value pair does not exist yet.
      *
-     * @param key   key
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param value new value
      * @return current value or null if there was no association.
      * @see Map#putIfAbsent(Object, Object)
      */
-    public T putIfAbsent(double[] key, T value) {
+    public T putIfAbsent(double[] lower, double[] upper, T value) {
         MutableRef<T> ref = new MutableRef<>();
-        compute(key, value, (k, v) -> v == null ? value : ref.set(v).get());
+        compute(lower, upper, value, (lo, up, v) -> v == null ? value : ref.set(v).get());
         return ref.get();
     }
 
     /**
      * Replaces an existing entry with a new value.
      *
-     * @param key      key
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param oldValue old value
      * @param newValue new value
      * @return {@code true} if the value was replaced
      * @see Map#replace(Object, Object, Object)
      */
-    public boolean replace(double[] key, T oldValue, T newValue) {
-        return computeIfPresent(key, oldValue, (doubles, t) -> newValue) != null;
+    public boolean replace(double[] lower, double[] upper, T oldValue, T newValue) {
+        return computeIfPresent(lower, upper, oldValue, (lo, up, t) -> newValue) != null;
     }
 
     /**
-     * @param key             key
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param value           value
      * @param mappingFunction mapping function
      * @return new value or null if none is associated
      * @see Map#computeIfAbsent(Object, Function)
      */
-    public T computeIfAbsent(double[] key, T value, Function<double[], ? extends T> mappingFunction) {
+    public T computeIfAbsent(double[] lower, double[] upper, T value, ComputeFn<T> mappingFunction) {
         MutableRef<T> ref = new MutableRef<>();
-        compute(key, value, (k, v) -> v == null ? ref.set(mappingFunction.apply(k)).get() : v);
+        compute(lower, upper, value, (lo, up, v) -> v == null ? ref.set(mappingFunction.apply(lo, up)).get() : v);
         return ref.get();
     }
 
     /**
-     * @param key               key
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param value             value
      * @param remappingFunction mapping function
      * @return new value or null if none is associated
      * @see Map#computeIfPresent(Object, BiFunction)
      */
-    public T computeIfPresent(double[] key, T value, BiFunction<double[], ? super T, ? extends T> remappingFunction) {
-        return compute(key, value, (k, v) -> v == null ? null : remappingFunction.apply(k, v));
+    public T computeIfPresent(double[] lower, double[] upper, T value, ComputeVFn<T> remappingFunction) {
+        return compute(lower, upper, value, (lo, up, v) -> v == null ? null : remappingFunction.apply(lo, up, v));
     }
 
     /**
-     * @param key               key
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param value             value
      * @param remappingFunction mapping function
      * @return new value or null if none is associated
      * @see Map#compute(Object, BiFunction)
      */
-    public T compute(double[] key, T value, BiFunction<double[], ? super T, ? extends T> remappingFunction) {
+    public T compute(double[] lower, double[] upper, T value, ComputeVFn<T> remappingFunction) {
         MutableRef<T> ref = new MutableRef<>();
         MutableInt delta = new MutableInt(0);
-        pht.compute(pre(key), (keyInternal, entry) -> {
+        pht.compute(pre(lower, upper), (keyInternal, entry) -> {
             if (entry instanceof ArrayList) {
                 ArrayList<T> list = asList(entry);
                 ListIterator<T> it = list.listIterator();
                 while (it.hasNext()) {
                     T valueOld = it.next();
                     if (Objects.equals(value, valueOld)) {
-                        T valueNew = remappingFunction.apply(key, valueOld);
+                        T valueNew = remappingFunction.apply(lower, upper, valueOld);
                         if (valueNew != null) {
                             it.set(valueNew);
                             ref.set(valueNew);
@@ -552,7 +590,7 @@ public class PhTreeSolidMultiMapF2<T> {
                         return list;
                     }
                 }
-                T valueNew = remappingFunction.apply(key, null);
+                T valueNew = remappingFunction.apply(lower, upper, null);
                 if (valueNew != null) {
                     list.add(valueNew);
                     ref.set(valueNew);
@@ -561,7 +599,7 @@ public class PhTreeSolidMultiMapF2<T> {
                 return list.isEmpty() ? null : list;
             } else {
                 T arg1 = Objects.equals(value, entry) ? asT(entry) : null;
-                ref.set(remappingFunction.apply(key, arg1));
+                ref.set(remappingFunction.apply(lower, upper, arg1));
                 if (ref.get() != null) {
                     delta.inc();
                     ArrayList<T> list = newList();
@@ -576,9 +614,9 @@ public class PhTreeSolidMultiMapF2<T> {
         return ref.get();
     }
 
-    private long[] pre(double[] key) {
-        long[] lKey = new long[key.length];
-        pre.pre(key, lKey);
+    private long[] pre(double[] lower, double[] upper) {
+        long[] lKey = new long[lower.length * 2];
+        pre.pre(lower, upper, lKey);
         return lKey;
     }
 
@@ -601,20 +639,20 @@ public class PhTreeSolidMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhIteratorF<T> implements PhIteratorBase<T, PhEntryF<T>> {
-        protected final PreProcessorPointF pre;
+    public static class PhIteratorSF<T> implements PhIteratorBase<T, PhEntrySF<T>> {
+        protected final PreProcessorRangeF pre;
         private final PhIteratorBase<Object, ? extends PhEntry<Object>> iter;
-        private final PhEntryF<T> buffer;
+        private final PhEntrySF<T> buffer;
         // For storing non-list entries
         private final ArrayList<T> bufferList = new ArrayList<>();
         private PhEntry<Object> internalEntry;
         private ArrayList<T> currentList;
         private int pos = Integer.MAX_VALUE;
 
-        protected PhIteratorF(PhIteratorBase<Object, ? extends PhEntry<Object>> iter, int dims, PreProcessorPointF pre) {
+        protected PhIteratorSF(PhIteratorBase<Object, ? extends PhEntry<Object>> iter, int dims, PreProcessorRangeF pre) {
             this.iter = iter;
             this.pre = pre;
-            this.buffer = new PhEntryF<>(new double[dims], null);
+            this.buffer = new PhEntrySF<>(new double[dims], new double[dims], null);
             this.bufferList.add(null); // empty entry
             findNextInternal();
         }
@@ -657,19 +695,19 @@ public class PhTreeSolidMultiMapF2<T> {
         }
 
         @Override
-        public PhEntryF<T> nextEntry() {
+        public PhEntrySF<T> nextEntry() {
             checkNext();
-            pre.post(internalEntry.getKey(), buffer.getKey());
+            pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
             buffer.setValue(getNextValue());
-            PhEntryF<T> ret = new PhEntryF<>(buffer.getKey().clone(), buffer.getValue());
+            PhEntrySF<T> ret = new PhEntrySF<>(buffer.lower(), buffer.upper().clone(), buffer.value());
             findNext();
             return ret;
         }
 
         @Override
-        public PhEntryF<T> nextEntryReuse() {
+        public PhEntrySF<T> nextEntryReuse() {
             checkNext();
-            pre.post(internalEntry.getKey(), buffer.getKey());
+            pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
             buffer.setValue(getNextValue());
             findNext();
             return buffer;
@@ -688,7 +726,7 @@ public class PhTreeSolidMultiMapF2<T> {
             throw new UnsupportedOperationException();
         }
 
-        protected PhIteratorF<T> reset() {
+        protected PhIteratorSF<T> reset() {
             pos = Integer.MAX_VALUE;
             findNextInternal();
             return this;
@@ -706,7 +744,7 @@ public class PhTreeSolidMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhExtentF<T> extends PhIteratorF<T> {
+    public static class PhExtentF<T> extends PhIteratorSF<T> {
         private final PhExtent<Object> iter;
 
         protected PhExtentF(PhExtent<Object> iter, int dims, PreProcessorRangeF pre) {
@@ -732,14 +770,22 @@ public class PhTreeSolidMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhQueryF<T> extends PhIteratorF<T> {
+    public static class PhQuerySF<T> extends PhIteratorSF<T> {
         private final long[] lMin;
         private final long[] lMax;
         private final PhQuery<Object> q;
+        private final double[] qMIN;
+        private final double[] qMAX;
+        private final boolean intersect;
 
-        protected PhQueryF(PhQuery<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhQuerySF(PhQuery<Object> iter, int dims, PreProcessorRangeF pre, boolean intersect) {
             super(iter, dims, pre);
             q = iter;
+            qMIN = new double[dims];
+            Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
+            qMAX = new double[dims];
+            Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
+            this.intersect = intersect;
             lMin = new long[dims];
             lMax = new long[dims];
         }
@@ -749,12 +795,20 @@ public class PhTreeSolidMultiMapF2<T> {
          *
          * @param lower minimum values of query rectangle
          * @param upper maximum values of query rectangle
+         * @return this
          */
-        public void reset(double[] lower, double[] upper) {
-            pre.pre(lower, lMin);
-            pre.pre(upper, lMax);
+        public PhQuerySF<T> reset(double[] lower, double[] upper) {
+            if (intersect) {
+                pre.pre(qMIN, lower, lMin);
+                pre.pre(upper, qMAX, lMax);
+            } else {
+                //include
+                pre.pre(lower, lower, lMin);
+                pre.pre(upper, upper, lMax);
+            }
             q.reset(lMin, lMax);
-            super.reset();
+            super.reset(); // TODO this is from MM
+            return this;
         }
     }
 
@@ -763,20 +817,26 @@ public class PhTreeSolidMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhKnnQueryF<T> implements PhIteratorBase<T, PhEntryDistF<T>> {
-        private final PreProcessorPointF pre;
+    public static class PhKnnQuerySF<T> implements PhIteratorBase<T, PhEntryDistSF<T>> {
+        private final PreProcessorRangeF pre;
         private final PhKnnQuery<Object> iter;
-        private final PhEntryDistF<T> buffer;
+        private final PhEntryDistSF<T> buffer;
         private final ArrayList<T> bufferList = new ArrayList<>();
         private PhEntryDist<Object> internalEntry;
         private ArrayList<T> currentList;
         private int pos = Integer.MAX_VALUE;
+        private final double[] qMIN;
+        private final double[] qMAX;
 
-        protected PhKnnQueryF(PhKnnQuery<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhKnnQuerySF(PhKnnQuery<Object> iter, int dims, PreProcessorRangeF pre) {
             this.iter = iter;
             this.pre = pre;
-            this.buffer = new PhEntryDistF<>(new double[dims], null, Double.NaN);
+            this.buffer = new PhEntryDistSF<>(new double[dims], new double[dims], null, Double.NaN);
             this.bufferList.add(null);
+            this.qMIN = new double[dims];
+            Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
+            this.qMAX = new double[dims];
+            Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
             findNextInternal();
         }
 
@@ -818,22 +878,20 @@ public class PhTreeSolidMultiMapF2<T> {
         }
 
         @Override
-        public PhEntryDistF<T> nextEntry() {
+        public PhEntryDistSF<T> nextEntry() {
             checkNextKnn();
-            pre.post(internalEntry.getKey(), buffer.getKey());
-            buffer.setDist(internalEntry.dist());
-            buffer.setValue(getNextValue());
-            PhEntryDistF<T> ret = new PhEntryDistF<>(buffer.getKey().clone(), buffer.getValue(), buffer.dist());
+            pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
+            buffer.setValueDist(getNextValue(), internalEntry.dist());
+            PhEntryDistSF<T> ret = new PhEntryDistSF<>(buffer.getKey().clone(), buffer.getValue(), buffer.dist());
             findNextKnn();
             return ret;
         }
 
         @Override
-        public PhEntryDistF<T> nextEntryReuse() {
+        public PhEntryDistSF<T> nextEntryReuse() {
             checkNextKnn();
-            pre.post(internalEntry.getKey(), buffer.getKey());
-            buffer.setDist(internalEntry.dist());
-            buffer.setValue(getNextValue());
+            pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
+            buffer.setValueDist(getNextValue(), internalEntry.dist());
             findNextKnn();
             return buffer;
         }
@@ -861,7 +919,7 @@ public class PhTreeSolidMultiMapF2<T> {
          * @param center new center point
          * @return this
          */
-        public PhKnnQueryF<T> reset(int nMin, PhDistance dist, double[] center) {
+        public PhKnnQuerySF<T> reset(int nMin, PhDistance dist, double[] center) {
             pos = Integer.MAX_VALUE;
             long[] lCenter = new long[center.length];
             pre.pre(center, lCenter);

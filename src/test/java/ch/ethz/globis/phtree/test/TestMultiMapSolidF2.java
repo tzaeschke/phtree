@@ -6,11 +6,8 @@
  */
 package ch.ethz.globis.phtree.test;
 
-import ch.ethz.globis.phtree.PhDistanceF;
-import ch.ethz.globis.phtree.PhEntryDistF;
-import ch.ethz.globis.phtree.PhTreeMultiMapF2;
+import ch.ethz.globis.phtree.*;
 import ch.ethz.globis.phtree.PhTreeMultiMapF2.*;
-import ch.ethz.globis.phtree.PhTreeSolidMultiMapF2;
 import ch.ethz.globis.phtree.util.BitTools;
 import ch.ethz.globis.phtree.util.Bits;
 import ch.ethz.globis.phtree.util.PhTreeStats;
@@ -20,33 +17,35 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 
-public class TestSolidMultiMapF2 {
+public class TestMultiMapSolidF2 {
 
-    private <T>PhTreeSolidMultiMapF2<T> newTree(int DIM) {
-        return PhTreeSolidMultiMapF2.create(DIM);
+    private <T> PhTreeMultiMapSF2<T> newTree(int dim) {
+        return PhTreeMultiMapSF2.create(dim);
     }
 
     @Test
     public void testCRUD() {
-        PhTreeSolidMultiMapF2<Integer> idx = newTree(2);
-        Random R = new Random(0);
-        int DIM = 3;
-        int DX = 3;
-        int N = 1000;
-        HashMap<Integer, double[]> map = new HashMap<>();
+        PhTreeMultiMapSF2<Integer> idx = newTree(2);
+        final Random R = new Random(0);
+        final int DIM = 3;
+        final int DX = 3;
+        final int N = 1000;
+        HashMap<Integer, PhEntrySF<Integer>> map = new HashMap<>();
 
         int id = 1;
         for (int i = 0; i < N; i++) {
-            double[] v = new double[DIM];
+            double[] vLo = new double[DIM];
+            double[] vUp = new double[DIM];
             for (int j = 0; j < DIM; j++) {
-                v[j] = R.nextDouble();
+                vLo[j] = R.nextDouble();
+                vUp[j] = vLo[j] + 0.1 * R.nextDouble();
             }
             for (int x = 0; x < DX; x++) {
-                map.put(id, v);
-                assertTrue(Bits.toBinary(v), idx.put(v, id));
-                assertTrue(idx.contains(v, id));
+                map.put(id, new PhEntrySF<>(vLo, vUp, id));
+                assertTrue(idx.put(vLo, vUp, id));
+                assertTrue(idx.contains(vLo, vUp, id));
                 ArrayList<Integer> list = new ArrayList<>();
-                idx.get(v).forEach(list::add);
+                idx.get(vLo, vUp).forEach(list::add);
                 for (int x2 = 0; x2 <= x; x2++) {
                     assertTrue(list.contains(id - x2));
                 }
@@ -58,38 +57,43 @@ public class TestSolidMultiMapF2 {
         assertEquals(N * DX, idx.size());
 
         // replace values
-        for (Map.Entry<Integer, double[]> e : map.entrySet()) {
-            assertTrue(idx.replace(e.getValue(), e.getKey(), -e.getKey()));
+        for (Map.Entry<Integer, PhEntrySF<Integer>> e2 : map.entrySet()) {
+            PhEntrySF<Integer> e = e2.getValue();
+            assertTrue(idx.replace(e.lower(), e.upper(), e2.getKey(), -e2.getKey()));
         }
 
         assertEquals(N * DX, idx.size());
 
         // update keys
-        for (Map.Entry<Integer, double[]> e : map.entrySet()) {
-            double[] v2 = new double[DIM];
+        for (Map.Entry<Integer, PhEntrySF<Integer>> e2 : map.entrySet()) {
+            PhEntrySF<Integer> e = e2.getValue();
+            double[] vLo2 = new double[DIM];
+            double[] vUp2 = new double[DIM];
             for (int j = 0; j < DIM; j++) {
                 // preserve duplicates
-                v2[j] = e.getValue()[j] + 0.1;
+                vLo2[j] = e.lower()[j] + 0.1;
+                vUp2[j] = e.upper()[j] + 0.1;
             }
-            assertTrue(idx.update(e.getValue(), -e.getKey(), v2));
-            assertFalse(idx.update(e.getValue(), -e.getKey(), v2));
-            map.put(e.getKey(), v2);
+            assertTrue(idx.update(e.lower(), e.upper(), -e2.getKey(), vLo2, vUp2));
+            assertFalse(idx.update(e.lower(), e.upper(), -e2.getKey(), vLo2, vUp2));
+            map.put(e2.getKey(), new PhEntrySF<>(vLo2, vUp2, e2.getKey()));
         }
 
         assertEquals(N * DX, idx.size());
 
         // remove
-        for (Map.Entry<Integer, double[]> e : map.entrySet()) {
+        for (Map.Entry<Integer, PhEntrySF<Integer>> e2 : map.entrySet()) {
+            PhEntrySF<Integer> e = e2.getValue();
             if (idx.size() < N * DX / 2) {
                 // The key may have already been removed
-                if (idx.get(e.getValue()).iterator().hasNext()) {
-                    assertEquals(-e.getKey(), (int) idx.remove(e.getValue()).iterator().next());
+                if (idx.get(e.lower(), e.upper()).iterator().hasNext()) {
+                    assertEquals(-e2.getKey(), (int) idx.remove(e.lower(), e.upper()).iterator().next());
                 }
-                assertFalse(idx.remove(e.getValue()).iterator().hasNext());
-                assertFalse(idx.remove(e.getValue(), -e.getKey()));
+                assertFalse(idx.remove(e.lower(), e.upper()).iterator().hasNext());
+                assertFalse(idx.remove(e.lower(), e.upper(), -e2.getKey()));
             } else {
-                assertTrue(idx.remove(e.getValue(), -e.getKey()));
-                assertFalse(idx.remove(e.getValue(), -e.getKey()));
+                assertTrue(idx.remove(e.lower(), e.upper(), -e2.getKey()));
+                assertFalse(idx.remove(e.lower(), e.upper(), -e2.getKey()));
             }
         }
 
@@ -101,43 +105,45 @@ public class TestSolidMultiMapF2 {
      */
     @Test
     public void testCRUD_JDK8() {
-        PhTreeSolidMultiMapF2<Integer> idx = newTree(2);
-        Random R = new Random(0);
-        int DIM = 3;
-        int DX = 3;
-        int N = 1000;
-        HashMap<Integer, double[]> map = new HashMap<>();
+        PhTreeMultiMapSF2<Integer> idx = newTree(2);
+        final Random R = new Random(0);
+        final int DIM = 3;
+        final int DX = 3;
+        final int N = 1000;
+        HashMap<Integer, PhEntrySF<Integer>> map = new HashMap<>();
 
         int id = 1;
         for (int i = 0; i < N; i++) {
-            double[] v = new double[DIM];
+            double[] vLo = new double[DIM];
+            double[] vUp = new double[DIM];
             for (int j = 0; j < DIM; j++) {
-                v[j] = R.nextDouble();
+                vLo[j] = R.nextDouble();
+                vUp[j] = vLo[j] + 0.1 * R.nextDouble();
             }
             for (int x = 0; x < DX; x++) {
-                map.put(id, v);
+                map.put(id, new PhEntrySF<>(vLo, vUp, id));
                 switch (R.nextInt(3)) {
                     case 0:
-                        assertNull(idx.putIfAbsent(v, id));
-                        assertEquals(id, (int) idx.putIfAbsent(v, id));
+                        assertNull(idx.putIfAbsent(vLo, vUp, id));
+                        assertEquals(id, (int) idx.putIfAbsent(vLo, vUp, id));
                         break;
                     case 1: {
                         final int id2 = id;
-                        assertEquals(id2, (int) idx.computeIfAbsent(v, id2, v2 -> id2));
-                        assertNull(idx.computeIfAbsent(v, id2, v2 -> id2));
+                        assertEquals(id2, (int) idx.computeIfAbsent(vLo, vUp, id2, (l2, u2) -> id2));
+                        assertNull(idx.computeIfAbsent(vLo, vUp, id2, (l2, u2) -> id2));
                         break;
                     }
                     case 2:
                         final int id2 = id;
-                        assertEquals(id2, (int) idx.compute(v, id, (v2, idNull2) -> id2));
+                        assertEquals(id2, (int) idx.compute(vLo, vUp, id, (l2, u2, idNull2) -> id2));
                         // idempotent operation:
-                        assertEquals(id2, (int) idx.compute(v, id, (v2, idNull2) -> id2));
+                        assertEquals(id2, (int) idx.compute(vLo, vUp, id, (l2, u2, idNull2) -> id2));
                         break;
                     default:
                         throw new IllegalStateException();
                 }
-                assertTrue(idx.contains(v, id));
-                assertTrue(idx.get(v).iterator().hasNext());
+                assertTrue(idx.contains(vLo, vUp, id));
+                assertTrue(idx.get(vLo, vUp).iterator().hasNext());
                 id++;
             }
         }
@@ -145,31 +151,34 @@ public class TestSolidMultiMapF2 {
         assertEquals(N * DX, map.size());
         assertEquals(N * DX, idx.size());
 
-        for (Map.Entry<Integer, double[]> e : map.entrySet()) {
-            assertTrue(idx.contains(e.getValue(), e.getKey()));
+        for (Map.Entry<Integer, PhEntrySF<Integer>> e2 : map.entrySet()) {
+            PhEntrySF<Integer> e = e2.getValue();
+            assertTrue(idx.contains(e.lower(), e.upper(), e2.getKey()));
         }
 
         // replace values
-        for (Map.Entry<Integer, double[]> e : map.entrySet()) {
+        for (Map.Entry<Integer, PhEntrySF<Integer>> e2 : map.entrySet()) {
+            PhEntrySF<Integer> e = e2.getValue();
             if (R.nextBoolean()) {
-                assertEquals(-e.getKey(), (int) idx.compute(e.getValue(), e.getKey(), (v2, id2) -> -id2));
+                assertEquals(-e2.getKey(), (int) idx.compute(e.lower(), e.upper(), e2.getKey(), (up, lo, id2) -> -id2));
             } else {
-                assertEquals(-e.getKey(), (int) idx.computeIfPresent(e.getValue(), e.getKey(), (v2, id2) -> -id2));
+                assertEquals(-e2.getKey(), (int) idx.computeIfPresent(e.lower(), e.upper(), e2.getKey(), (lo, up, id2) -> -id2));
             }
         }
 
         assertEquals(N * DX, idx.size());
 
         // remove
-        for (Map.Entry<Integer, double[]> e : map.entrySet()) {
+        for (Map.Entry<Integer, PhEntrySF<Integer>> e2 : map.entrySet()) {
+            PhEntrySF<Integer> e = e2.getValue();
             if (idx.size() <= N * DX / 2) {
-                assertNull(idx.compute(e.getValue(), -e.getKey(), (v2, id2) -> null));
-                assertNull(idx.compute(e.getValue(), -e.getKey(), (v2, id2) -> null));
+                assertNull(idx.compute(e.lower(), e.upper(), -e2.getKey(), (lo, up, id2) -> null));
+                assertNull(idx.compute(e.lower(), e.upper(), -e2.getKey(), (lo, up, id2) -> null));
             } else {
-                assertNull(idx.computeIfPresent(e.getValue(), -e.getKey(), (v2, id2) -> null));
-                assertNull(idx.computeIfPresent(e.getValue(), -e.getKey(), (v2, id2) -> null));
+                assertNull(idx.computeIfPresent(e.lower(), e.upper(), -e2.getKey(), (lo, up, id2) -> null));
+                assertNull(idx.computeIfPresent(e.lower(), e.upper(), -e2.getKey(), (lo, up, id2) -> null));
             }
-            assertFalse(idx.contains(e.getValue(), e.getKey()));
+            assertFalse(idx.contains(e.lower(), e.upper(), e2.getKey()));
         }
 
         assertEquals(0, idx.size());
@@ -178,7 +187,7 @@ public class TestSolidMultiMapF2 {
 
     @Test
     public void testRangeQuery() {
-        PhTreeSolidMultiMapF2<double[]> idx = newTree(2);
+        PhTreeMultiMapSF2<double[]> idx = newTree(2);
         idx.put(new double[]{2, 2}, new double[]{2, 2});
         idx.put(new double[]{2, 2}, new double[]{2, 2});
         idx.put(new double[]{2, 2}, new double[]{2, 2});
@@ -210,7 +219,7 @@ public class TestSolidMultiMapF2 {
 
     @Test
     public void testKNN() {
-        PhTreeMultiMapF2<double[]> idx = newTree(2);
+        PhTreeMultiMapSF2<double[]> idx = newTree(2);
         idx.put(new double[]{2, 2}, new double[]{2, 2});
         idx.put(new double[]{2, 2}, new double[]{2, 2});
         idx.put(new double[]{2, 2}, new double[]{2, 2});
@@ -254,7 +263,7 @@ public class TestSolidMultiMapF2 {
         for (int d = 0; d < LOOP; d++) {
             list.clear();
             int id = 0;
-            PhTreeSolidMultiMapF2<Integer> ind = newTree(DIM);
+            PhTreeMultiMapSF2<Integer> ind = newTree(DIM);
             for (int i = 0; i < N; i++) {
                 double[] v = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
@@ -293,7 +302,7 @@ public class TestSolidMultiMapF2 {
         Random R = new Random(0);
 
         for (int d = 0; d < DIM; d++) {
-            PhTreeSolidMultiMapF2<double[]> ind = newTree(DIM);
+            PhTreeMultiMapSF2<double[]> ind = newTree(DIM);
             for (int i = 0; i < N; i++) {
                 double[] v = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
@@ -376,7 +385,7 @@ public class TestSolidMultiMapF2 {
         final int range = MAXV / 2;
         final Random R = new Random(0);
         for (int d = 0; d < LOOP; d++) {
-            PhTreeSolidMultiMapF2<Integer> ind = newTree(DIM);
+            PhTreeMultiMapSF2<Integer> ind = newTree(DIM);
             PhRangeQueryF<Integer> q = ind.rangeQuery(1, PhDistanceF.THIS, new double[DIM]);
             for (int i = 0; i < N; i++) {
                 double[] v = new double[DIM];
@@ -453,7 +462,7 @@ public class TestSolidMultiMapF2 {
         return ret;
     }
 
-    private <T> List<PhEntryDistF<T>> toList(PhKnnQueryF<T> q) {
+    private <T> List<PhEntryDistF<T>> toList(PhKnnQuerySF<T> q) {
         ArrayList<PhEntryDistF<T>> ret = new ArrayList<>();
         while (q.hasNext()) {
             if (ret.size() % 2 == 0) {
@@ -494,7 +503,7 @@ public class TestSolidMultiMapF2 {
     }
 
     private void testEmptyTreeStats(int dim) {
-        PhTreeSolidMultiMapF2<Integer> ind = newTree(dim);
+        PhTreeMultiMapSF2<Integer> ind = newTree(dim);
         PhTreeStats stats = ind.getStats();
         assertEquals(0, stats.nNodes);
     }
