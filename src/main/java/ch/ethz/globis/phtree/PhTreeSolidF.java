@@ -516,7 +516,7 @@ public class PhTreeSolidF<T> implements Iterable<T> {
 			return dist;
 		}
 		
-	@Override
+		@Override
 		public String toString() {
 			return super.toString() + " dist=" + dist;
 		}
