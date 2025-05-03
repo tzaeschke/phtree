@@ -217,8 +217,8 @@ public class PhTreeMultiMapF2<T> {
     /**
      * @return an iterator over all elements in the tree
      */
-    public PhExtentF<T> queryExtent() {
-        return new PhExtentF<>(pht.queryExtent(), pht.getDim(), pre);
+    public PhExtentSF<T> queryExtent() {
+        return new PhExtentSF<>(pht.queryExtent(), pht.getDim(), pre);
     }
 
     /**
@@ -642,10 +642,10 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhExtentF<T> extends PhIteratorF<T> {
+    public static class PhExtentSF<T> extends PhIteratorF<T> {
         private final PhExtent<Object> iter;
 
-        protected PhExtentF(PhExtent<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhExtentSF(PhExtent<Object> iter, int dims, PreProcessorPointF pre) {
             super(iter, dims, pre);
             this.iter = iter;
         }
@@ -656,7 +656,7 @@ public class PhTreeMultiMapF2<T> {
          * @return this
          */
         @Override
-        public PhExtentF<T> reset() {
+        public PhExtentSF<T> reset() {
             iter.reset();
             super.reset();
             return this;
