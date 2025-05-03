@@ -2,7 +2,7 @@
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
  * Copyright 2019 Improbable Worlds Limited. All rights reserved.
- * Copyright 2022-2023 Tilmann Zäschke. All rights reserved.
+ * Copyright 2022-2025 Tilmann Zäschke. All rights reserved.
  *
  * This file is part of the PH-Tree project.
  *
@@ -23,9 +23,11 @@ package ch.ethz.globis.phtree;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
-import ch.ethz.globis.phtree.pre.PreProcessorPointF;
 import ch.ethz.globis.phtree.pre.PreProcessorRangeF;
-import ch.ethz.globis.phtree.util.*;
+import ch.ethz.globis.phtree.util.MutableInt;
+import ch.ethz.globis.phtree.util.MutableRef;
+import ch.ethz.globis.phtree.util.PhIteratorBase;
+import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
 
 import java.util.*;
@@ -73,12 +75,12 @@ public class PhTreeMultiMapSF2<T> {
     private int size = 0;
 
     protected PhTreeMultiMapSF2(int dim, PreProcessorRangeF pre) {
-        this (PhTree.create(dim * 2), pre);
+        this(PhTree.create(dim * 2), pre);
     }
 
     protected PhTreeMultiMapSF2(PhTree<Object> tree, PreProcessorRangeF pre) {
-        this.dims = tree.getDim()/2;
-        if (dims*2 != tree.getDim()) {
+        this.dims = tree.getDim() / 2;
+        if (dims * 2 != tree.getDim()) {
             throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");
         }
         this.pht = tree;
@@ -151,6 +153,7 @@ public class PhTreeMultiMapSF2<T> {
 
     /**
      * Check whether an entry with the specified coordinates exists in the tree.
+     *
      * @param lower lower left corner
      * @param upper upper right corner
      * @param value the value
@@ -187,10 +190,10 @@ public class PhTreeMultiMapSF2<T> {
 
     /**
      * Removes all values that exactly match lower/upper.
+     *
      * @param lower lower left corner
      * @param upper upper right corner
      * @return the value or {@code null} if no entry existed
-     *
      * @see PhTree#remove(long...)
      */
     public Iterable<T> remove(double[] lower, double[] upper) {
@@ -250,7 +253,7 @@ public class PhTreeMultiMapSF2<T> {
      * @return an iterator over all elements in the tree
      */
     public PhExtentF<T> queryExtent() {
-        return new PhExtentF<>(pht.queryExtent(), pht.getDim(), pre);
+        return new PhExtentF<>(pht.queryExtent(), dims, pre);
     }
 
     /**
@@ -273,6 +276,7 @@ public class PhTreeMultiMapSF2<T> {
 
     /**
      * Query for all bodies that are fully included in the query rectangle.
+     *
      * @param lower 'lower left' corner of query rectangle
      * @param upper 'upper right' corner of query rectangle
      * @return Iterator over all matching elements.
@@ -287,6 +291,7 @@ public class PhTreeMultiMapSF2<T> {
 
     /**
      * Query for all bodies that are included in or partially intersect with the query rectangle.
+     *
      * @param lower 'lower left' corner of query rectangle
      * @param upper 'upper right' corner of query rectangle
      * @return Iterator over all matching elements.
@@ -301,119 +306,36 @@ public class PhTreeMultiMapSF2<T> {
 
     /**
      * Locate nearest neighbours for a given point in space.
-     * @param nMin number of entries to be returned. More entries may or may not be returned if
-     * several points have the same distance.
+     *
+     * @param nMin   number of entries to be returned. More entries may or may not be returned if
+     *               several points have the same distance.
      * @param center the center point
      * @return The query iterator.
      */
-    public PhKnnQuerySF<T> nearestNeighbour(int nMin, double ... center) {
+    public PhKnnQuerySF<T> nearestNeighbour(int nMin, double... center) {
         return nearestNeighbour(nMin, dist, center);
     }
 
     /**
      * Locate nearest neighbours for a given point in space.
-     * @param nMin number of entries to be returned. More entries may or may not be returned if
-     * several points have the same distance.
+     *
+     * @param nMin             number of entries to be returned. More entries may or may not be returned if
+     *                         several points have the same distance.
      * @param distanceFunction A distance function for rectangle data. This parameter is optional,
-     * passing a {@code null} will use the default distance function.
-     * @param center the center point
+     *                         passing a {@code null} will use the default distance function.
+     * @param center           the center point
      * @return The query iterator.
      */
-    public PhKnnQuerySF<T> nearestNeighbour(int nMin, PhDistanceSF distanceFunction,
-                                            double ... center) {
-        long[] lCenter = new long[2*dims];
+    public PhKnnQuerySF<T> nearestNeighbour(int nMin, PhDistanceSF distanceFunction, double... center) {
+        long[] lCenter = new long[2 * dims];
         pre.pre(center, center, lCenter);
         PhDistanceSF df = distanceFunction == null ? dist : distanceFunction;
         return new PhKnnQuerySF<>(pht.nearestNeighbour(nMin, df, null, lCenter), dims, pre);
     }
 
-
-
-//    /**
-//     * Performs a rectangular window query. The parameters are the min and max keys
-//     * which contain the minimum respectively the maximum keys in every dimension.
-//     *
-//     * @param min Minimum values
-//     * @param max Maximum values
-//     * @return Result iterator.
-//     */
-//    public PhQuerySF<T> query(double[] min, double[] max) {
-//        long[] lMin = new long[min.length];
-//        long[] lMax = new long[max.length];
-//        pre.pre(min, lMin);
-//        pre.pre(max, lMax);
-//        return new PhQuerySF<>(pht.query(lMin, lMax), pht.getDim(), pre);
-//    }
-//
-//    /**
-//     * Find all entries within a given distance from a center point.
-//     *
-//     * @param dist   Maximum distance
-//     * @param center Center point
-//     * @return All entries with at most distance `dist` from `center`.
-//     */
-//    public PhRangeQueryF<T> rangeQuery(double dist, double... center) {
-//        return rangeQuery(dist, PhDistanceF.THIS, center);
-//    }
-//
-//    /**
-//     * Find all entries within a given distance from a center point.
-//     *
-//     * @param dist         Maximum distance
-//     * @param optionalDist Distance function, optional, can be `null`.
-//     * @param center       Center point
-//     * @return All entries with at most distance `dist` from `center`.
-//     */
-//    public PhRangeQueryF<T> rangeQuery(double dist, PhDistance optionalDist, double... center) {
-//        if (optionalDist == null) {
-//            optionalDist = PhDistanceF.THIS;
-//        }
-//        long[] lKey = new long[center.length];
-//        pre.pre(center, lKey);
-//        PhRangeQuery<Object> iter = pht.rangeQuery(dist, optionalDist, lKey);
-//        return new PhRangeQueryF<>(iter, pht, pre);
-//    }
-
     public int getDim() {
         return dims;
     }
-
-//    /**
-//     * Locate nearest neighbours for a given point in space.
-//     *
-//     * @param nMin number of entries to be returned. More entries may or may not be
-//     *             returned if several points have the same distance.
-//     * @param key  the center point
-//     * @return List of neighbours.
-//     */
-//    public PhKnnQuerySF<T> nearestNeighbour(int nMin, double... key) {
-//        long[] lKey = new long[key.length];
-//        pre.pre(key, lKey);
-//        PhKnnQuery<Object> iter = pht.nearestNeighbour(nMin, PhDistanceF.THIS, null, lKey);
-//        return new PhKnnQuerySF<>(iter, pht.getDim(), pre);
-//    }
-//
-//    /**
-//     * Locate nearest neighbours for a given point in space.
-//     *
-//     * @param nMin number of entries to be returned. More entries may or may not be
-//     *             returned if several points have the same distance.
-//     * @param dist Distance function. Note that the distance function should be
-//     *             compatible with the preprocessor of the tree.
-//     * @param key  the center point
-//     * @return KNN query iterator.
-//     */
-//    public PhKnnQuerySF<T> nearestNeighbour(int nMin, PhDistance dist, double... key) {
-//        long[] lKey = new long[key.length];
-//        pre.pre(key, lKey);
-//        PhKnnQuery<Object> iter = pht.nearestNeighbour(nMin, dist, null, lKey);
-//        return new PhKnnQuerySF<>(iter, pht.getDim(), pre);
-//    }
-
-//    @Override
-//    public PhIteratorSF<T> iterator() {
-//        return new PhIteratorSF<>(pht.queryExtent(), dims, pre);
-//    }
 
     /**
      * Update the key of an entry. Update may fail if the old key does not exist, or
@@ -421,7 +343,7 @@ public class PhTreeMultiMapSF2<T> {
      *
      * @param oldLower old lower left corner
      * @param oldUpper old upper right corner
-     * @param value  value
+     * @param value    value
      * @param newLower new lower left corner
      * @param newUpper new upper right corner
      * @return the value (can be {@code null}) associated with the updated key if
@@ -435,50 +357,6 @@ public class PhTreeMultiMapSF2<T> {
         }
         return false;
     }
-
-//    /**
-//     * Same as {@link #query(double[], double[])}, except that it returns a list
-//     * instead of an iterator. This may be faster for small result sets.
-//     *
-//     * @param min min values
-//     * @param max max values
-//     * @return List of query results
-//     */
-//    public List<PhEntryF<T>> queryAll(double[] min, double[] max) {
-//        return queryAll(min, max, Integer.MAX_VALUE, null, e -> new PhEntryF<>(PhMapperK.toDouble(e.getKey()), e.getValue()));
-//    }
-//
-//    /**
-//     * Same as {@link PhTreeMultiMapSF2#queryAll(double[], double[])}, except that it
-//     * also accepts a limit for the result size, a filter and a mapper.
-//     *
-//     * @param min        min key
-//     * @param max        max key
-//     * @param maxResults maximum result count
-//     * @param filter     filter object (optional)
-//     * @param mapper     mapper object (optional)
-//     * @param <R>        value type
-//     * @return List of query results
-//     */
-//    public <R> List<R> queryAll(double[] min, double[] max, int maxResults, PhFilter filter, PhMapper<T, R> mapper) {
-//        long[] lUpp = new long[min.length];
-//        long[] lLow = new long[max.length];
-//        pre.pre(min, lLow);
-//        pre.pre(max, lUpp);
-//
-//        ArrayList<R> list = new ArrayList<>();
-//        pht.queryAll(lLow, lUpp, maxResults, filter, e2 -> e2).forEach(entry -> {
-//            if (filter.isValid(entry.getKey())) {
-//                if (entry.getValue() instanceof ArrayList) {
-//                    ArrayList<T> eList = asList(entry.getValue());
-//                    eList.forEach(t -> list.add(mapper.map(new PhEntry<>(entry.getKey(), t))));
-//                } else {
-//                    list.add(mapper.map(new PhEntry<>(entry.getKey(), asT(entry.getValue()))));
-//                }
-//            }
-//        });
-//        return list;
-//    }
 
     /**
      * Clear the tree.
@@ -536,8 +414,8 @@ public class PhTreeMultiMapSF2<T> {
     /**
      * Replaces an existing entry with a new value.
      *
-     * @param lower lower left corner
-     * @param upper upper right corner
+     * @param lower    lower left corner
+     * @param upper    upper right corner
      * @param oldValue old value
      * @param newValue new value
      * @return {@code true} if the value was replaced
@@ -548,8 +426,8 @@ public class PhTreeMultiMapSF2<T> {
     }
 
     /**
-     * @param lower lower left corner
-     * @param upper upper right corner
+     * @param lower           lower left corner
+     * @param upper           upper right corner
      * @param value           value
      * @param mappingFunction mapping function
      * @return new value or null if none is associated
@@ -562,8 +440,8 @@ public class PhTreeMultiMapSF2<T> {
     }
 
     /**
-     * @param lower lower left corner
-     * @param upper upper right corner
+     * @param lower             lower left corner
+     * @param upper             upper right corner
      * @param value             value
      * @param remappingFunction mapping function
      * @return new value or null if none is associated
@@ -574,8 +452,8 @@ public class PhTreeMultiMapSF2<T> {
     }
 
     /**
-     * @param lower lower left corner
-     * @param upper upper right corner
+     * @param lower             lower left corner
+     * @param upper             upper right corner
      * @param value             value
      * @param remappingFunction mapping function
      * @return new value or null if none is associated
@@ -717,7 +595,7 @@ public class PhTreeMultiMapSF2<T> {
             checkNext();
             pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
             buffer.setValue(getNextValue());
-            PhEntrySF<T> ret = new PhEntrySF<>(buffer.lower(), buffer.upper().clone(), buffer.value());
+            PhEntrySF<T> ret = new PhEntrySF<>(buffer.lower().clone(), buffer.upper().clone(), buffer.value());
             findNext();
             return ret;
         }
@@ -804,8 +682,8 @@ public class PhTreeMultiMapSF2<T> {
             qMAX = new double[dims];
             Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
             this.intersect = intersect;
-            lMin = new long[dims];
-            lMax = new long[dims];
+            lMin = new long[dims * 2];
+            lMax = new long[dims * 2];
         }
 
         /**
@@ -825,7 +703,7 @@ public class PhTreeMultiMapSF2<T> {
                 pre.pre(upper, upper, lMax);
             }
             q.reset(lMin, lMax);
-            super.reset(); // TODO this is from MM
+            super.reset();
             return this;
         }
     }
@@ -843,18 +721,12 @@ public class PhTreeMultiMapSF2<T> {
         private PhEntryDist<Object> internalEntry;
         private ArrayList<T> currentList;
         private int pos = Integer.MAX_VALUE;
-        private final double[] qMIN;
-        private final double[] qMAX;
 
         protected PhKnnQuerySF(PhKnnQuery<Object> iter, int dims, PreProcessorRangeF pre) {
             this.iter = iter;
             this.pre = pre;
             this.buffer = new PhEntryDistSF<>(new double[dims], new double[dims], null, Double.NaN);
             this.bufferList.add(null);
-            this.qMIN = new double[dims];
-            Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
-            this.qMAX = new double[dims];
-            Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
             findNextInternal();
         }
 
@@ -946,34 +818,4 @@ public class PhTreeMultiMapSF2<T> {
             return this;
         }
     }
-
-//    /**
-//     * Range query iterator class for floating point keys.
-//     *
-//     * @param <T> value type
-//     */
-//    public static class PhRangeQueryF<T> extends PhIteratorF<T> {
-//        private final long[] lCenter;
-//        private final PhRangeQuery<Object> q;
-//
-//        protected PhRangeQueryF(PhRangeQuery<Object> iter, PhTree<Object> tree, PreProcessorPointF pre) {
-//            super(iter, tree.getDim(), pre);
-//            this.q = iter;
-//            this.lCenter = new long[tree.getDim()];
-//        }
-//
-//        /**
-//         * Restarts the query with a new center point and range.
-//         *
-//         * @param range  new range
-//         * @param center new center point
-//         * @return this
-//         */
-//        public PhRangeQueryF<T> reset(double range, double... center) {
-//            pre.pre(center, lCenter);
-//            q.reset(range, lCenter);
-//            super.reset();
-//            return this;
-//        }
-//    }
 }

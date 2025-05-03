@@ -7,7 +7,11 @@
 package ch.ethz.globis.phtree.test;
 
 import ch.ethz.globis.phtree.*;
-import ch.ethz.globis.phtree.PhTreeMultiMapSF2.*;
+import ch.ethz.globis.phtree.PhTreeMultiMapSF2.PhExtentF;
+import ch.ethz.globis.phtree.PhTreeMultiMapSF2.PhIteratorSF;
+import ch.ethz.globis.phtree.PhTreeMultiMapSF2.PhKnnQuerySF;
+import ch.ethz.globis.phtree.PhTreeMultiMapSF2.PhQuerySF;
+import ch.ethz.globis.phtree.pre.PreProcessorRangeF;
 import ch.ethz.globis.phtree.util.BitTools;
 import ch.ethz.globis.phtree.util.Bits;
 import ch.ethz.globis.phtree.util.PhTreeStats;
@@ -229,26 +233,26 @@ public class TestMultiMapSolidF2 {
         idx.put(new double[]{2.9, 0.9}, new double[]{3.1, 1.1}, new double[]{3, 1});
 
         List<PhEntrySF<double[]>> result;
-        result = toList(idx.queryIntersect(new double[]{3, 3}, new double[]{3, 3}));
+        result = toList(idx.queryInclude(new double[]{3, 3}, new double[]{3, 3}));
         assertTrue(result.isEmpty());
 
-        result = toList(idx.queryIntersect(new double[]{2, 2}, new double[]{2, 2}));
+        result = toList(idx.queryInclude(new double[]{2, 2}, new double[]{2, 2}));
         assertTrue(result.isEmpty());
-        result = toList(idx.queryIntersect(new double[]{1.9, 1.9}, new double[]{2.1, 2.1}));
+        result = toList(idx.queryInclude(new double[]{1.9, 1.9}, new double[]{2.1, 2.1}));
         assertEquals(3, result.size());
         check(result.get(0).value(), 2, 2);
         check(result.get(1).value(), 2, 2);
         check(result.get(2).value(), 2, 2);
 
-        result = toList(idx.queryIntersect(new double[]{0.8, 0.8}, new double[]{1.2, 1.2}));
+        result = toList(idx.queryInclude(new double[]{0.8, 0.8}, new double[]{1.2, 1.2}));
         assertEquals(1, result.size());
         check(result.get(0).value(), 1, 1);
 
-        result = toList(idx.queryIntersect(new double[]{0.8, 2.8}, new double[]{1.2, 3.2}));
+        result = toList(idx.queryInclude(new double[]{0.8, 2.8}, new double[]{1.2, 3.2}));
         assertEquals(1, result.size());
         check(result.get(0).value(), 1, 3);
 
-        result = toList(idx.queryIntersect(new double[]{2.8, 0.8}, new double[]{3.2, 1.2}));
+        result = toList(idx.queryInclude(new double[]{2.8, 0.8}, new double[]{3.2, 1.2}));
         assertEquals(1, result.size());
         check(result.get(0).value(), 3, 1);
     }
@@ -330,14 +334,18 @@ public class TestMultiMapSolidF2 {
                 for (int j = 0; j < DIM; j++) {
                     v[j] = R.nextDouble() * MAXV;
                 }
-                list.forEach(xx -> xx.dist = distCenter(v, xx.lo, xx.up));
+                list.forEach(xx -> xx.dist = distEdge(v, xx.lo, xx.up));
                 list.sort(Comparator.comparingDouble(o -> o.dist));
-                List<PhEntryDistSF<Integer>> nnList = toList(q.reset(MIN_RESULT, PhDistanceF.THIS, v));
+                PhDistanceSF distSF = new PhDistanceSFEdgeDist(new PreProcessorRangeF.IEEE(3), 3);
+                List<PhEntryDistSF<Integer>> nnList = toList(q.reset(MIN_RESULT, distSF, v));
                 assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
                 for (int x = 0; x < MIN_RESULT; ++x) {
                     assertEquals(list.get(x).dist, nnList.get(x).dist(), 0.0);
-                    assertArrayEquals(list.get(x).lo, nnList.get(x).lower(), 0.0);
-                    assertArrayEquals(list.get(x).up, nnList.get(x).upper(), 0.0);
+                    if (list.get(x).dist > 0) {
+                        // Ignore for dist=0 (==overlap with box), it is likely that we have multiple matching boxes
+                        assertArrayEquals(list.get(x).lo, nnList.get(x).lower(), 0.0);
+                        assertArrayEquals(list.get(x).up, nnList.get(x).upper(), 0.0);
+                    }
                 }
             }
         }
@@ -384,12 +392,12 @@ public class TestMultiMapSolidF2 {
 
     @Test
     public void testQueryInclude() {
-        testQuery(true);
+        testQuery(false);
     }
 
     private void testQuery(boolean intersect) {
         final int MAX_DIM = 10;
-        final int N = 1000;
+        final int N = 10000;
         Random R = new Random(0);
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
@@ -398,7 +406,7 @@ public class TestMultiMapSolidF2 {
                 double[] vLo = new double[DIM];
                 double[] vUp = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
-                    vLo[j] = R.nextDouble();
+                    vLo[j] = R.nextDouble() * 2 - 1;
                     vUp[j] = vLo[j] + 0.1 * R.nextDouble();
                 }
                 assertTrue(ind.put(vLo, vUp, vLo));
@@ -479,12 +487,35 @@ public class TestMultiMapSolidF2 {
                     min[j] = v - MAXV * 0.25;
                     max[j] = v + MAXV * 0.25;
                 }
-                PhEntrySF<Integer> exp = query(ind, min, max, intersect).get(0);
+                List<PhEntrySF<Integer>> expList = query(ind, min, max, intersect);
                 List<PhEntrySF<Integer>> nnList = toList(q.reset(min, max));
                 assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
-                PhEntrySF<Integer> nn = nnList.get(0);
-                check(min, max, exp, nn);
+                expList.sort(new EntrySFComparator<>());
+                nnList.sort(new EntrySFComparator<>());
+                for (int j = 0; j < expList.size(); j++) {
+                    assertEquals(expList.get(j), nnList.get(j));
+                }
+                assertEquals(expList.size(), nnList.size());
             }
+        }
+    }
+
+    private static class EntrySFComparator<T> implements Comparator<PhEntrySF<T>> {
+        @Override
+        public int compare(PhEntrySF<T> o1, PhEntrySF<T> o2) {
+            for (int i = 0; i < o1.lower().length; i++) {
+                int c = Double.compare(o1.lower()[i], o2.lower()[i]);
+                if (c != 0) {
+                    return c;
+                }
+            }
+            for (int i = 0; i < o1.upper().length; i++) {
+                int c = Double.compare(o1.upper()[i], o2.upper()[i]);
+                if (c != 0) {
+                    return c;
+                }
+            }
+            return 0;
         }
     }
 
@@ -540,6 +571,24 @@ public class TestMultiMapSolidF2 {
             double dx = hi[i] - lo[i];
             double dl = p[i] - dx;
             d += dl * dl;
+        }
+        return Math.sqrt(d);
+    }
+
+    private double distEdge(double[] p, double[] lo, double[] hi) {
+        double d = 0;
+        double[] d1lo = p;
+        double[] d1up = p;
+        double[] d2lo = lo;
+        double[] d2up = hi;
+        for (int i = 0; i < d1lo.length; i++) {
+            double dOnAxis = 0;
+            if (d1up[i] < d2lo[i]) {
+                dOnAxis = d2lo[i] - d1up[i];
+            } else if (d1lo[i] > d2up[i]) {
+                dOnAxis = d1lo[i] - d2up[i];
+            }
+            d += dOnAxis * dOnAxis;
         }
         return Math.sqrt(d);
     }
