@@ -6,6 +6,8 @@
  */
 package ch.ethz.globis.phtree;
 
+import java.util.Objects;
+
 public class PhEntryDistSF<T> extends PhEntrySF<T> {
     private double dist;
 
@@ -13,7 +15,7 @@ public class PhEntryDistSF<T> extends PhEntrySF<T> {
      * @param lower lower corner of rectangle key
      * @param upper upper corner of rectangle key
      * @param value value
-     * @param dist distance value
+     * @param dist  distance value
      */
     public PhEntryDistSF(double[] lower, double[] upper, T value, double dist) {
         super(lower, upper, value);
@@ -30,6 +32,20 @@ public class PhEntryDistSF<T> extends PhEntrySF<T> {
      */
     public double dist() {
         return dist;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        PhEntryDistSF<?> that = (PhEntryDistSF<?>) o;
+        return Double.compare(dist, that.dist) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), dist);
     }
 
     @Override

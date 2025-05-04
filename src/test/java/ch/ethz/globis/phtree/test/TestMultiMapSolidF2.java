@@ -18,6 +18,7 @@ import ch.ethz.globis.phtree.util.PhTreeStats;
 import org.junit.Test;
 
 import java.util.*;
+import java.util.function.BiFunction;
 
 import static org.junit.Assert.*;
 
@@ -30,7 +31,7 @@ public class TestMultiMapSolidF2 {
     @Test
     public void testCRUD() {
         PhTreeMultiMapSF2<Integer> idx = newTree(2);
-        final Random R = new Random(0);
+        final Random rnd = new Random(0);
         final int DIM = 3;
         final int DX = 3;
         final int N = 1000;
@@ -41,8 +42,8 @@ public class TestMultiMapSolidF2 {
             double[] vLo = new double[DIM];
             double[] vUp = new double[DIM];
             for (int j = 0; j < DIM; j++) {
-                vLo[j] = R.nextDouble();
-                vUp[j] = vLo[j] + 0.1 * R.nextDouble();
+                vLo[j] = rnd.nextDouble();
+                vUp[j] = vLo[j] + 0.1 * rnd.nextDouble();
             }
             for (int x = 0; x < DX; x++) {
                 map.put(id, new PhEntrySF<>(vLo, vUp, id));
@@ -110,7 +111,7 @@ public class TestMultiMapSolidF2 {
     @Test
     public void testCRUD_JDK8() {
         PhTreeMultiMapSF2<Integer> idx = newTree(2);
-        final Random R = new Random(0);
+        final Random rnd = new Random(0);
         final int DIM = 3;
         final int DX = 3;
         final int N = 1000;
@@ -121,12 +122,12 @@ public class TestMultiMapSolidF2 {
             double[] vLo = new double[DIM];
             double[] vUp = new double[DIM];
             for (int j = 0; j < DIM; j++) {
-                vLo[j] = R.nextDouble();
-                vUp[j] = vLo[j] + 0.1 * R.nextDouble();
+                vLo[j] = rnd.nextDouble();
+                vUp[j] = vLo[j] + 0.1 * rnd.nextDouble();
             }
             for (int x = 0; x < DX; x++) {
                 map.put(id, new PhEntrySF<>(vLo, vUp, id));
-                switch (R.nextInt(3)) {
+                switch (rnd.nextInt(3)) {
                     case 0:
                         assertNull(idx.putIfAbsent(vLo, vUp, id));
                         assertEquals(id, (int) idx.putIfAbsent(vLo, vUp, id));
@@ -163,7 +164,7 @@ public class TestMultiMapSolidF2 {
         // replace values
         for (Map.Entry<Integer, PhEntrySF<Integer>> e2 : map.entrySet()) {
             PhEntrySF<Integer> e = e2.getValue();
-            if (R.nextBoolean()) {
+            if (rnd.nextBoolean()) {
                 assertEquals(-e2.getKey(), (int) idx.compute(e.lower(), e.upper(), e2.getKey(), (up, lo, id2) -> -id2));
             } else {
                 assertEquals(-e2.getKey(), (int) idx.computeIfPresent(e.lower(), e.upper(), e2.getKey(), (lo, up, id2) -> -id2));
@@ -299,7 +300,18 @@ public class TestMultiMapSolidF2 {
     }
 
     @Test
-    public void testKnnLarge() {
+    public void testKnnLarge_distEdge() {
+        PhDistanceSF distSF = new PhDistanceSFEdgeDist(new PreProcessorRangeF.IEEE(3), 3);
+        testKnnLarge(distSF, (p, entry) -> distEdge(p, entry.lo, entry.up));
+    }
+
+    @Test
+    public void testKnnLarge_distCenter() {
+        PhDistanceSF distSF = new PhDistanceSFCenterDist(new PreProcessorRangeF.IEEE(3), 3);
+        testKnnLarge(distSF, (p, entry) -> distCenter(p, entry.lo, entry.up));
+    }
+
+    private void testKnnLarge(PhDistanceSF distSF, BiFunction<double[], EntryDist<Integer>, Double> controlDist) {
         final int DIM = 3;
         final int LOOP = 10;
         final int N = 1000;
@@ -307,7 +319,7 @@ public class TestMultiMapSolidF2 {
         final int NQ = 100;
         final int MAXV = 1000;
         final int MIN_RESULT = 10;
-        final Random R = new Random(0);
+        final Random rnd = new Random(0);
         final ArrayList<EntryDist<Integer>> list = new ArrayList<>();
         for (int d = 0; d < LOOP; d++) {
             list.clear();
@@ -317,8 +329,8 @@ public class TestMultiMapSolidF2 {
                 double[] vLo = new double[DIM];
                 double[] vUp = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
-                    vLo[j] = R.nextDouble() * MAXV;
-                    vUp[j] = vLo[j] + 0.1 * R.nextDouble() * MAXV;
+                    vLo[j] = rnd.nextDouble() * MAXV;
+                    vUp[j] = vLo[j] + 0.1 * rnd.nextDouble() * MAXV;
                 }
                 for (int dupl = 0; dupl <= i % N_DUPL; dupl++) {
                     ind.put(vLo, vUp, id);
@@ -332,15 +344,14 @@ public class TestMultiMapSolidF2 {
             for (int i = 0; i < NQ; i++) {
                 double[] v = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
-                    v[j] = R.nextDouble() * MAXV;
+                    v[j] = rnd.nextDouble() * MAXV;
                 }
-                list.forEach(xx -> xx.dist = distEdge(v, xx.lo, xx.up));
+                list.forEach(entry -> entry.dist = controlDist.apply(v, entry));
                 list.sort(Comparator.comparingDouble(o -> o.dist));
-                PhDistanceSF distSF = new PhDistanceSFEdgeDist(new PreProcessorRangeF.IEEE(3), 3);
                 List<PhEntryDistSF<Integer>> nnList = toList(q.reset(MIN_RESULT, distSF, v));
                 assertFalse("i=" + i + " d=" + d, nnList.isEmpty());
                 for (int x = 0; x < MIN_RESULT; ++x) {
-                    assertEquals(list.get(x).dist, nnList.get(x).dist(), 0.0);
+                    assertEquals(list.get(x).dist, nnList.get(x).dist(), 0.0000001);
                     if (list.get(x).dist > 0) {
                         // Ignore for dist=0 (==overlap with box), it is likely that we have multiple matching boxes
                         assertArrayEquals(list.get(x).lo, nnList.get(x).lower(), 0.0);
@@ -355,7 +366,7 @@ public class TestMultiMapSolidF2 {
     public void testQueryFullExtent() {
         final int DIM = 5;
         final int N = 10000;
-        Random R = new Random(0);
+        Random rnd = new Random(0);
 
         for (int d = 0; d < DIM; d++) {
             PhTreeMultiMapSF2<double[]> ind = newTree(DIM);
@@ -363,8 +374,8 @@ public class TestMultiMapSolidF2 {
                 double[] vLo = new double[DIM];
                 double[] vUp = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
-                    vLo[j] = R.nextDouble();
-                    vUp[j] = vLo[j] + 0.1 * R.nextDouble();
+                    vLo[j] = rnd.nextDouble();
+                    vUp[j] = vLo[j] + 0.1 * rnd.nextDouble();
                 }
                 ind.put(vLo, vUp, vLo);
                 ind.put(vLo, vUp, vLo);
@@ -398,7 +409,7 @@ public class TestMultiMapSolidF2 {
     private void testQuery(boolean intersect) {
         final int MAX_DIM = 10;
         final int N = 10000;
-        Random R = new Random(0);
+        Random rnd = new Random(0);
 
         for (int DIM = 3; DIM <= MAX_DIM; DIM++) {
             PhTreeMultiMapSF2<double[]> ind = newTree(DIM);
@@ -406,8 +417,8 @@ public class TestMultiMapSolidF2 {
                 double[] vLo = new double[DIM];
                 double[] vUp = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
-                    vLo[j] = R.nextDouble() * 2 - 1;
-                    vUp[j] = vLo[j] + 0.1 * R.nextDouble();
+                    vLo[j] = rnd.nextDouble() * 2 - 1;
+                    vUp[j] = vLo[j] + 0.1 * rnd.nextDouble();
                 }
                 assertTrue(ind.put(vLo, vUp, vLo));
                 assertTrue(ind.put(vLo, vUp, vLo));
@@ -460,7 +471,7 @@ public class TestMultiMapSolidF2 {
         final int N = 1000;
         final int NQ = 100;
         final int MAXV = 1000;
-        final Random R = new Random(0);
+        final Random rnd = new Random(0);
         for (int d = 0; d < LOOP; d++) {
             PhTreeMultiMapSF2<Integer> ind = newTree(DIM);
             PhQuerySF<Integer> q;
@@ -473,8 +484,8 @@ public class TestMultiMapSolidF2 {
                 double[] vLo = new double[DIM];
                 double[] vUp = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
-                    vLo[j] = R.nextDouble() * MAXV;
-                    vUp[j] = vLo[j] + 0.01 * R.nextDouble() * MAXV;
+                    vLo[j] = rnd.nextDouble() * MAXV;
+                    vUp[j] = vLo[j] + 0.01 * rnd.nextDouble() * MAXV;
                 }
                 ind.put(vLo, vUp, 2 * i);
                 ind.put(vLo, vUp, 2 * i + 1);
@@ -483,7 +494,7 @@ public class TestMultiMapSolidF2 {
                 double[] min = new double[DIM];
                 double[] max = new double[DIM];
                 for (int j = 0; j < DIM; j++) {
-                    double v = R.nextDouble() * MAXV;
+                    double v = rnd.nextDouble() * MAXV;
                     min[j] = v - MAXV * 0.25;
                     max[j] = v + MAXV * 0.25;
                 }
@@ -547,28 +558,10 @@ public class TestMultiMapSolidF2 {
         return points;
     }
 
-    private <T> void check(double[] min, double[] max, PhEntrySF<T> c1, PhEntrySF<T> c2) {
-        for (int i = 0; i < min.length; i++) {
-            if (c1.lower()[i] != c2.lower()[i] || c1.upper()[i] != c2.upper()[i]) {
-//                double d1 = dist(v, c1);
-//                double d2 = dist(v, c2);
-//                double maxEps = Math.abs(d2 - d1) / d1;
-                double eps = Math.abs(c1.lower()[i] - c2.lower()[i]) + Math.abs(c1.upper()[i] - c2.upper()[i]);
-                if (eps >= 1) {
-                    System.out.println("WARNING: different values found: eps=" + eps);
-                    System.out.println("c1=" + c1);
-                    System.out.println("c2=" + c2);
-                    fail();
-                }
-                break;
-            }
-        }
-    }
-
     private double distCenter(double[] p, double[] lo, double[] hi) {
         double d = 0;
         for (int i = 0; i < p.length; i++) {
-            double dx = hi[i] - lo[i];
+            double dx = (hi[i] + lo[i]) / 2;
             double dl = p[i] - dx;
             d += dl * dl;
         }
@@ -577,16 +570,12 @@ public class TestMultiMapSolidF2 {
 
     private double distEdge(double[] p, double[] lo, double[] hi) {
         double d = 0;
-        double[] d1lo = p;
-        double[] d1up = p;
-        double[] d2lo = lo;
-        double[] d2up = hi;
-        for (int i = 0; i < d1lo.length; i++) {
+        for (int i = 0; i < p.length; i++) {
             double dOnAxis = 0;
-            if (d1up[i] < d2lo[i]) {
-                dOnAxis = d2lo[i] - d1up[i];
-            } else if (d1lo[i] > d2up[i]) {
-                dOnAxis = d1lo[i] - d2up[i];
+            if (p[i] < lo[i]) {
+                dOnAxis = lo[i] - p[i];
+            } else if (p[i] > hi[i]) {
+                dOnAxis = p[i] - hi[i];
             }
             d += dOnAxis * dOnAxis;
         }

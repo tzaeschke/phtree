@@ -68,7 +68,7 @@ public class PhTreeMultiMapSF2<T> {
     private final int dims;
     private final PhTree<Object> pht;
     private final PreProcessorRangeF pre;
-    private final PhDistanceSF dist;
+    private final PhDistanceSF defaultDist;
     private final double[] qMIN;
     private final double[] qMAX;
     private final ObjectPool<ArrayList<T>> pool = ObjectPool.create(10, () -> new ArrayList<>(DEFAULT_SIZE));
@@ -85,8 +85,7 @@ public class PhTreeMultiMapSF2<T> {
         }
         this.pht = tree;
         this.pre = pre;
-        this.dist = new PhDistanceSFEdgeDist(pre, dims);
-        // this.dist = new PhDistanceSFCenterDist(pre, dims);
+        this.defaultDist = new PhDistanceSFEdgeDist(pre, dims);
         qMIN = new double[dims];
         Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
         qMAX = new double[dims];
@@ -313,7 +312,7 @@ public class PhTreeMultiMapSF2<T> {
      * @return The query iterator.
      */
     public PhKnnQuerySF<T> nearestNeighbour(int nMin, double... center) {
-        return nearestNeighbour(nMin, dist, center);
+        return nearestNeighbour(nMin, defaultDist, center);
     }
 
     /**
@@ -329,7 +328,7 @@ public class PhTreeMultiMapSF2<T> {
     public PhKnnQuerySF<T> nearestNeighbour(int nMin, PhDistanceSF distanceFunction, double... center) {
         long[] lCenter = new long[2 * dims];
         pre.pre(center, center, lCenter);
-        PhDistanceSF df = distanceFunction == null ? dist : distanceFunction;
+        PhDistanceSF df = distanceFunction == null ? defaultDist : distanceFunction;
         return new PhKnnQuerySF<>(pht.nearestNeighbour(nMin, df, null, lCenter), dims, pre);
     }
 
