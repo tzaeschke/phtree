@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Nothing yet
+- Added `PhTreeMultiMapSolidF`, a multimap for solids(boxes). [#45](https://github.com/tzaeschke/phtree/pull/45)
 
 ## 2.8.2 - 2025-02-02
 
