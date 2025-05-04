@@ -2,7 +2,7 @@
  * Copyright 2011-2016 ETH Zurich. All Rights Reserved.
  * Copyright 2016-2018 Tilmann Zäschke. All Rights Reserved.
  * Copyright 2019 Improbable Worlds Limited. All rights reserved.
- * Copyright 2022-2023 Tilmann Zäschke. All rights reserved.
+ * Copyright 2022-2025 Tilmann Zäschke. All rights reserved.
  *
  * This file is part of the PH-Tree project.
  *
@@ -23,8 +23,11 @@ package ch.ethz.globis.phtree;
 import ch.ethz.globis.phtree.PhTree.PhExtent;
 import ch.ethz.globis.phtree.PhTree.PhKnnQuery;
 import ch.ethz.globis.phtree.PhTree.PhQuery;
-import ch.ethz.globis.phtree.pre.PreProcessorPointF;
-import ch.ethz.globis.phtree.util.*;
+import ch.ethz.globis.phtree.pre.PreProcessorRangeF;
+import ch.ethz.globis.phtree.util.MutableInt;
+import ch.ethz.globis.phtree.util.MutableRef;
+import ch.ethz.globis.phtree.util.PhIteratorBase;
+import ch.ethz.globis.phtree.util.PhTreeStats;
 import ch.ethz.globis.phtree.util.unsynced.ObjectPool;
 
 import java.util.*;
@@ -49,22 +52,44 @@ import java.util.function.Function;
  * @param <T> The value type of the tree
  * @author ztilmann (Tilmann Zaeschke)
  */
-public class PhTreeMultiMapF2<T> {
+public class PhTreeMultiMapSF2<T> {
+
+    @FunctionalInterface
+    public interface ComputeFn<V> {
+        V apply(double[] lower, double[] upper);
+    }
+
+    @FunctionalInterface
+    public interface ComputeVFn<V> {
+        V apply(double[] lower, double[] upper, V value);
+    }
 
     public static final int DEFAULT_SIZE = 2;
+    private final int dims;
     private final PhTree<Object> pht;
-    private final PreProcessorPointF pre;
+    private final PreProcessorRangeF pre;
+    private final PhDistanceSF defaultDist;
+    private final double[] qMIN;
+    private final double[] qMAX;
     private final ObjectPool<ArrayList<T>> pool = ObjectPool.create(10, () -> new ArrayList<>(DEFAULT_SIZE));
     private int size = 0;
 
-    protected PhTreeMultiMapF2(int dim, PreProcessorPointF pre) {
-        this.pht = PhTree.create(dim);
-        this.pre = pre;
+    protected PhTreeMultiMapSF2(int dim, PreProcessorRangeF pre) {
+        this(PhTree.create(dim * 2), pre);
     }
 
-    protected PhTreeMultiMapF2(PhTree<Object> tree) {
+    protected PhTreeMultiMapSF2(PhTree<Object> tree, PreProcessorRangeF pre) {
+        this.dims = tree.getDim() / 2;
+        if (dims * 2 != tree.getDim()) {
+            throw new IllegalArgumentException("The backing tree's DIM must be a multiple of 2");
+        }
         this.pht = tree;
-        this.pre = new PreProcessorPointF.IEEE();
+        this.pre = pre;
+        this.defaultDist = new PhDistanceSFEdgeDist(pre, dims);
+        qMIN = new double[dims];
+        Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
+        qMAX = new double[dims];
+        Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
     }
 
     /**
@@ -74,8 +99,8 @@ public class PhTreeMultiMapF2<T> {
      * @param <T> value type of the tree
      * @return PhTreeMultiMapF2
      */
-    public static <T> PhTreeMultiMapF2<T> create(int dim) {
-        return new PhTreeMultiMapF2<>(dim, new PreProcessorPointF.IEEE());
+    public static <T> PhTreeMultiMapSF2<T> create(int dim) {
+        return new PhTreeMultiMapSF2<>(dim, new PreProcessorRangeF.IEEE(dim));
     }
 
     /**
@@ -87,8 +112,8 @@ public class PhTreeMultiMapF2<T> {
      * @param <T> value type of the tree
      * @return PhTreeMultiMapF2
      */
-    public static <T> PhTreeMultiMapF2<T> create(int dim, PreProcessorPointF pre) {
-        return new PhTreeMultiMapF2<>(dim, pre);
+    public static <T> PhTreeMultiMapSF2<T> create(int dim, PreProcessorRangeF pre) {
+        return new PhTreeMultiMapSF2<>(dim, pre);
     }
 
     /**
@@ -99,14 +124,15 @@ public class PhTreeMultiMapF2<T> {
     }
 
     /**
-     * Insert an entry associated with a k dimensional key + value.
+     * Inserts a new ranged object into the tree.
      *
-     * @param key   the key to store the value to store
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param value the value
      * @return `true` (this implementation allows duplicate key/value entries)
      */
-    public boolean put(double[] key, T value) {
-        pht.compute(pre(key), (keyInternal, entry) -> {
+    public boolean put(double[] lower, double[] upper, T value) {
+        pht.compute(pre(lower, upper), (keyInternal, entry) -> {
             if (entry == null) {
                 return value;
             }
@@ -125,12 +151,15 @@ public class PhTreeMultiMapF2<T> {
     }
 
     /**
-     * @param key   key
+     * Check whether an entry with the specified coordinates exists in the tree.
+     *
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param value the value
-     * @return true if the key exists in the tree
+     * @return true if the entry was found
      */
-    public boolean contains(double[] key, T value) {
-        Object v = pht.get(pre(key));
+    public boolean contains(double[] lower, double[] upper, T value) {
+        Object v = pht.get(pre(lower, upper));
         if (v != null) {
             if (v instanceof ArrayList) {
                 return asList(v).contains(value);
@@ -141,12 +170,13 @@ public class PhTreeMultiMapF2<T> {
     }
 
     /**
-     * @param key the key
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @return the value associated with the key or 'null' if the key was not found
      */
     @SuppressWarnings("unchecked")
-    public Iterable<T> get(double[] key) {
-        Object v = pht.get(pre(key));
+    public Iterable<T> get(double[] lower, double[] upper) {
+        Object v = pht.get(pre(lower, upper));
         if (v instanceof ArrayList) {
             return (Iterable<T>) v;
         } else if (v == null) {
@@ -158,12 +188,15 @@ public class PhTreeMultiMapF2<T> {
     }
 
     /**
-     * @param key key
-     * @return {@code true} if the value was removed
-     * @see Map#remove(Object)
+     * Removes all values that exactly match lower/upper.
+     *
+     * @param lower lower left corner
+     * @param upper upper right corner
+     * @return the value or {@code null} if no entry existed
+     * @see PhTree#remove(long...)
      */
-    public Iterable<T> remove(double[] key) {
-        Object v = pht.remove(pre(key));
+    public Iterable<T> remove(double[] lower, double[] upper) {
+        Object v = pht.remove(pre(lower, upper));
         if (v instanceof ArrayList) {
             ArrayList<T> list = asList(v);
             size -= list.size();
@@ -179,14 +212,15 @@ public class PhTreeMultiMapF2<T> {
     }
 
     /**
-     * @param key   key
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param value value
      * @return {@code true} if the value was removed
      * @see Map#remove(Object, Object)
      */
-    public boolean remove(double[] key, T value) {
+    public boolean remove(double[] lower, double[] upper, T value) {
         MutableInt i = new MutableInt(0);
-        pht.computeIfPresent(pre(key), (keyInternal, entry) -> {
+        pht.computeIfPresent(pre(lower, upper), (keyInternal, entry) -> {
             if (entry == null) {
                 return null;
             }
@@ -217,152 +251,110 @@ public class PhTreeMultiMapF2<T> {
     /**
      * @return an iterator over all elements in the tree
      */
-    public PhExtentSF<T> queryExtent() {
-        return new PhExtentSF<>(pht.queryExtent(), pht.getDim(), pre);
+    public PhExtentF<T> queryExtent() {
+        return new PhExtentF<>(pht.queryExtent(), dims, pre);
     }
 
     /**
-     * Performs a rectangular window query. The parameters are the min and max keys
-     * which contain the minimum respectively the maximum keys in every dimension.
-     *
-     * @param min Minimum values
-     * @param max Maximum values
-     * @return Result iterator.
+     * @param e an entry that describes the query rectangle
+     * @return a query iterator
+     * @see #queryInclude(double[], double[])
      */
-    public PhQueryF<T> query(double[] min, double[] max) {
-        long[] lMin = new long[min.length];
-        long[] lMax = new long[max.length];
-        pre.pre(min, lMin);
-        pre.pre(max, lMax);
-        return new PhQueryF<>(pht.query(lMin, lMax), pht.getDim(), pre);
+    public PhQuerySF<T> queryInclude(PhEntrySF<T> e) {
+        return queryInclude(e.lower(), e.upper());
     }
 
     /**
-     * Find all entries within a given distance from a center point.
-     *
-     * @param dist   Maximum distance
-     * @param center Center point
-     * @return All entries with at most distance `dist` from `center`.
+     * @param e an entry that describes the query rectangle
+     * @return a query iterator
+     * @see #queryIntersect(double[], double[])
      */
-    public PhRangeQueryF<T> rangeQuery(double dist, double... center) {
-        return rangeQuery(dist, PhDistanceF.THIS, center);
+    public PhQuerySF<T> queryIntersect(PhEntrySF<T> e) {
+        return queryIntersect(e.lower(), e.upper());
     }
 
     /**
-     * Find all entries within a given distance from a center point.
+     * Query for all bodies that are fully included in the query rectangle.
      *
-     * @param dist         Maximum distance
-     * @param optionalDist Distance function, optional, can be `null`.
-     * @param center       Center point
-     * @return All entries with at most distance `dist` from `center`.
+     * @param lower 'lower left' corner of query rectangle
+     * @param upper 'upper right' corner of query rectangle
+     * @return Iterator over all matching elements.
      */
-    public PhRangeQueryF<T> rangeQuery(double dist, PhDistance optionalDist, double... center) {
-        if (optionalDist == null) {
-            optionalDist = PhDistanceF.THIS;
-        }
-        long[] lKey = new long[center.length];
-        pre.pre(center, lKey);
-        PhRangeQuery<Object> iter = pht.rangeQuery(dist, optionalDist, lKey);
-        return new PhRangeQueryF<>(iter, pht, pre);
+    public PhQuerySF<T> queryInclude(double[] lower, double[] upper) {
+        long[] lUpp = new long[lower.length << 1];
+        long[] lLow = new long[lower.length << 1];
+        pre.pre(lower, lower, lLow);
+        pre.pre(upper, upper, lUpp);
+        return new PhQuerySF<>(pht.query(lLow, lUpp), dims, pre, false);
+    }
+
+    /**
+     * Query for all bodies that are included in or partially intersect with the query rectangle.
+     *
+     * @param lower 'lower left' corner of query rectangle
+     * @param upper 'upper right' corner of query rectangle
+     * @return Iterator over all matching elements.
+     */
+    public PhQuerySF<T> queryIntersect(double[] lower, double[] upper) {
+        long[] lUpp = new long[lower.length << 1];
+        long[] lLow = new long[lower.length << 1];
+        pre.pre(qMIN, lower, lLow);
+        pre.pre(upper, qMAX, lUpp);
+        return new PhQuerySF<>(pht.query(lLow, lUpp), dims, pre, true);
+    }
+
+    /**
+     * Locate nearest neighbours for a given point in space.
+     *
+     * @param nMin   number of entries to be returned. More entries may or may not be returned if
+     *               several points have the same distance.
+     * @param center the center point
+     * @return The query iterator.
+     */
+    public PhKnnQuerySF<T> nearestNeighbour(int nMin, double... center) {
+        return nearestNeighbour(nMin, defaultDist, center);
+    }
+
+    /**
+     * Locate nearest neighbours for a given point in space.
+     *
+     * @param nMin             number of entries to be returned. More entries may or may not be returned if
+     *                         several points have the same distance.
+     * @param distanceFunction A distance function for rectangle data. This parameter is optional,
+     *                         passing a {@code null} will use the default distance function.
+     * @param center           the center point
+     * @return The query iterator.
+     */
+    public PhKnnQuerySF<T> nearestNeighbour(int nMin, PhDistanceSF distanceFunction, double... center) {
+        long[] lCenter = new long[2 * dims];
+        pre.pre(center, center, lCenter);
+        PhDistanceSF df = distanceFunction == null ? defaultDist : distanceFunction;
+        return new PhKnnQuerySF<>(pht.nearestNeighbour(nMin, df, null, lCenter), dims, pre);
     }
 
     public int getDim() {
-        return pht.getDim();
-    }
-
-    /**
-     * Locate nearest neighbours for a given point in space.
-     *
-     * @param nMin number of entries to be returned. More entries may or may not be
-     *             returned if several points have the same distance.
-     * @param key  the center point
-     * @return List of neighbours.
-     */
-    public PhKnnQueryF<T> nearestNeighbour(int nMin, double... key) {
-        long[] lKey = new long[key.length];
-        pre.pre(key, lKey);
-        PhKnnQuery<Object> iter = pht.nearestNeighbour(nMin, PhDistanceF.THIS, null, lKey);
-        return new PhKnnQueryF<>(iter, pht.getDim(), pre);
-    }
-
-    /**
-     * Locate nearest neighbours for a given point in space.
-     *
-     * @param nMin number of entries to be returned. More entries may or may not be
-     *             returned if several points have the same distance.
-     * @param dist Distance function. Note that the distance function should be
-     *             compatible with the preprocessor of the tree.
-     * @param key  the center point
-     * @return KNN query iterator.
-     */
-    public PhKnnQueryF<T> nearestNeighbour(int nMin, PhDistance dist, double... key) {
-        long[] lKey = new long[key.length];
-        pre.pre(key, lKey);
-        PhKnnQuery<Object> iter = pht.nearestNeighbour(nMin, dist, null, lKey);
-        return new PhKnnQueryF<>(iter, pht.getDim(), pre);
+        return dims;
     }
 
     /**
      * Update the key of an entry. Update may fail if the old key does not exist, or
      * if the new key already exists.
      *
-     * @param oldKey old key
-     * @param value  value
-     * @param newKey new key
+     * @param oldLower old lower left corner
+     * @param oldUpper old upper right corner
+     * @param value    value
+     * @param newLower new lower left corner
+     * @param newUpper new upper right corner
      * @return the value (can be {@code null}) associated with the updated key if
      * the key could be updated, otherwise {@code null}.
      */
-    public boolean update(double[] oldKey, T value, double[] newKey) {
+    public boolean update(double[] oldLower, double[] oldUpper, T value, double[] newLower, double[] newUpper) {
         // TODO OPTIMIZE
-        if (remove(oldKey, value)) {
-            put(newKey, value);
+        if (remove(oldLower, oldUpper, value)) {
+            put(newLower, newUpper, value);
             return true;
         }
         return false;
-    }
-
-    /**
-     * Same as {@link #query(double[], double[])}, except that it returns a list
-     * instead of an iterator. This may be faster for small result sets.
-     *
-     * @param min min values
-     * @param max max values
-     * @return List of query results
-     */
-    public List<PhEntryF<T>> queryAll(double[] min, double[] max) {
-        return queryAll(min, max, Integer.MAX_VALUE, null, e -> new PhEntryF<>(PhMapperK.toDouble(e.getKey()), e.getValue()));
-    }
-
-    /**
-     * Same as {@link PhTreeMultiMapF2#queryAll(double[], double[])}, except that it
-     * also accepts a limit for the result size, a filter and a mapper.
-     *
-     * @param min        min key
-     * @param max        max key
-     * @param maxResults maximum result count
-     * @param filter     filter object (optional)
-     * @param mapper     mapper object (optional)
-     * @param <R>        value type
-     * @return List of query results
-     */
-    public <R> List<R> queryAll(double[] min, double[] max, int maxResults, PhFilter filter, PhMapper<T, R> mapper) {
-        long[] lUpp = new long[min.length];
-        long[] lLow = new long[max.length];
-        pre.pre(min, lLow);
-        pre.pre(max, lUpp);
-
-        ArrayList<R> list = new ArrayList<>();
-        pht.queryAll(lLow, lUpp, maxResults, filter, e2 -> e2).forEach(entry -> {
-            if (filter.isValid(entry.getKey())) {
-                if (entry.getValue() instanceof ArrayList) {
-                    ArrayList<T> eList = asList(entry.getValue());
-                    eList.forEach(t -> list.add(mapper.map(new PhEntry<>(entry.getKey(), t))));
-                } else {
-                    list.add(mapper.map(new PhEntry<>(entry.getKey(), asT(entry.getValue()))));
-                }
-            }
-        });
-        return list;
     }
 
     /**
@@ -382,7 +374,7 @@ public class PhTreeMultiMapF2<T> {
     /**
      * @return the preprocessor of this tree.
      */
-    public PreProcessorPointF getPreprocessor() {
+    public PreProcessorRangeF getPreprocessor() {
         return pre;
     }
 
@@ -406,72 +398,77 @@ public class PhTreeMultiMapF2<T> {
     /**
      * Insert key/value if key/value pair does not exist yet.
      *
-     * @param key   key
+     * @param lower lower left corner
+     * @param upper upper right corner
      * @param value new value
      * @return current value or null if there was no association.
      * @see Map#putIfAbsent(Object, Object)
      */
-    public T putIfAbsent(double[] key, T value) {
+    public T putIfAbsent(double[] lower, double[] upper, T value) {
         MutableRef<T> ref = new MutableRef<>();
-        compute(key, value, (k, v) -> v == null ? value : ref.set(v).get());
+        compute(lower, upper, value, (lo, up, v) -> v == null ? value : ref.set(v).get());
         return ref.get();
     }
 
     /**
      * Replaces an existing entry with a new value.
      *
-     * @param key      key
+     * @param lower    lower left corner
+     * @param upper    upper right corner
      * @param oldValue old value
      * @param newValue new value
      * @return {@code true} if the value was replaced
      * @see Map#replace(Object, Object, Object)
      */
-    public boolean replace(double[] key, T oldValue, T newValue) {
-        return computeIfPresent(key, oldValue, (doubles, t) -> newValue) != null;
+    public boolean replace(double[] lower, double[] upper, T oldValue, T newValue) {
+        return computeIfPresent(lower, upper, oldValue, (lo, up, t) -> newValue) != null;
     }
 
     /**
-     * @param key             key
+     * @param lower           lower left corner
+     * @param upper           upper right corner
      * @param value           value
      * @param mappingFunction mapping function
      * @return new value or null if none is associated
      * @see Map#computeIfAbsent(Object, Function)
      */
-    public T computeIfAbsent(double[] key, T value, Function<double[], ? extends T> mappingFunction) {
+    public T computeIfAbsent(double[] lower, double[] upper, T value, ComputeFn<T> mappingFunction) {
         MutableRef<T> ref = new MutableRef<>();
-        compute(key, value, (k, v) -> v == null ? ref.set(mappingFunction.apply(k)).get() : v);
+        compute(lower, upper, value, (lo, up, v) -> v == null ? ref.set(mappingFunction.apply(lo, up)).get() : v);
         return ref.get();
     }
 
     /**
-     * @param key               key
+     * @param lower             lower left corner
+     * @param upper             upper right corner
      * @param value             value
      * @param remappingFunction mapping function
      * @return new value or null if none is associated
      * @see Map#computeIfPresent(Object, BiFunction)
      */
-    public T computeIfPresent(double[] key, T value, BiFunction<double[], ? super T, ? extends T> remappingFunction) {
-        return compute(key, value, (k, v) -> v == null ? null : remappingFunction.apply(k, v));
+    public T computeIfPresent(double[] lower, double[] upper, T value, ComputeVFn<T> remappingFunction) {
+        return compute(lower, upper, value, (lo, up, v) -> v == null ? null : remappingFunction.apply(lo, up, v));
     }
 
     /**
-     * @param key               key
+     * @param lower             lower left corner
+     * @param upper             upper right corner
      * @param value             value
      * @param remappingFunction mapping function
      * @return new value or null if none is associated
      * @see Map#compute(Object, BiFunction)
      */
-    public T compute(double[] key, T value, BiFunction<double[], ? super T, ? extends T> remappingFunction) {
+    public T compute(double[] lower, double[] upper, T value, ComputeVFn<T> remappingFunction) {
         MutableRef<T> ref = new MutableRef<>();
         MutableInt delta = new MutableInt(0);
-        pht.compute(pre(key), (keyInternal, entry) -> {
+        pht.compute(pre(lower, upper), (keyInternal, entry) -> {
             if (entry instanceof ArrayList) {
                 ArrayList<T> list = asList(entry);
                 ListIterator<T> it = list.listIterator();
                 while (it.hasNext()) {
                     T valueOld = it.next();
                     if (Objects.equals(value, valueOld)) {
-                        T valueNew = remappingFunction.apply(key, valueOld);
+                        T valueNew = remappingFunction.apply(lower, upper, valueOld);
                         if (valueNew != null) {
                             it.set(valueNew);
                             ref.set(valueNew);
@@ -488,7 +485,7 @@ public class PhTreeMultiMapF2<T> {
                         return list;
                     }
                 }
-                T valueNew = remappingFunction.apply(key, null);
+                T valueNew = remappingFunction.apply(lower, upper, null);
                 if (valueNew != null) {
                     list.add(valueNew);
                     ref.set(valueNew);
@@ -497,7 +494,7 @@ public class PhTreeMultiMapF2<T> {
                 return list.isEmpty() ? null : list;
             } else {
                 T arg1 = Objects.equals(value, entry) ? asT(entry) : null;
-                ref.set(remappingFunction.apply(key, arg1));
+                ref.set(remappingFunction.apply(lower, upper, arg1));
                 if (ref.get() != null) {
                     delta.inc();
                     ArrayList<T> list = newList();
@@ -512,9 +509,9 @@ public class PhTreeMultiMapF2<T> {
         return ref.get();
     }
 
-    private long[] pre(double[] key) {
-        long[] lKey = new long[key.length];
-        pre.pre(key, lKey);
+    private long[] pre(double[] lower, double[] upper) {
+        long[] lKey = new long[lower.length * 2];
+        pre.pre(lower, upper, lKey);
         return lKey;
     }
 
@@ -537,20 +534,20 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhIteratorF<T> implements PhIteratorBase<T, PhEntryF<T>> {
-        protected final PreProcessorPointF pre;
+    public static class PhIteratorSF<T> implements PhIteratorBase<T, PhEntrySF<T>> {
+        protected final PreProcessorRangeF pre;
         private final PhIteratorBase<Object, ? extends PhEntry<Object>> iter;
-        private final PhEntryF<T> buffer;
+        private final PhEntrySF<T> buffer;
         // For storing non-list entries
         private final ArrayList<T> bufferList = new ArrayList<>();
         private PhEntry<Object> internalEntry;
         private ArrayList<T> currentList;
         private int pos = Integer.MAX_VALUE;
 
-        protected PhIteratorF(PhIteratorBase<Object, ? extends PhEntry<Object>> iter, int dims, PreProcessorPointF pre) {
+        protected PhIteratorSF(PhIteratorBase<Object, ? extends PhEntry<Object>> iter, int dims, PreProcessorRangeF pre) {
             this.iter = iter;
             this.pre = pre;
-            this.buffer = new PhEntryF<>(new double[dims], null);
+            this.buffer = new PhEntrySF<>(new double[dims], new double[dims], null);
             this.bufferList.add(null); // empty entry
             findNextInternal();
         }
@@ -593,19 +590,19 @@ public class PhTreeMultiMapF2<T> {
         }
 
         @Override
-        public PhEntryF<T> nextEntry() {
+        public PhEntrySF<T> nextEntry() {
             checkNext();
-            pre.post(internalEntry.getKey(), buffer.getKey());
+            pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
             buffer.setValue(getNextValue());
-            PhEntryF<T> ret = new PhEntryF<>(buffer.getKey().clone(), buffer.getValue());
+            PhEntrySF<T> ret = new PhEntrySF<>(buffer.lower().clone(), buffer.upper().clone(), buffer.value());
             findNext();
             return ret;
         }
 
         @Override
-        public PhEntryF<T> nextEntryReuse() {
+        public PhEntrySF<T> nextEntryReuse() {
             checkNext();
-            pre.post(internalEntry.getKey(), buffer.getKey());
+            pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
             buffer.setValue(getNextValue());
             findNext();
             return buffer;
@@ -624,7 +621,7 @@ public class PhTreeMultiMapF2<T> {
             throw new UnsupportedOperationException();
         }
 
-        protected PhIteratorF<T> reset() {
+        protected PhIteratorSF<T> reset() {
             pos = Integer.MAX_VALUE;
             findNextInternal();
             return this;
@@ -642,10 +639,10 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhExtentSF<T> extends PhIteratorF<T> {
+    public static class PhExtentF<T> extends PhIteratorSF<T> {
         private final PhExtent<Object> iter;
 
-        protected PhExtentSF(PhExtent<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhExtentF(PhExtent<Object> iter, int dims, PreProcessorRangeF pre) {
             super(iter, dims, pre);
             this.iter = iter;
         }
@@ -656,7 +653,7 @@ public class PhTreeMultiMapF2<T> {
          * @return this
          */
         @Override
-        public PhExtentSF<T> reset() {
+        public PhExtentF<T> reset() {
             iter.reset();
             super.reset();
             return this;
@@ -668,16 +665,24 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhQueryF<T> extends PhIteratorF<T> {
+    public static class PhQuerySF<T> extends PhIteratorSF<T> {
         private final long[] lMin;
         private final long[] lMax;
         private final PhQuery<Object> q;
+        private final double[] qMIN;
+        private final double[] qMAX;
+        private final boolean intersect;
 
-        protected PhQueryF(PhQuery<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhQuerySF(PhQuery<Object> iter, int dims, PreProcessorRangeF pre, boolean intersect) {
             super(iter, dims, pre);
             q = iter;
-            lMin = new long[dims];
-            lMax = new long[dims];
+            qMIN = new double[dims];
+            Arrays.fill(qMIN, Double.NEGATIVE_INFINITY);
+            qMAX = new double[dims];
+            Arrays.fill(qMAX, Double.POSITIVE_INFINITY);
+            this.intersect = intersect;
+            lMin = new long[dims * 2];
+            lMax = new long[dims * 2];
         }
 
         /**
@@ -685,12 +690,20 @@ public class PhTreeMultiMapF2<T> {
          *
          * @param lower minimum values of query rectangle
          * @param upper maximum values of query rectangle
+         * @return this
          */
-        public void reset(double[] lower, double[] upper) {
-            pre.pre(lower, lMin);
-            pre.pre(upper, lMax);
+        public PhQuerySF<T> reset(double[] lower, double[] upper) {
+            if (intersect) {
+                pre.pre(qMIN, lower, lMin);
+                pre.pre(upper, qMAX, lMax);
+            } else {
+                //include
+                pre.pre(lower, lower, lMin);
+                pre.pre(upper, upper, lMax);
+            }
             q.reset(lMin, lMax);
             super.reset();
+            return this;
         }
     }
 
@@ -699,19 +712,19 @@ public class PhTreeMultiMapF2<T> {
      *
      * @param <T> value type
      */
-    public static class PhKnnQueryF<T> implements PhIteratorBase<T, PhEntryDistF<T>> {
-        private final PreProcessorPointF pre;
+    public static class PhKnnQuerySF<T> implements PhIteratorBase<T, PhEntryDistSF<T>> {
+        private final PreProcessorRangeF pre;
         private final PhKnnQuery<Object> iter;
-        private final PhEntryDistF<T> buffer;
+        private final PhEntryDistSF<T> buffer;
         private final ArrayList<T> bufferList = new ArrayList<>();
         private PhEntryDist<Object> internalEntry;
         private ArrayList<T> currentList;
         private int pos = Integer.MAX_VALUE;
 
-        protected PhKnnQueryF(PhKnnQuery<Object> iter, int dims, PreProcessorPointF pre) {
+        protected PhKnnQuerySF(PhKnnQuery<Object> iter, int dims, PreProcessorRangeF pre) {
             this.iter = iter;
             this.pre = pre;
-            this.buffer = new PhEntryDistF<>(new double[dims], null, Double.NaN);
+            this.buffer = new PhEntryDistSF<>(new double[dims], new double[dims], null, Double.NaN);
             this.bufferList.add(null);
             findNextInternal();
         }
@@ -754,22 +767,20 @@ public class PhTreeMultiMapF2<T> {
         }
 
         @Override
-        public PhEntryDistF<T> nextEntry() {
+        public PhEntryDistSF<T> nextEntry() {
             checkNextKnn();
-            pre.post(internalEntry.getKey(), buffer.getKey());
-            buffer.setDist(internalEntry.dist());
-            buffer.setValue(getNextValue());
-            PhEntryDistF<T> ret = new PhEntryDistF<>(buffer.getKey().clone(), buffer.getValue(), buffer.dist());
+            pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
+            buffer.setValueDist(getNextValue(), internalEntry.dist());
+            PhEntryDistSF<T> ret = new PhEntryDistSF<>(buffer.lower().clone(), buffer.upper().clone(), buffer.value(), buffer.dist());
             findNextKnn();
             return ret;
         }
 
         @Override
-        public PhEntryDistF<T> nextEntryReuse() {
+        public PhEntryDistSF<T> nextEntryReuse() {
             checkNextKnn();
-            pre.post(internalEntry.getKey(), buffer.getKey());
-            buffer.setDist(internalEntry.dist());
-            buffer.setValue(getNextValue());
+            pre.post(internalEntry.getKey(), buffer.lower(), buffer.upper());
+            buffer.setValueDist(getNextValue(), internalEntry.dist());
             findNextKnn();
             return buffer;
         }
@@ -797,42 +808,12 @@ public class PhTreeMultiMapF2<T> {
          * @param center new center point
          * @return this
          */
-        public PhKnnQueryF<T> reset(int nMin, PhDistance dist, double[] center) {
+        public PhKnnQuerySF<T> reset(int nMin, PhDistance dist, double[] center) {
             pos = Integer.MAX_VALUE;
-            long[] lCenter = new long[center.length];
-            pre.pre(center, lCenter);
+            long[] lCenter = new long[center.length * 2];
+            pre.pre(center, center, lCenter);
             iter.reset(nMin, dist, lCenter);
             findNextInternal();
-            return this;
-        }
-    }
-
-    /**
-     * Range query iterator class for floating point keys.
-     *
-     * @param <T> value type
-     */
-    public static class PhRangeQueryF<T> extends PhIteratorF<T> {
-        private final long[] lCenter;
-        private final PhRangeQuery<Object> q;
-
-        protected PhRangeQueryF(PhRangeQuery<Object> iter, PhTree<Object> tree, PreProcessorPointF pre) {
-            super(iter, tree.getDim(), pre);
-            this.q = iter;
-            this.lCenter = new long[tree.getDim()];
-        }
-
-        /**
-         * Restarts the query with a new center point and range.
-         *
-         * @param range  new range
-         * @param center new center point
-         * @return this
-         */
-        public PhRangeQueryF<T> reset(double range, double... center) {
-            pre.pre(center, lCenter);
-            q.reset(range, lCenter);
-            super.reset();
             return this;
         }
     }

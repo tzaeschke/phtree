@@ -304,7 +304,7 @@ public class TestMultiMapF2 {
 
             //check full result
             int n = 0;
-            PhExtentF<double[]> it = ind.queryExtent();
+            PhExtentSF<double[]> it = ind.queryExtent();
             for (int i = 0; i < N * 2; i++) {
                 it.next();
                 n++;
